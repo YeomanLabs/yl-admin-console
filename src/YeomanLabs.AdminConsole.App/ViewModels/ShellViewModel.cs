@@ -528,6 +528,15 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Called once after the window is shown. Silent sign-in when the cache has an account; otherwise the sign-in page.</summary>
     public async Task StartAsync()
     {
+        // M10.2: an installation that does not know which registration to use cannot sign in, and failing inside MSAL
+        // tells the person in front of it nothing they can act on. Ask first.
+        if (!_services.GetRequiredService<TenantConfigStore>().Load().IsConfigured)
+        {
+            _logger.LogInformation("No app registration configured; showing setup");
+            CurrentPage = new SetupPageViewModel(_services.GetRequiredService<TenantConfigStore>(), RestartAfterSetup);
+            return;
+        }
+
         _signInPage = new SignInPageViewModel(BeginInteractiveSignInAsync);
         CurrentPage = _signInPage;
         try
@@ -546,6 +555,17 @@ public sealed partial class ShellViewModel : ObservableObject
             _signInPage.ShowFailure(ex);
             CurrentPage = _signInPage;
         }
+    }
+
+    /// <summary>
+    /// The registration only reaches MSAL when the auth service is built, so a newly configured install has to start
+    /// again rather than carry on with a client that was created without one. Saying so is better than a restart that
+    /// looks like a crash.
+    /// </summary>
+    private void RestartAfterSetup()
+    {
+        ShowStatusMessage("Registration saved. Restart the console to sign in.");
+        CurrentPage = new SetupSavedViewModel();
     }
 
     /// <summary>

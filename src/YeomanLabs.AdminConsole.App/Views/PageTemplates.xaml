@@ -563,6 +563,70 @@
     </DataTemplate>
 
 
+    <!-- First-run setup (M10.2): which app registration does this installation sign in with? -->
+    <DataTemplate DataType="{x:Type pages:SetupPageViewModel}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24,32">
+                <TextBlock Text="Connect to your tenant" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" HorizontalAlignment="Center" TextAlignment="Center"
+                           TextWrapping="Wrap" Margin="0,8,0,0" FontSize="13"
+                           Text="This console signs in through an app registration in your own Entra tenant. It needs the client ID of that registration once; after that it remembers." />
+
+                <Border Margin="0,20,0,0" Padding="14,12" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Don't have one yet?" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,6"
+                                   Text="Run this from the repository, signed in as someone who can create an app registration. It creates one in your tenant, asks for the permissions this console uses, and prints the client ID. Run it with -WhatIf first to see what it would do without changing anything." />
+                        <Border CornerRadius="4" Padding="8,6" Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                            <TextBlock Text="{Binding ScriptCommand}" FontFamily="{StaticResource YlMono}" FontSize="12"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="Client ID" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,4" />
+                <ui:TextBox Text="{Binding ClientId, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="00000000-0000-0000-0000-000000000000"
+                            FontFamily="{StaticResource YlMono}"
+                            AutomationProperties.Name="Client ID of the app registration" />
+                <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" Margin="0,4,0,0"
+                           TextWrapping="Wrap" Text="{Binding ClientIdError}"
+                           Visibility="{Binding ClientIdError, Converter={StaticResource NullToCollapsed}}" />
+
+                <CheckBox Content="Only allow sign-in from one tenant" IsChecked="{Binding SingleTenant}" Margin="0,16,0,0"
+                          AutomationProperties.Name="Restrict sign-in to a single tenant" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="24,2,0,0"
+                           Text="Leave this off unless the registration was created with -SingleTenant. The default works for any tenant." />
+                <ui:TextBox Text="{Binding TenantId, UpdateSourceTrigger=PropertyChanged}" Margin="24,6,0,0"
+                            PlaceholderText="contoso.onmicrosoft.com, or the tenant GUID"
+                            AutomationProperties.Name="Tenant"
+                            Visibility="{Binding SingleTenant, Converter={StaticResource BoolToVisibility}}" />
+
+                <ui:Button Appearance="Primary" Content="Save and continue" HorizontalAlignment="Stretch" Height="38"
+                           Margin="0,22,0,0" Command="{Binding SaveCommand}"
+                           AutomationProperties.Name="Save the registration and continue" />
+
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"
+                           Margin="0,16,0,0"
+                           Text="Nothing is sent anywhere by saving this. It is written to your own machine, and the console still signs in as you." />
+            </StackPanel>
+        </ScrollViewer>
+    </DataTemplate>
+
+    <!-- Saved: the client ID is read when the auth client is built, so it takes a restart. -->
+    <DataTemplate DataType="{x:Type pages:SetupSavedViewModel}">
+        <StackPanel MaxWidth="460" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="40" HorizontalAlignment="Center"
+                           Foreground="{StaticResource YlSuccess}" />
+            <TextBlock Text="Registration saved" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,12,0,0" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" HorizontalAlignment="Center" TextAlignment="Center"
+                       TextWrapping="Wrap" Margin="0,8,0,0" FontSize="13"
+                       Text="Close the console and start it again to sign in. It reads the registration once, when it starts." />
+        </StackPanel>
+    </DataTemplate>
+
     <!-- Activity log (M8.2): every write this admin made, filtered, and copyable as markdown. -->
     <DataTemplate DataType="{x:Type pages:ActivityPageViewModel}">
         <Grid Margin="24,16,24,56">

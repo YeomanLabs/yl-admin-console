@@ -65,6 +65,18 @@ public sealed class TenantConfigStoreTests : IDisposable
     }
 
     [Fact]
+    public void Save_DoesNotWriteTheDerivedFlag_BecauseTheFileIsHandEditable()
+    {
+        Store().Save(new TenantConfig { ClientId = Client });
+
+        var json = File.ReadAllText(_path);
+
+        json.Should().NotContain("isConfigured",
+            "it is computed from the client ID, and writing it invites someone to flip it and expect that to mean something");
+        json.Should().Contain("clientId").And.Contain("authority");
+    }
+
+    [Fact]
     public void Clear_ForgetsTheInstallationsRegistration()
     {
         var store = Store(shippedClientId: string.Empty);

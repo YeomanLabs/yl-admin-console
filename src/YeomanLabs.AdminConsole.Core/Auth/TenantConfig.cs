@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace YeomanLabs.AdminConsole.Core.Auth;
 
 /// <summary>
@@ -23,6 +25,11 @@ public sealed record TenantConfig
     /// <summary>What the setup screen showed when this was saved, so Settings can say which tenant it was made for.</summary>
     public string? TenantHint { get; init; }
 
+    /// <summary>
+    /// Derived, so it must not be written to the file. It is hand-editable, and a serialized "isConfigured": true
+    /// invites someone to flip it and expect that to mean something.
+    /// </summary>
+    [JsonIgnore]
     public bool IsConfigured => LooksLikeClientId(ClientId);
 
     /// <summary>
