@@ -98,13 +98,21 @@ public sealed partial class ShellViewModel : ObservableObject
     private object? _currentPage;
 
     [RelayCommand]
-    private void Navigate(NavItem item)
+    private void Navigate(NavItem item) => NavigateWithFilters(item, null);
+
+    private void NavigateWithFilters(NavItem item, IReadOnlyList<string>? filters)
     {
         if (!IsSessionReady) return;
         var tab = SelectedTab ?? OpenTab();
-        tab.Navigate(CreatePage(item), item);
+        tab.Navigate(CreatePage(item, filters), item);
         ShowTab(tab);
         _logger.LogDebug("Navigated to {Nav}", item.Id);
+    }
+
+    /// <summary>Opens a list page from a Home tile with the filters behind that figure already ticked.</summary>
+    private void OpenListWithFilters(string navId, IReadOnlyList<string> filters)
+    {
+        if (NavItems.FirstOrDefault(i => i.Id == navId) is { } item) NavigateWithFilters(item, filters);
     }
 
     /// <summary>Alt+1..6 (UX §11).</summary>
@@ -118,7 +126,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void OpenSettings() => Navigate(SettingsItem);
 
-    private object CreatePage(NavItem item)
+    private object CreatePage(NavItem item, IReadOnlyList<string>? filters = null)
     {
         var page = _services.GetRequiredService(item.PageViewModelType);
         if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
@@ -130,19 +138,34 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is UsersPageViewModel users)
         {
             users.OpenRow = r => OpenObjectFromPage(ObjectType.User, r.Id, r.Primary);
+            if (filters is not null) users.ApplyFilters(filters);
             users.Start();
         }
 
         if (page is GroupsPageViewModel groups)
         {
             groups.OpenRow = r => OpenObjectFromPage(ObjectType.Group, r.Id, r.Primary);
+            if (filters is not null) groups.ApplyFilters(filters);
             groups.Start();
         }
 
         if (page is DevicesPageViewModel devices)
         {
             devices.OpenRow = r => OpenObjectFromPage(ObjectType.Device, r.Id, r.Primary);
+            if (filters is not null) devices.ApplyFilters(filters);
             devices.Start();
+        }
+
+        // Home (M9.5) is a launchpad: nearly everything on it runs one of the shell's own actions.
+        if (page is HomePageViewModel home)
+        {
+            home.OpenPalette = OpenPalette;
+            home.NewUser = () => NewUserCommand.Execute(null);
+            home.Offboard = Offboard;
+            home.SyncNow = () => SyncNowCommand.Execute(null);
+            home.OpenObject = OpenObjectFromPage;
+            home.OpenList = OpenListWithFilters;
+            _ = home.LoadAsync(CancellationToken.None);
         }
 
         if (page is PlaceholderPageViewModel placeholder)

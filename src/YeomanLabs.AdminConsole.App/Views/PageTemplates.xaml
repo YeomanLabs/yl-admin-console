@@ -6,13 +6,123 @@
                     xmlns:tpl="clr-namespace:YeomanLabs.AdminConsole.Core.Templates;assembly=YeomanLabs.AdminConsole.Core">
     <!-- Doc 03: navigation is ContentControl + one DataTemplate per page ViewModel type. -->
 
+    <!-- Home (M9.5). It was one sentence pointing at Ctrl+K. It is now somewhere to start from: search, the things
+         people do, what is in the tenant, what is worth a look, and what you had open last. -->
     <DataTemplate DataType="{x:Type pages:HomePageViewModel}">
-        <Grid>
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="720">
-                <ui:SymbolIcon Symbol="Search24" FontSize="40" Opacity="0.5" HorizontalAlignment="Center" />
-                <TextBlock Text="{Binding Hint}" FontSize="16" Opacity="0.75" Margin="0,12,0,0" HorizontalAlignment="Center" TextAlignment="Center" />
-            </StackPanel>
-        </Grid>
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid Margin="24,20,24,56">
+                <!-- Left-aligning this panel would size it to its widest child, which made the search box as
+                     narrow as its own caption. Stretching to a max width lets the search invite a click. -->
+                <StackPanel MaxWidth="980" HorizontalAlignment="Stretch">
+
+                    <TextBlock Text="{Binding Greeting}" FontSize="26" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding TenantName}" FontSize="13" Opacity="0.6" Margin="0,2,0,0" />
+
+                    <!-- The search box is a button: clicking anywhere on it opens the palette, which is the real
+                         search. A second text box that behaved differently would be worse than one that is honest. -->
+                    <Button Command="{Binding SearchCommand}" Margin="0,18,0,0" HorizontalContentAlignment="Stretch"
+                            Padding="14,12" Cursor="Hand" BorderThickness="1"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            AutomationProperties.Name="Search users, devices and groups">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Symbol="Search24" FontSize="18" Opacity="0.7" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" Text="Search for a person, a device or a group" Margin="10,0,0,0"
+                                       FontSize="14" Opacity="0.7" VerticalAlignment="Center" />
+                            <Border Grid.Column="2" CornerRadius="3" Padding="6,2"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <TextBlock Text="Ctrl+K" FontSize="11" Opacity="0.8" FontFamily="{StaticResource YlMono}" />
+                            </Border>
+                        </Grid>
+                    </Button>
+
+                    <TextBlock Text="Start something" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,24,0,8" />
+                    <WrapPanel>
+                        <ui:Button Icon="{ui:SymbolIcon PersonAdd24}" Content="New user from a template" Margin="0,0,8,8"
+                                   Command="{Binding CreateUserCommand}"
+                                   AutomationProperties.Name="Create a new user from a template" />
+                        <ui:Button Icon="{ui:SymbolIcon PersonDelete24}" Content="Offboard someone" Margin="0,0,8,8"
+                                   Command="{Binding OffboardUserCommand}"
+                                   AutomationProperties.Name="Offboard someone" />
+                        <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" Content="Sync now" Margin="0,0,8,8"
+                                   Command="{Binding SyncCommand}"
+                                   AutomationProperties.Name="Sync now" />
+                    </WrapPanel>
+
+                    <TextBlock Text="In this tenant" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,20,0,8" />
+                    <ItemsControl ItemsSource="{Binding Totals}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pages:HomeTile}">
+                                <Button Style="{StaticResource HomeTileButton}" Command="{Binding OpenCommand}"
+                                        AutomationProperties.Name="{Binding AccessibleName}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding CountText}" FontSize="26" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Label}" FontSize="13" Margin="0,2,0,0" />
+                                        <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.55" Margin="0,2,0,0"
+                                                   TextWrapping="Wrap" MaxWidth="190" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="Worth a look" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,20,0,8" />
+                    <TextBlock Text="Nothing needs attention — no disabled accounts holding licences, no non-compliant devices, no empty groups."
+                               FontSize="12" Opacity="0.6" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left"
+                               Visibility="{Binding NothingNeedsAttention, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding Attention}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pages:HomeTile}">
+                                <Button Style="{StaticResource HomeTileButton}" Command="{Binding OpenCommand}"
+                                        AutomationProperties.Name="{Binding AccessibleName}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding CountText}" FontSize="26" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource YlCoral}" />
+                                        <TextBlock Text="{Binding Label}" FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="190" />
+                                        <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.55" Margin="0,2,0,0"
+                                                   TextWrapping="Wrap" MaxWidth="190" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Visibility="{Binding HasRecent, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Where you were" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,20,0,8" />
+                        <ItemsControl ItemsSource="{Binding Recent}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type pages:RecentEntry}">
+                                    <Button Style="{StaticResource ListRowButton}" Command="{Binding OpenCommand}"
+                                            Margin="0,0,8,8" MinWidth="220"
+                                            AutomationProperties.Name="{Binding Primary}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Secondary}" FontSize="11" Opacity="0.55"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
     </DataTemplate>
 
     <!-- UX §9 step 1: splash + Sign in with Microsoft, with the three failure states -->

@@ -145,6 +145,16 @@ public abstract partial class ListPageViewModel<TRow> : ObservableObject, IPageV
     /// shell is still building it.</summary>
     public void Start() => QueueReload();
 
+    /// <summary>
+    /// Opens the page with filters already ticked — how a Home tile turns a figure into the rows behind it. The chips
+    /// are set rather than the query, so the admin can see which filters produced what they are looking at and can
+    /// untick them.
+    /// </summary>
+    public void ApplyFilters(IReadOnlyList<string> keys)
+    {
+        foreach (var chip in Chips) chip.IsOn = keys.Contains(chip.Key, StringComparer.Ordinal);
+    }
+
     private void QueueReload()
     {
         OnPropertyChanged(nameof(HasActiveFilters));
