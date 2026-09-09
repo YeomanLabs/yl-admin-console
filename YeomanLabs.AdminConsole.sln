@@ -1,8 +1,12 @@
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YeomanLabs.AdminConsole.Core", "src\YeomanLabs.AdminConsole.Core\YeomanLabs.AdminConsole.Core.csproj", "{A1B2C3D4-0000-4000-8000-000000000001}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "YeomanLabs.AdminConsole.App", "src\YeomanLabs.AdminConsole.App\YeomanLabs.AdminConsole.App.csproj", "{A1B2C3D4-0000-4000-8000-000000000002}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{7B31DB40-D9FC-422D-A776-6C07AA957CF1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YeomanLabs.AdminConsole.Core.Tests", "tests\YeomanLabs.AdminConsole.Core.Tests\YeomanLabs.AdminConsole.Core.Tests.csproj", "{D3FB88F5-51B9-4D54-A18A-65F13C256FE0}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,5 +22,12 @@ Global
 		{A1B2C3D4-0000-4000-8000-000000000002}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1B2C3D4-0000-4000-8000-000000000002}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1B2C3D4-0000-4000-8000-000000000002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D3FB88F5-51B9-4D54-A18A-65F13C256FE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D3FB88F5-51B9-4D54-A18A-65F13C256FE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D3FB88F5-51B9-4D54-A18A-65F13C256FE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D3FB88F5-51B9-4D54-A18A-65F13C256FE0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{D3FB88F5-51B9-4D54-A18A-65F13C256FE0} = {7B31DB40-D9FC-422D-A776-6C07AA957CF1}
 	EndGlobalSection
 EndGlobal
