@@ -34,7 +34,6 @@ User.RevokeSessions.All
 GroupMember.ReadWrite.All
 Group.ReadWrite.All
 UserAuthenticationMethod.ReadWrite.All
-Device.ReadWrite.All
 DeviceManagementManagedDevices.ReadWrite.All
 DeviceManagementManagedDevices.PrivilegedOperations.All
 ```
@@ -44,6 +43,8 @@ BitLockerKey.Read.All
 DeviceLocalCredential.Read.All
 ```
 Do **not** add `Directory.ReadWrite.All` or `Directory.AccessAsUser.All`; the granular scopes above are sufficient and review better.
+
+> `Device.ReadWrite.All` is **application-only** on Microsoft Graph; there is no delegated equivalent short of `Directory.AccessAsUser.All`. Offboarding step 9 (delete Entra device objects) is therefore deferred to Phase 2 — see `DECISIONS.md` 2026-09-09.
 
 4. Grant admin consent for the dev tenant (button on the API permissions page) so first-run testing skips the consent prompt. For customer tenants, the app's own consent screen handles it.
 5. Copy **Application (client) ID** into `src/YeomanLabs.AdminConsole.App/appsettings.json` → `Auth.ClientId`. No client secret — this is a public client.

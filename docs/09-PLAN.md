@@ -54,7 +54,7 @@ Legend: 🧪 has a unit test requirement · 🖥 requires launching the app agai
 
 ## M6 — Offboarding
 - [ ] 6.1 🧪 `Offboarding/IOffboardingStep`, `OffboardingContext`, `OffboardingRunner` (parallel preview, sequential execute, halt semantics, undo collection). Tests with fake steps.
-- [ ] 6.2 🧪 Steps 1–9, 16, 17 from doc 06 (15 → investigate, log decision). Tests for skip rules (dynamic/synced/role-assignable groups; group-assigned licenses; on-prem-mastered attributes).
+- [ ] 6.2 🧪 Steps 1–8, 16, 17 from doc 06 (9 → deferred to Phase 2 per DECISIONS 2026-09-09; 15 → investigate, log decision). Tests for skip rules (dynamic/synced/role-assignable groups; group-assigned licenses; on-prem-mastered attributes).
 - [ ] 6.3 Profiles: load/save JSON; default "Standard leaver".
 - [ ] 6.4 🖥 Offboard dialog implementing UX §8 exactly (preview → live log → summary with undo). Reachable from User 360 header, palette action `> offboard`, and Ctrl+Shift+O on a user page.
 - **Gate:** offboard a test user with all default steps; verify each effect in the portal; undo the reversible set; re-run and confirm idempotent ("already disabled — nothing to do").

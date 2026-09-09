@@ -28,7 +28,7 @@ Steps run **in the order listed**. Preview runs all previews in parallel (batche
 | 6 | `remove-group-memberships` | Remove from groups | Graph | ✅ | ✗ | For each cached membership: skip dynamic, skip synced, skip role-assignable unless scope+role present; `DELETE /groups/{g}/members/{u}/$ref` via batch | Cloud groups only; synced groups listed as skipped | ✅ re-add |
 | 7 | `remove-licenses` | Remove all direct licenses | Graph | ✅ | ✗ | `assignLicense removeLicenses=[all direct skuIds]`; group-assigned licenses listed as "inherited — removed when group step runs" | Runs | ✅ restore (30-day mailbox soft-delete caveat shown) |
 | 8 | `retire-devices` | Retire Intune devices | Graph | ✗ | ✗ | For each managed device where user is primary: `POST /retire`. Preview lists device names. Off by default — many orgs reassign hardware. | Runs | ✗ |
-| 9 | `remove-registered-devices` | Remove Entra device registrations | Graph | ✗ | ✗ | For each `/registeredDevices` not Intune-managed: `DELETE /devices/{id}` | Runs (cloud objects) | ✗ |
+| 9 | `remove-registered-devices` | Remove Entra device registrations | Graph | ✗ | ✗ | **Deferred to Phase 2.** `DELETE /devices/{id}` needs `Directory.AccessAsUser.All` (no granular delegated scope exists). Registered with `CanRun=false`, reason "Deleting Entra device objects needs Directory.AccessAsUser.All, which this app does not request." | — | ✗ |
 | 10 | `hide-from-gal` | Hide from address lists | Exchange | ✅ | ✗ | EXO `Set-Mailbox -HiddenFromAddressListsEnabled $true` | Phase 3 | ✅ |
 | 11 | `convert-to-shared` | Convert mailbox to shared | Exchange | ✅ | ✗ | EXO `Set-Mailbox -Type Shared` (must run **before** license removal in real life — the runner reorders Exchange steps ahead of step 7 once Exchange exists; document this in the preview) | Phase 3 | ✅ |
 | 12 | `set-auto-reply` | Set out-of-office | Exchange | ✗ | ✗ | Template text with manager name | Phase 3 | ✅ |
@@ -40,7 +40,7 @@ Steps run **in the order listed**. Preview runs all previews in parallel (batche
 | 18 | `move-ou` | Move AD object to Disabled OU | OnPremAd | ✅ | ✗ | LDAP move | Phase 2 | ✅ |
 | 19 | `disable-ad-account` | Disable on-prem AD account | OnPremAd | ✅ | ✅ | LDAP `userAccountControl` | Phase 2 | ✅ |
 
-Phase 1 implements 1–9, 15 (if a clean endpoint exists — otherwise mark investigate in DECISIONS.md), 16, 17. Steps 10–14, 18–19 are registered with their capability so they render greyed in the preview with the standard reason; they have no `ExecuteAsync` body beyond throwing `NotSupportedException` (the runner never calls it when `CanRun == false`).
+Phase 1 implements 1–8, 15 (if a clean endpoint exists — otherwise mark investigate in DECISIONS.md), 16, 17. Steps 9, 10–14, 18–19 are registered with their capability so they render greyed in the preview with the standard reason; they have no `ExecuteAsync` body beyond throwing `NotSupportedException` (the runner never calls it when `CanRun == false`).
 
 ## Profiles
 An offboarding profile is JSON: `{ "name": "Standard leaver", "steps": { "disable-account": true, "retire-devices": false, … }, "options": { "delegateToManager": true } }` saved under `templates\offboarding\*.json`. Ship a default "Standard leaver" profile. Users can save the current toggle set as a new profile from the preview dialog.
