@@ -26,6 +26,11 @@ Undoing it is one command, which the script prints when it finishes:
 Remove-MgApplication -ApplicationId <the object id it printed>
 ```
 
+That removes the service principal and the consent grant along with the application. Entra **soft-deletes** app
+registrations, so it then sits in **Deleted applications** for 30 days — recoverable if you delete the wrong one, and
+gone by itself after that. To remove it immediately:
+`Invoke-MgGraphRequest -Method DELETE -Uri "v1.0/directory/deletedItems/<object id>"`.
+
 ## What you need
 
 - The **Microsoft.Graph** PowerShell module: `Install-Module Microsoft.Graph -Scope CurrentUser`
