@@ -41,6 +41,11 @@
     .\New-AppRegistration.ps1 -TenantId contoso.onmicrosoft.com -SingleTenant -WriteConfig
     Creates it in Contoso, restricted to Contoso, and points this machine's console at it.
 
+.EXAMPLE
+    .\New-AppRegistration.ps1 -Confirm:$false
+    Skips the confirmation prompt. Required when running non-interactively: with no console to prompt on,
+    ShouldProcess has nowhere to ask.
+
 .NOTES
     Needs the Microsoft.Graph PowerShell module and an account holding Application Administrator (to create the
     registration) and Privileged Role Administrator or Global Administrator (to grant admin consent).
@@ -191,7 +196,16 @@ if ($WhatIfPreference) {
 
 # --- Create the registration ------------------------------------------------------------------------------------------
 Write-Step "Creating the registration in $tenantName"
-if (-not $PSCmdlet.ShouldProcess("$Name in $tenantName", 'Create app registration')) { return }
+# ConfirmImpact is High, so this prompts by default — creating a registration and granting tenant-wide consent should
+# not happen because somebody mistyped a command. With no interactive host to prompt on, ShouldProcess throws a bare
+# null reference rather than saying why, so say why.
+try {
+    if (-not $PSCmdlet.ShouldProcess("$Name in $tenantName", 'Create app registration')) { return }
+}
+catch [System.NullReferenceException] {
+    throw 'This session cannot show a confirmation prompt. Re-run with -Confirm:$false if you are sure, or run it ' +
+          'from an interactive PowerShell window.'
+}
 
 $body = @{
     displayName            = $Name
