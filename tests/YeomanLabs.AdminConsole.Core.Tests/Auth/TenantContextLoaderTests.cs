@@ -26,8 +26,9 @@ public sealed class TenantContextLoaderTests
             ]}]}},
           {"id":"me","status":200,"body":{"id":"u-1","displayName":"Andrew","userPrincipalName":"andrew@yeomanlabs.co"}},
           {"id":"roles","status":200,"body":{"value":[
-            {"displayName":"Global Administrator","roleTemplateId":"62e90394-69f5-4237-9190-012177145e10"},
-            {"displayName":"Intune Administrator","roleTemplateId":"3a2c62db-5318-420d-8d74-23affee5d9d5"}
+            {"displayName":null,"roleTemplateId":"62e90394-69f5-4237-9190-012177145e10"},
+            {"displayName":null,"roleTemplateId":"3a2c62db-5318-420d-8d74-23affee5d9d5"},
+            {"displayName":"Custom Role","roleTemplateId":"11111111-2222-3333-4444-555555555555"}
           ]}}
         ]}
         """;
@@ -56,7 +57,9 @@ public sealed class TenantContextLoaderTests
         context.SignedInDisplayName.Should().Be("Andrew");
         context.HasP1.Should().BeTrue();
         context.HasP2.Should().BeFalse("the P2 plan is Deleted, not Enabled");
-        context.Roles.Should().HaveCount(2);
+        context.Roles.Should().HaveCount(3);
+        context.Roles.Select(r => r.DisplayName).Should().Equal("Global Administrator", "Intune Administrator", "Custom Role",
+            "Graph blanks displayName without Directory.Read.All, so known template IDs map to local names");
         context.IsGlobalAdmin.Should().BeTrue();
         context.HasRole(DirectoryRoleRef.IntuneAdministrator).Should().BeTrue();
         context.HasRole(DirectoryRoleRef.UserAdministrator).Should().BeFalse();

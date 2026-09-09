@@ -52,7 +52,8 @@ public sealed class TenantContextLoader
             {
                 var templateId = GetString(role, "roleTemplateId");
                 if (templateId is null) continue;
-                roles.Add(new DirectoryRoleRef(GetString(role, "displayName") ?? templateId, templateId));
+                // displayName is null when the token lacks Directory.Read.All; From() falls back to the local table.
+                roles.Add(DirectoryRoleRef.From(GetString(role, "displayName"), templateId));
             }
         }
         else if (!rolesResponse.IsSuccess)
