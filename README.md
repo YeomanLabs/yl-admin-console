@@ -11,12 +11,15 @@ Phase 1 is cloud-only: Entra users, groups and devices, Intune devices, and the 
 is Phase 2. Exchange Online is Phase 3. Neither is stubbed out and pretending; where a step needs them it is listed and
 greyed with the reason.
 
-![The command palette](docs/images/palette.png)
+![Home](docs/images/home.png)
 
 ## What it does
 
 - **Search that answers instantly.** Everything is indexed locally, so the palette never waits on Graph. At 5,000 users,
   2,000 devices and 1,000 groups it answers in a median of 1.1 ms — see [PERF.md](docs/PERF.md).
+- **Lists you can actually browse.** Users, groups and devices, sortable and filterable from the same local cache, with
+  filters phrased as the questions a helpdesk asks: who is disabled, who has no licence, which devices are failing
+  compliance, which are registered but never enrolled, which groups nobody is in. Every count is clickable.
 - **One page per person.** Identity, access, devices and activity, editable in place, with anything mastered on-prem
   greyed and labelled rather than silently failing.
 - **Actions that explain themselves.** Every destructive action previews exactly what it will change, names the real
@@ -27,6 +30,11 @@ greyed with the reason.
   filled in and the sign-in name checked while you type.
 - **A written record.** Every write lands in a local action log with what was sent, what came back, and whether it was
   undone. The Activity page filters it and copies it as markdown.
+
+![The Users list](docs/images/users.png)
+
+Home is a landing page, not a splash screen: every figure on it opens the list already filtered to it, so "2 enabled
+but unlicensed" is one click from the two people it means.
 
 ![User 360](docs/images/user-360.png)
 
@@ -98,6 +106,7 @@ Everything is under `%LOCALAPPDATA%\YeomanLabs\AdminConsole`:
 | `Ctrl+T` / `Ctrl+W` | New tab, close tab |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Next tab, previous tab |
 | `Alt+1`…`Alt+6` | Home, Users, Groups, Devices, Templates, Activity |
+| `Esc` | Close the palette or a dialog |
 | `Alt+←` | Back |
 | `F5` | Re-read the object on screen |
 | `Ctrl+Shift+S` | Sync now |
@@ -131,6 +140,10 @@ Microsoft Graph SDK, so batching, delta queries, throttling and payload size sta
 | [docs/BACKLOG.md](docs/BACKLOG.md) | What is known to be rough |
 
 ## Status
+
+Phase 1 is complete and being dogfooded, which is where most of the recent work has come from: the list pages, the
+landing page, a contrast pass and several bugs all came out of real use rather than out of the plan. What is known to
+be rough is in [BACKLOG.md](docs/BACKLOG.md) rather than left for you to discover.
 
 Phase 1 is complete and being dogfooded. It has been built and verified against a live tenant milestone by milestone;
 every gate and what it actually proved is recorded in [docs/09-PLAN.md](docs/09-PLAN.md), including the places where a
