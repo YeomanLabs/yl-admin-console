@@ -6,7 +6,7 @@ Legend: 🧪 has a unit test requirement · 🖥 requires launching the app agai
 
 ## M0 — Repo hygiene
 - [x] 0.1 Add `tests/YeomanLabs.AdminConsole.Core.Tests` (xUnit, FluentAssertions) to the solution; add a trivial passing test. — done: xunit 2.9.2 + FluentAssertions 7.0.0 (last Apache-2.0 line) + Test.Sdk 17.11.1; `dotnet test` 1/1 passed, 0 warnings
-- [ ] 0.2 Add `Directory.Build.props` with `TreatWarningsAsErrors=false` for now, `Nullable=enable`, `AnalysisLevel=latest`, deterministic builds.
+- [x] 0.2 Add `Directory.Build.props` with `TreatWarningsAsErrors=false` for now, `Nullable=enable`, `AnalysisLevel=latest`, deterministic builds. — done: Nullable/ImplicitUsings/AnalysisLevel=latest/Deterministic + ContinuousIntegrationBuild on GitHub Actions; Core + Tests rebuild with 0 warnings
 - [ ] 0.3 Add `docs/DECISIONS.md` with the header and the first entry: chosen working name/namespace.
 - [ ] 0.4 Add a GitHub Actions workflow `build.yml` on `windows-latest`: restore, build solution, test. (Will fail until App compiles — that's fine; it's the gate for M3.)
 - **Gate:** `dotnet build src/YeomanLabs.AdminConsole.Core && dotnet test` green.
