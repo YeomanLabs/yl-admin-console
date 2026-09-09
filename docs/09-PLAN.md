@@ -12,7 +12,7 @@ Legend: 🧪 has a unit test requirement · 🖥 requires launching the app agai
 - **Gate:** `dotnet build src/YeomanLabs.AdminConsole.Core && dotnet test` green.
 
 ## M1 — Core: auth + Graph client
-- [ ] 1.1 `Auth/AuthOptions` (ClientId, Authority), `Auth/Scopes` (Read/Write/Sensitive constants from doc 08).
+- [x] 1.1 `Auth/AuthOptions` (ClientId, Authority), `Auth/Scopes` (Read/Write/Sensitive constants from doc 08). — done: `AuthOptions` (section `Auth`), `Scopes` with Read/Write/Sensitive lists (22 scopes; `Device.ReadWrite.All` dropped per DECISIONS 2026-09-09; casing as issued by Graph); Core builds 0 warnings
 - [ ] 1.2 `Auth/AuthService`: MSAL PCA builder with broker, `MsalCacheHelper` at the path in doc 03, `EnsureSignedInAsync(scopes, ct)`, `SignOutAsync`, `GetTokenAsync(scopes, ct)`, `HasScopeAsync(scope, ct)` (parse `scp` from the cached access token JWT payload without validation — it's our own token), `AccountChanged` event. Parent window handle via injected `Func<IntPtr>`.
 - [ ] 1.3 🧪 `Graph/GraphException`, `Graph/GraphClient` per doc 03 (send, paging, retry, per-inner-response batch retry). Tests with a fake handler: 429 with Retry-After then 200; nextLink paging of 3 pages; batch with one inner 429; 4xx surfaces code/message/request-id.
 - [ ] 1.4 `Graph/GraphSelects` constants for user/group/device/managedDevice from doc 04.
