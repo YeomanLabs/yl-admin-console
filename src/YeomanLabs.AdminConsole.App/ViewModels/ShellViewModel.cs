@@ -13,6 +13,7 @@ using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
+using YeomanLabs.AdminConsole.Core.Groups;
 using YeomanLabs.AdminConsole.Core.Sync;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels;
@@ -266,13 +267,35 @@ public sealed partial class ShellViewModel : ObservableObject
     private void OpenPalette()
     {
         if (!IsSessionReady || Palette is null) return;
+        // Ctrl+K is always a plain search, so drop any picker the admin abandoned with Esc.
+        _pendingGroupPick = null;
         if (Palette.IsOpen) Palette.IsOpen = false;
         Palette.Open();
+    }
+
+    private Func<DirectoryGroup, Task>? _pendingGroupPick;
+
+    /// <summary>Opens the palette restricted to groups and hands the pick to <paramref name="onPicked"/> (UX §4: group picker).</summary>
+    private void OpenGroupPicker(Func<DirectoryGroup, Task> onPicked)
+    {
+        if (Palette is null) return;
+        _pendingGroupPick = onPicked;
+        Palette.OpenPicker(ObjectType.Group, "Choose a group to add this user to");
     }
 
     private void OnPaletteChosen(object? sender, PaletteChoice choice)
     {
         var hit = choice.Hit;
+
+        if (_pendingGroupPick is { } pick)
+        {
+            _pendingGroupPick = null;
+            if (hit.ObjectType != ObjectType.Group) return;
+            var group = _services.GetRequiredService<CacheDb>().GetGroup(hit.Id);
+            if (group is not null) _ = pick(group);
+            return;
+        }
+
         if (hit.ObjectType == ObjectType.Action)
         {
             RunAction(hit.Id);
@@ -294,6 +317,7 @@ public sealed partial class ShellViewModel : ObservableObject
             case ObjectType.User:
                 var user = _services.GetRequiredService<UserDetailViewModel>();
                 user.OpenObject = OpenObjectFromPage;
+                user.PickGroup = OpenGroupPicker;
                 user.Start(id);
                 return user;
             case ObjectType.Device:

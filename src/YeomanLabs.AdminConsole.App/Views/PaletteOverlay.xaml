@@ -72,7 +72,7 @@
                 <StackPanel>
                     <ui:TextBox x:Name="SearchBox" Margin="12,12,12,8" FontSize="16" ClearButtonEnabled="False"
                                 Icon="{ui:SymbolIcon Search24}"
-                                PlaceholderText="Search users, devices, groups — u: d: g: narrow, > for actions"
+                                PlaceholderText="{Binding Placeholder}"
                                 Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
                                 b:FocusBehavior.FocusWhen="{Binding IsOpen}"
                                 AutomationProperties.Name="Command palette search">

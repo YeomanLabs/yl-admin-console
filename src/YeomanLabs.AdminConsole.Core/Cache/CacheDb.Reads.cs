@@ -15,11 +15,10 @@ public sealed partial class CacheDb
     {
         using var conn = OpenConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT raw, member_count FROM groups WHERE id=$id;";
+        cmd.CommandText = $"SELECT {GroupColumns} FROM groups WHERE id=$id;";
         cmd.Parameters.AddWithValue("$id", id);
         using var r = cmd.ExecuteReader();
-        if (!r.Read()) return null;
-        return ParseGroup(r.GetString(0), r.GetInt32(1));
+        return r.Read() ? ReadGroup(r) : null;
     }
 
     public ManagedDevice? GetManagedDevice(string id) => Parse(GetRaw(CacheEntity.ManagedDevices, id), ManagedDevice.FromJson);
@@ -61,11 +60,11 @@ public sealed partial class CacheDb
     {
         using var conn = OpenConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT g.raw, g.member_count FROM group_members gm JOIN groups g ON g.id = gm.group_id WHERE gm.member_id=$m ORDER BY g.display_name;";
+        cmd.CommandText = $"SELECT {GroupColumns.Replace("id,", "g.id,")} FROM group_members gm JOIN groups g ON g.id = gm.group_id WHERE gm.member_id=$m ORDER BY g.display_name;";
         cmd.Parameters.AddWithValue("$m", memberId);
         using var r = cmd.ExecuteReader();
         var list = new List<DirectoryGroup>();
-        while (r.Read()) list.Add(ParseGroup(r.GetString(0), r.GetInt32(1)));
+        while (r.Read()) list.Add(ReadGroup(r));
         return list;
     }
 
@@ -154,11 +153,25 @@ public sealed partial class CacheDb
         return parse(doc.RootElement);
     }
 
-    private static DirectoryGroup ParseGroup(string raw, int memberCount)
+    private const string GroupColumns = "id, display_name, description, mail, kind, dynamic, synced, role_assignable, member_count, raw";
+
+    /// <summary>
+    /// Groups from the projected columns (doc 05), not by re-parsing <c>raw</c>: the columns are what the sync wrote and
+    /// what the FTS index and member counts agree with, and they are present even if a payload was ever partial.
+    /// </summary>
+    private static DirectoryGroup ReadGroup(Microsoft.Data.Sqlite.SqliteDataReader r) => new()
     {
-        using var doc = JsonDocument.Parse(raw);
-        return DirectoryGroup.FromJson(doc.RootElement) with { MemberCount = memberCount };
-    }
+        Id = r.GetString(0),
+        DisplayName = r.IsDBNull(1) ? null : r.GetString(1),
+        Description = r.IsDBNull(2) ? null : r.GetString(2),
+        Mail = r.IsDBNull(3) ? null : r.GetString(3),
+        Kind = Enum.TryParse<GroupKind>(r.GetString(4), out var kind) ? kind : GroupKind.Security,
+        IsDynamic = r.GetInt64(5) != 0,
+        OnPremisesSyncEnabled = r.GetInt64(6) != 0,
+        IsAssignableToRole = r.GetInt64(7) != 0,
+        MemberCount = r.GetInt32(8),
+        Raw = r.GetString(9),
+    };
 
     private static List<T> ReadAll<T>(Microsoft.Data.Sqlite.SqliteCommand cmd, Func<JsonElement, T> parse)
     {

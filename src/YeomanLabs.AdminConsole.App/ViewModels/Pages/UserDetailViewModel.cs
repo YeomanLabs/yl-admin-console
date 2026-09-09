@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.App.Services;
 using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
+using YeomanLabs.AdminConsole.Core.Groups;
 using YeomanLabs.AdminConsole.Core.Licensing;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
@@ -31,12 +32,13 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private readonly PermissionChecker _permissions;
     private readonly ConsentService _consent;
     private readonly LicenseService _licenseService;
+    private readonly GroupService _groupService;
     private readonly ToastService _toasts;
     private readonly ILogger<UserDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, ToastService toasts, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, ILogger<UserDetailViewModel> logger)
     {
         _users = users;
         _db = db;
@@ -44,6 +46,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         _permissions = permissions;
         _consent = consent;
         _licenseService = licenses;
+        _groupService = groups;
         _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
         _logger = logger;
@@ -349,7 +352,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private IReadOnlyList<LicenseRow> _licenses = [];
 
     [ObservableProperty]
-    private IReadOnlyList<DirectoryGroup> _groups = [];
+    private IReadOnlyList<GroupMembershipRow> _groups = [];
 
     [ObservableProperty]
     private string? _groupsCaption;
@@ -390,14 +393,17 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
         // Groups: live list when available (authoritative), else the cache; member counts always from the cache.
         var counts = cachedGroups.ToDictionary(g => g.Id, g => g.MemberCount, StringComparer.OrdinalIgnoreCase);
+        var groupBlocked = GreyRule.Reason(_permissions, Capabilities.ChangeGroupMembership, null);
         if (Live?.Groups.IsSuccess == true)
         {
-            Groups = Live.Groups.Value!.Select(g => g with { MemberCount = counts.GetValueOrDefault(g.Id) }).OrderBy(g => g.DisplayName).ToList();
+            Groups = Live.Groups.Value!
+                .Select(g => new GroupMembershipRow(g with { MemberCount = counts.GetValueOrDefault(g.Id) }, groupBlocked, RemoveFromGroupAsync))
+                .OrderBy(g => g.Label).ToList();
             GroupsCaption = null;
         }
         else
         {
-            Groups = cachedGroups;
+            Groups = cachedGroups.Select(g => new GroupMembershipRow(g, groupBlocked, RemoveFromGroupAsync)).ToList();
             GroupsCaption = Live?.Groups.Error is { } err ? $"Showing cached memberships — live read failed ({err.ErrorCode})" : "Showing cached memberships";
         }
 
@@ -465,6 +471,72 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         }
 
         _toasts.Show(back.Success ? back.Summary : back.FriendlyError ?? "Undo failed");
+    }
+
+    /// <summary>Remove-X on a group row (UX §4 tab 2): consent, DELETE the membership, undo toast.</summary>
+    private async Task RemoveFromGroupAsync(GroupMembershipRow row)
+    {
+        if (!await EnsureAsync(Capabilities.ChangeGroupMembership)) return;
+
+        var label = User?.DisplayName ?? User?.UserPrincipalName ?? Id;
+        var outcome = await _groupService.RemoveMemberAsync(row.Id, Id, label, CancellationToken.None);
+        if (outcome.Success)
+        {
+            Groups = Groups.Where(g => g.Id != row.Id).ToList();
+            _toasts.Show(outcome.Summary, "Undo", () => UndoMembershipAsync(outcome));
+        }
+        else
+        {
+            _toasts.Show(outcome.FriendlyError ?? outcome.Summary);
+        }
+    }
+
+    /// <summary>"Add to group…" — the shell opens a groups-only picker and calls back with the chosen group.</summary>
+    [RelayCommand]
+    private void AddToGroup() => PickGroup?.Invoke(async group =>
+    {
+        if (!await EnsureAsync(Capabilities.ChangeGroupMembership)) return;
+
+        var label = User?.DisplayName ?? User?.UserPrincipalName ?? Id;
+        var outcome = await _groupService.AddMemberAsync(group.Id, Id, label, CancellationToken.None);
+        if (outcome.Success)
+        {
+            RecomputeAccess(_users.GetCachedGroups(Id));
+            _toasts.Show(outcome.Summary, "Undo", () => UndoMembershipAsync(outcome));
+        }
+        else
+        {
+            _toasts.Show(outcome.FriendlyError ?? outcome.Summary);
+        }
+    });
+
+    /// <summary>Set by the shell: opens the palette in groups-only mode and invokes the callback with the pick.</summary>
+    public Action<Func<DirectoryGroup, Task>>? PickGroup { get; set; }
+
+    private async Task UndoMembershipAsync(WriteOutcome outcome)
+    {
+        var back = await outcome.Undo!(CancellationToken.None);
+        if (back.Success) RecomputeAccess(_users.GetCachedGroups(Id));
+        _toasts.Show(back.Success ? back.Summary : back.FriendlyError ?? "Undo failed");
+    }
+
+    /// <summary>Consent on the first write of the session; false means the admin declined or lacks the scope.</summary>
+    private async Task<bool> EnsureAsync(Capability capability)
+    {
+        var permission = _permissions.Check(capability);
+        if (!permission.NeedsConsent) return true;
+        try
+        {
+            permission = await _consent.EnsureAsync(capability, CancellationToken.None);
+        }
+        catch (SignInException)
+        {
+            _toasts.Show("Write permission was not granted.");
+            return false;
+        }
+
+        if (!permission.CanRun) _toasts.Show(permission.Reason ?? "Not permitted.");
+        return permission.CanRun;
     }
 
     // ---- Devices tab (UX §4 tab 3) ---------------------------------------------------------------------------------

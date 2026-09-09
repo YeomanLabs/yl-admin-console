@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
@@ -11,7 +12,7 @@ namespace YeomanLabs.AdminConsole.Core.Groups;
 /// Group page data access (UX §4.5, doc 04 §Groups). The cache is authoritative for member counts; the member list is
 /// fetched on demand and paged. Membership writes come in M5.4.
 /// </summary>
-public sealed class GroupService
+public sealed partial class GroupService
 {
     private const string GroupId = "group";
     private const string OwnersId = "owners";
@@ -19,12 +20,16 @@ public sealed class GroupService
 
     private readonly GraphClient _graph;
     private readonly CacheDb _db;
+    private readonly ActionLog _actions;
+    private readonly TenantContext _tenant;
     private readonly ILogger<GroupService> _logger;
 
-    public GroupService(GraphClient graph, CacheDb db, ILogger<GroupService> logger)
+    public GroupService(GraphClient graph, CacheDb db, ActionLog actions, TenantContext tenant, ILogger<GroupService> logger)
     {
         _graph = graph;
         _db = db;
+        _actions = actions;
+        _tenant = tenant;
         _logger = logger;
     }
 

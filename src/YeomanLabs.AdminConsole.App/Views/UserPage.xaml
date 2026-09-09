@@ -188,16 +188,17 @@
         </Grid>
     </DataTemplate>
 
-    <DataTemplate x:Key="GroupRowTemplate" DataType="{x:Type models:DirectoryGroup}">
+    <DataTemplate x:Key="GroupRowTemplate" DataType="{x:Type pages:GroupMembershipRow}">
         <Grid Height="30">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="28" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ui:SymbolIcon Symbol="PeopleTeam24" FontSize="14" Opacity="0.7" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
                 <ItemsControl ItemsSource="{Binding Badges}" ItemTemplate="{StaticResource StringChip}" VerticalAlignment="Center">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -205,10 +206,16 @@
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                 </ItemsControl>
+                <TextBlock Text="{Binding BlockedReason}" Style="{StaticResource Caption}" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
-            <TextBlock Grid.Column="2" FontSize="12" Opacity="0.6" VerticalAlignment="Center" Margin="12,0,0,0">
-                <Run Text="{Binding MemberCount, Mode=OneWay}" /><Run Text=" members" />
-            </TextBlock>
+            <TextBlock Grid.Column="2" Text="{Binding MembersText}" FontSize="12" Opacity="0.6" VerticalAlignment="Center" Margin="12,0,0,0" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent" Padding="6,2" Command="{Binding RemoveCommand}"
+                           IsEnabled="{Binding CanRemove}" ToolTip="{Binding BlockedReason}" ToolTipService.ShowOnDisabled="True"
+                           AutomationProperties.Name="Remove from group" />
+            </StackPanel>
         </Grid>
     </DataTemplate>
 
@@ -425,7 +432,10 @@
                                                         <TextBlock Text="Licenses" Style="{StaticResource SectionTitle}" />
                                                         <ItemsControl ItemsSource="{Binding Licenses}" ItemTemplate="{StaticResource LicenseRowTemplate}" />
 
-                                                        <TextBlock Text="Groups" Style="{StaticResource SectionTitle}" />
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="Groups" Style="{StaticResource SectionTitle}" />
+                                                            <ui:Button Content="Add to group…" Command="{Binding AddToGroupCommand}" Padding="10,2" Margin="12,16,0,6" />
+                                                        </StackPanel>
                                                         <TextBlock Text="{Binding GroupsCaption}" Style="{StaticResource Caption}" Margin="0,0,0,4" Visibility="{Binding GroupsCaption, Converter={StaticResource NullToCollapsed}}" />
                                                         <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource GroupRowTemplate}" />
 

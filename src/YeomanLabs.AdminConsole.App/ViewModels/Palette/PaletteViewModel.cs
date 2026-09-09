@@ -66,10 +66,31 @@ public sealed partial class PaletteViewModel : ObservableObject
 
     public void Open()
     {
+        PickMode = null;
+        Placeholder = DefaultPlaceholder;
         Query = string.Empty;
         ClearResults();
         RefreshEmptyState();
         IsOpen = true;
+    }
+
+    private const string DefaultPlaceholder = "Search users, devices, groups — u: d: g: narrow, > for actions";
+
+    /// <summary>Placeholder text; changes in pick mode so it is obvious the palette is choosing, not navigating.</summary>
+    [ObservableProperty]
+    private string _placeholder = DefaultPlaceholder;
+
+    /// <summary>Non-null while the palette is picking one object of a type for a caller (UX §4: group picker, palette-style).</summary>
+    [ObservableProperty]
+    private ObjectType? _pickMode;
+
+    /// <summary>Opens the palette restricted to one object type; <see cref="Chosen"/> carries the pick.</summary>
+    public void OpenPicker(ObjectType type, string placeholder)
+    {
+        Open();
+        PickMode = type;
+        Placeholder = placeholder;
+        RefreshEmptyState();
     }
 
     [RelayCommand]
@@ -95,7 +116,14 @@ public sealed partial class PaletteViewModel : ObservableObject
                 return;
             }
 
-            var results = await _search.SearchAsync(query, SearchScope.All, PerGroup, cts.Token);
+            var scope = PickMode switch
+            {
+                ObjectType.Group => SearchScope.Groups,
+                ObjectType.User => SearchScope.Users,
+                ObjectType.Device => SearchScope.Devices,
+                _ => SearchScope.All,
+            };
+            var results = await _search.SearchAsync(query, scope, PerGroup, cts.Token);
             if (cts.IsCancellationRequested) return;
             Apply(results);
         }
@@ -192,7 +220,13 @@ public sealed partial class PaletteViewModel : ObservableObject
         var states = _db.GetAllSyncState().ToDictionary(s => s.Entity);
         int Count(CacheEntity e) => states.TryGetValue(e, out var s) ? s.RowCount : 0;
         var last = states.Values.Select(s => s.LastSync).Max();
-        FooterText = $"Type to search {Count(CacheEntity.Users):N0} users, {Count(CacheEntity.ManagedDevices):N0} devices, {Count(CacheEntity.Groups):N0} groups · last synced {Age(last)}";
+        FooterText = PickMode switch
+        {
+            ObjectType.Group => $"Type to choose from {Count(CacheEntity.Groups):N0} groups",
+            ObjectType.User => $"Type to choose from {Count(CacheEntity.Users):N0} users",
+            ObjectType.Device => $"Type to choose from {Count(CacheEntity.ManagedDevices):N0} devices",
+            _ => $"Type to search {Count(CacheEntity.Users):N0} users, {Count(CacheEntity.ManagedDevices):N0} devices, {Count(CacheEntity.Groups):N0} groups · last synced {Age(last)}",
+        };
         RefreshPartialWarning();
     }
 
