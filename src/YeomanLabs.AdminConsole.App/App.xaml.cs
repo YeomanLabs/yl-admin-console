@@ -71,7 +71,15 @@ public sealed partial class App : Application
         _logger.LogInformation("Admin Console {Version} starting", typeof(App).Assembly.GetName().Version);
 
         // CLAUDE.md: apply the theme before the window is shown. UX §1: coral is the accent for primary actions and focus.
+        // The saved appearance, before any window exists: applying it later would flash the wrong theme.
+        var settings = _host.Services.GetRequiredService<UserSettingsStore>().Load();
         ApplicationThemeManager.Apply(ApplicationTheme.Dark, Wpf.Ui.Controls.WindowBackdropType.None, false);
+        AppearanceService.ApplyAll(settings);
+
+        // The sync loop reads its intervals each cycle, so the saved choice takes effect from the first one.
+        var syncOptions = _host.Services.GetRequiredService<SyncOptions>();
+        syncOptions.DeltaIntervalSeconds = settings.DeltaIntervalSeconds;
+        syncOptions.DeviceRefreshIntervalSeconds = settings.DeviceRefreshIntervalSeconds;
         ApplicationAccentColorManager.Apply(System.Windows.Media.Color.FromRgb(0xFF, 0x69, 0x50), ApplicationTheme.Dark, false);
 
         var window = _host.Services.GetRequiredService<MainWindow>();
@@ -151,6 +159,7 @@ public sealed partial class App : Application
                 sp.GetRequiredService<ActionLog>(),
                 sp.GetRequiredService<TenantContext>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
+        services.AddSingleton(sp => new UserSettingsStore(UserSettingsStore.DefaultPath, sp.GetRequiredService<ILogger<UserSettingsStore>>()));
         services.AddSingleton<UserProvisioningService>();
         services.AddSingleton(sp => new TemplateService(
             TemplateService.DefaultDirectory,

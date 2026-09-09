@@ -122,6 +122,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         var page = _services.GetRequiredService(item.PageViewModelType);
         if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
+        if (page is SettingsPageViewModel settings) settings.SignedOut = ReturnToSignIn;
         if (page is PlaceholderPageViewModel placeholder)
         {
             placeholder.Title = item.Title;
@@ -502,6 +503,21 @@ public sealed partial class ShellViewModel : ObservableObject
             _signInPage.ShowFailure(ex);
             CurrentPage = _signInPage;
         }
+    }
+
+    /// <summary>
+    /// Back to the sign-in page after a sign-out (UX §12 Account). The tabs go with it: every page behind them was
+    /// built for an account that is no longer signed in.
+    /// </summary>
+    private void ReturnToSignIn()
+    {
+        Tabs.Clear();
+        _tenant.Clear();
+        _signInPage ??= new SignInPageViewModel(BeginInteractiveSignInAsync);
+        _scopesExplained = false;
+        CurrentPage = _signInPage;
+        HighlightRail(null);
+        RefreshTenantHeader();
     }
 
     /// <summary>Sign-in button: explain the read scopes first (once per process), then prompt.</summary>

@@ -18,6 +18,8 @@
     <conv:NullToCollapsedConverter x:Key="NullToCollapsed" />
     <conv:NullToBoolConverter x:Key="NullToBool" />
     <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+    <conv:SecondsConverter x:Key="Seconds" />
+    <conv:InverseBoolConverter x:Key="InverseBool" />
     <conv:CountToVisibilityConverter x:Key="ZeroToVisible" />
     <conv:CountToVisibilityConverter x:Key="NonZeroToVisible" WhenNonZero="True" />
 </ResourceDictionary>
