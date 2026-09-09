@@ -64,14 +64,17 @@ public sealed class AuthService : IAuthService
         return SetAccount(result.Account);
     }
 
-    public async Task<string> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken ct)
+    public async Task<string> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken ct, bool forceRefresh = false)
     {
         var pca = await GetPcaAsync(ct).ConfigureAwait(false);
         var account = await ResolveAccountAsync(pca, ct).ConfigureAwait(false)
             ?? throw new SignInRequiredException("No signed-in account.");
         try
         {
-            var result = await pca.AcquireTokenSilent(scopes, account).ExecuteAsync(ct).ConfigureAwait(false);
+            var result = await pca.AcquireTokenSilent(scopes, account)
+                .WithForceRefresh(forceRefresh)
+                .ExecuteAsync(ct)
+                .ConfigureAwait(false);
             SetAccount(result.Account);
             return result.AccessToken;
         }

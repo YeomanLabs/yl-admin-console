@@ -11,8 +11,11 @@ public interface IAuthService
     /// <summary>Silent first; interactive (WAM broker) on <c>MsalUiRequiredException</c>. Safe to call repeatedly.</summary>
     Task<AuthAccount> EnsureSignedInAsync(IReadOnlyList<string> scopes, CancellationToken ct);
 
-    /// <summary>Silent only. Throws <see cref="SignInRequiredException"/> if interaction would be needed.</summary>
-    Task<string> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken ct);
+    /// <summary>
+    /// Silent only. Throws <see cref="SignInRequiredException"/> if interaction would be needed.
+    /// <paramref name="forceRefresh"/> bypasses the cached access token (used once after a 401).
+    /// </summary>
+    Task<string> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken ct, bool forceRefresh = false);
 
     /// <summary>True if the cached access token's <c>scp</c> claim contains <paramref name="scope"/>. Never interactive.</summary>
     Task<bool> HasScopeAsync(string scope, CancellationToken ct);
