@@ -65,17 +65,23 @@ The Core project is plain .NET and testable anywhere. The App project is WPF and
 
 ## Register the app
 
-The console needs its own Entra app registration — one per organisation, made once. The full walkthrough is in
-[docs/08-APP-REGISTRATION.md](docs/08-APP-REGISTRATION.md); the short version:
+The console signs in through an app registration **in the tenant it manages** — one per tenant, created by a script,
+owned by that tenant rather than by us:
 
-1. Create a multi-tenant **public client** registration.
-2. Add the redirect URIs `ms-appx-web://microsoft.aad.brokerplugin/{client-id}`, `http://localhost` and the native
-   client URI.
-3. Add the delegated permissions listed in doc 08 — read scopes, a write tier, and two sensitive ones for revealing
-   BitLocker keys and LAPS passwords.
-4. Grant admin consent.
-5. Put the client id into `src/YeomanLabs.AdminConsole.App/appsettings.json`, or into a gitignored
-   `appsettings.local.json` beside it.
+```powershell
+.\scripts\New-AppRegistration.ps1 -WhatIf   # signs in, resolves every permission, creates nothing
+.\scripts\New-AppRegistration.ps1           # does it, and prints the client ID
+```
+
+It creates a public client with no secret, adds the redirect URIs the Windows broker needs, requests the 22 delegated
+permissions, grants admin consent, and prints the client ID to paste into the console's setup screen — or pass
+`-WriteConfig` and there is nothing to paste. Undoing it is the single `Remove-MgApplication` command it prints when
+it finishes.
+
+Per-tenant rather than one shared multi-tenant app is deliberate: the app object belongs to the client, so it survives
+their security review, and nothing we own holds standing access to their directory. The full detail, the permission
+list, the roles an admin needs, and the manual fallback are in
+[docs/08-APP-REGISTRATION.md](docs/08-APP-REGISTRATION.md).
 
 Read permissions are requested at sign-in. Write permissions are requested the first time you change something, and the
 two sensitive ones only when you click a reveal button.
@@ -91,6 +97,7 @@ Everything is under `%LOCALAPPDATA%\YeomanLabs\AdminConsole`:
 | `templates\users\*.json` | User templates. Hand-editable. |
 | `templates\offboarding\*.json` | Offboarding profiles. Hand-editable. |
 | `settings.json` | Sync intervals, theme, density. |
+| `tenant.json` | Which app registration this installation signs in with. |
 | `logs\*.log` | Application logs. Object IDs and error text, never tokens or passwords. |
 | `msal.cache` | The token cache, protected by DPAPI. |
 

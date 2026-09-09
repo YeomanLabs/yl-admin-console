@@ -162,3 +162,28 @@ giving the *secondary* line an explicit brush had made it brighter than the prim
 Pinned on the row styles (`ListRowButton`, `PaletteRowButton`) rather than per-TextBlock, so it holds for anything
 placed in a row later. An app-wide implicit `TextBlock` style was considered and rejected: a style setter beats an
 inherited value, so it would have overridden `YlOnNavy` on the navy chrome and undone the M8.4 light-theme fix.
+
+## M10 — A registration per tenant, not one shared multi-tenant app
+
+Andrew asked whether the console could be made tenant-agnostic with a script doing the Entra side. It already was
+tenant-agnostic where it counts — the registration is multi-tenant and the authority is the `organizations` endpoint —
+so the real question was which model to set clients up with.
+
+**Chosen: one registration per tenant, created by a script, owned by that tenant.** The alternative was every client
+consenting to one multi-tenant app owned by YeomanLabs. That is less setup and it means YeomanLabs owns an object
+holding `User.ReadWrite.All`, `UserAuthenticationMethod.ReadWrite.All` and `BitlockerKey.Read.All` against every
+client directory at once — a standing cross-tenant blast radius, a consent screen that shows an unverified-publisher
+warning until Partner Center clears, and something a decent security review should refuse. Per-tenant, revoking a
+client's access is deleting one object in their own directory.
+
+Two things followed from the choice:
+
+The client ID could no longer live in the shipped `appsettings.json`. It is per-installation, so it belongs beside
+`settings.json` in `%LOCALAPPDATA%` — the same reasoning that moved the sync and theme settings there in M8.1. An
+update overwrites the install directory, and it may be read-only under Program Files.
+
+The script and `Scopes.cs` are now two copies of the same list, which will drift. Generating one from the other would
+mean either the script fetching a list from something it cannot reach, or a build step emitting PowerShell. A test
+that parses the script and compares is duller and catches the same mistake — and the mistake it catches is expensive:
+drift shows up as a consent failure on a client's first write, in their tenant, long after anyone would connect it to
+the edit that caused it.
