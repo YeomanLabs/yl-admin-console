@@ -31,7 +31,7 @@ public sealed class RetireDevicesStep : IOffboardingStep
 
     public async Task<StepPreview> PreviewAsync(OffboardingContext ctx, CancellationToken ct)
     {
-        var devices = await ReadDevicesAsync(ctx.UserId, ct).ConfigureAwait(false);
+        var devices = await ReadDevicesAsync(ctx, ct).ConfigureAwait(false);
         ctx.Set(ScratchKey, devices.ToList());
 
         if (devices.Count == 0) return StepPreview.NoOp(Id, "No Intune devices have this user as their primary user");
@@ -67,10 +67,15 @@ public sealed class RetireDevicesStep : IOffboardingStep
             : StepResult.Success(Id, message);
     }
 
-    /// <summary>Live: a device enrolled since the last managedDevices refresh must not be missed.</summary>
-    private async Task<IReadOnlyList<ManagedDevice>> ReadDevicesAsync(string userId, CancellationToken ct)
+    /// <summary>
+    /// Live: a device enrolled since the last managedDevices refresh must not be missed. Filtered on
+    /// <c>userPrincipalName</c>, not <c>userId</c> — Intune answers 400 "Unsupported parameter found in query" for a
+    /// userId filter, with or without a <c>$select</c> (verified on the dev tenant).
+    /// </summary>
+    private async Task<IReadOnlyList<ManagedDevice>> ReadDevicesAsync(OffboardingContext ctx, CancellationToken ct)
     {
-        var page = await _graph.GetPageAsync($"deviceManagement/managedDevices?$filter=userId eq '{userId}'&$select={GraphSelects.ManagedDevice}", ct).ConfigureAwait(false);
+        var upn = ctx.User.UserPrincipalName.Replace("'", "''", StringComparison.Ordinal);
+        var page = await _graph.GetPageAsync($"deviceManagement/managedDevices?$filter=userPrincipalName eq '{upn}'&$select={GraphSelects.ManagedDevice}", ct).ConfigureAwait(false);
         return page.Items.Select(ManagedDevice.FromJson).ToList();
     }
 

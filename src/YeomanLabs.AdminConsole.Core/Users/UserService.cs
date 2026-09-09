@@ -1,4 +1,4 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.Core.Auth;
@@ -39,6 +39,20 @@ public sealed partial class UserService
 
     /// <summary>Cache only; never touches Graph. Null when the user is not indexed yet.</summary>
     public DirectoryUser? GetCached(string id) => _db.GetUser(id);
+
+    /// <summary>
+    /// One live read, straight from Graph. Offboarding previews use this rather than the cache: a stale
+    /// <c>accountEnabled</c> or licence list would make the preview describe a change that is not the one about to
+    /// happen (doc 06).
+    /// </summary>
+    public async Task<DirectoryUser?> ReadFreshAsync(string id, CancellationToken ct)
+    {
+        using var doc = await _graph.SendAsync(HttpMethod.Get, $"users/{id}?$select={GraphSelects.User}", null, ct).ConfigureAwait(false);
+        if (doc is null) return null;
+        var user = DirectoryUser.FromJson(doc.RootElement);
+        _db.Write(w => w.UpsertUser(user));
+        return user;
+    }
 
     /// <summary>Cache only: Intune devices where the user is primary, and cached group memberships.</summary>
     public IReadOnlyList<ManagedDevice> GetCachedDevices(string userId) => _db.GetManagedDevicesForUser(userId);

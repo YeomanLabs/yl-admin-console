@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.App.Services;
 using YeomanLabs.AdminConsole.App.ViewModels.Dialogs;
+using YeomanLabs.AdminConsole.Core.Offboarding;
 using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Groups;
@@ -36,11 +37,14 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private readonly GroupService _groupService;
     private readonly ToastService _toasts;
     private readonly IDialogService _dialogs;
+    private readonly OffboardingRunner _offboarding;
+    private readonly OffboardingProfileStore _profiles;
+    private readonly ActionLog _actions;
     private readonly ILogger<UserDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, ILogger<UserDetailViewModel> logger)
     {
         _users = users;
         _db = db;
@@ -52,6 +56,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
         _dialogs = dialogs;
+        _offboarding = offboarding;
+        _profiles = profiles;
+        _actions = actions;
         _logger = logger;
     }
 
@@ -70,6 +77,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     [NotifyPropertyChangedFor(nameof(Initials))]
     [NotifyPropertyChangedFor(nameof(IsSynced))]
     [NotifyPropertyChangedFor(nameof(CanRunActions))]
+    [NotifyPropertyChangedFor(nameof(CanOffboard))]
     private DirectoryUser? _user;
 
     public bool HasUser => User is not null;
@@ -107,14 +115,17 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     [ObservableProperty]
     private string? _authDeleteReason;
 
-    /// <summary>Offboarding is the one header action still unbuilt (M6); the others became live in M5.5.</summary>
+    /// <summary>Null once a user is loaded: offboarding needs a target, not a permission the run itself asks for.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanOffboard))]
     private string? _offboardDisabledReason;
+
+    public bool CanOffboard => HasUser && OffboardDisabledReason is null;
 
     private void RecomputeReasons()
     {
         ActionsDisabledReason = GreyRule.Reason(_permissions, [Capabilities.ResetPassword, Capabilities.RevokeSessions], null);
-        OffboardDisabledReason = "Offboarding arrives in M6";
+        OffboardDisabledReason = null;
         AuthDeleteReason = GreyRule.Reason(_permissions, Capabilities.DeleteAuthMethod, null);
         foreach (var row in AuthMethods) row.BlockedReason = AuthDeleteReason;
     }
@@ -627,6 +638,41 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
         _toasts.Show(result.Outcome.Summary);
     }
+
+    /// <summary>
+    /// Offboard (UX §4 header, UX §8). The dialog reads the user live rather than from the cache, because a stale
+    /// account state would make the preview describe a change that is not the one about to happen.
+    /// </summary>
+    [RelayCommand]
+    private async Task OffboardAsync()
+    {
+        if (User is null) return;
+
+        DirectoryUser target;
+        try
+        {
+            target = await _users.ReadFreshAsync(Id, CancellationToken.None) ?? User;
+        }
+        catch (GraphException ex)
+        {
+            _logger.LogWarning("Could not re-read {UserId} before offboarding: {Code}", Id, ex.ErrorCode);
+            _toasts.Show(GraphErrorText.Friendly(ex));
+            return;
+        }
+
+        var dialog = new OffboardDialogViewModel(target, _offboarding, _profiles, _permissions, _consent, _actions, _tenant, _logger)
+        {
+            PickDelegate = PickPerson,
+        };
+
+        await dialog.RefreshPreviewAsync();
+        await _dialogs.ShowAsync(dialog);
+        RefreshFromCache();
+        await RefreshAsync(CancellationToken.None);
+    }
+
+    /// <summary>Set by the shell: opens the palette restricted to users and calls back with the pick.</summary>
+    public Action<Action<PersonRef>>? PickPerson { get; set; }
 
     // ---- Devices tab (UX §4 tab 3) ---------------------------------------------------------------------------------
 

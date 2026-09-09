@@ -273,11 +273,13 @@ public sealed partial class ShellViewModel : ObservableObject
         if (!IsSessionReady || Palette is null) return;
         // Ctrl+K is always a plain search, so drop any picker the admin abandoned with Esc.
         _pendingGroupPick = null;
+        _pendingPersonPick = null;
         if (Palette.IsOpen) Palette.IsOpen = false;
         Palette.Open();
     }
 
     private Func<DirectoryGroup, Task>? _pendingGroupPick;
+    private Action<PersonRef>? _pendingPersonPick;
 
     /// <summary>Opens the palette restricted to groups and hands the pick to <paramref name="onPicked"/> (UX §4: group picker).</summary>
     private void OpenGroupPicker(Func<DirectoryGroup, Task> onPicked)
@@ -287,9 +289,26 @@ public sealed partial class ShellViewModel : ObservableObject
         Palette.OpenPicker(ObjectType.Group, "Choose a group to add this user to");
     }
 
+    /// <summary>Opens the palette restricted to users and hands the pick back (UX §8: the offboarding delegate).</summary>
+    private void OpenPersonPicker(Action<PersonRef> onPicked)
+    {
+        if (Palette is null) return;
+        _pendingPersonPick = onPicked;
+        Palette.OpenPicker(ObjectType.User, "Choose who inherits ownership and access");
+    }
+
     private void OnPaletteChosen(object? sender, PaletteChoice choice)
     {
         var hit = choice.Hit;
+
+        if (_pendingPersonPick is { } personPick)
+        {
+            _pendingPersonPick = null;
+            if (hit.ObjectType != ObjectType.User) return;
+            var picked = _services.GetRequiredService<CacheDb>().GetUser(hit.Id);
+            if (picked is not null) personPick(new PersonRef(picked.Id, picked.DisplayName, picked.UserPrincipalName));
+            return;
+        }
 
         if (_pendingGroupPick is { } pick)
         {
@@ -322,6 +341,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 var user = _services.GetRequiredService<UserDetailViewModel>();
                 user.OpenObject = OpenObjectFromPage;
                 user.PickGroup = OpenGroupPicker;
+                user.PickPerson = OpenPersonPicker;
                 user.Start(id);
                 return user;
             case ObjectType.Device:
@@ -357,7 +377,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 NewUser();
                 break;
             case PaletteActions.Offboard:
-                ShowStatusMessage("Offboarding arrives in M6.");
+                Offboard();
                 break;
             case PaletteActions.Settings:
                 OpenSettings();
@@ -366,6 +386,25 @@ public sealed partial class ShellViewModel : ObservableObject
                 _logger.LogWarning("Unknown palette action {Id}", id);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Ctrl+Shift+O and the palette's "Offboard user…". On a user page it offboards that user; anywhere else it opens
+    /// the palette to pick one first, because offboarding without naming the target is not an action anyone wants.
+    /// </summary>
+    [RelayCommand]
+    private void Offboard()
+    {
+        if (CurrentPage is UserDetailViewModel user)
+        {
+            user.OffboardCommand.Execute(null);
+            return;
+        }
+
+        if (Palette is null) return;
+        _pendingPersonPick = person => OpenObjectFromPage(ObjectType.User, person.Id, person.Label);
+        Palette.OpenPicker(ObjectType.User, "Choose the user to offboard");
+        ShowStatusMessage("Choose a user, then press Ctrl+Shift+O on their page.");
     }
 
     /// <summary>Ctrl+N (M7).</summary>

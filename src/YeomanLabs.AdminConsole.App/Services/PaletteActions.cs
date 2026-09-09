@@ -1,4 +1,4 @@
-using YeomanLabs.AdminConsole.Core.Search;
+﻿using YeomanLabs.AdminConsole.Core.Search;
 
 namespace YeomanLabs.AdminConsole.App.Services;
 
@@ -14,7 +14,7 @@ public static class PaletteActions
     [
         new SearchAction { Id = SyncNow, Title = "Sync now", Aliases = ["refresh", "delta"], Description = "Force a delta sync (Ctrl+Shift+S)" },
         new SearchAction { Id = NewUser, Title = "New user from template", Aliases = ["new user", "create user", "onboard"], Description = "Ctrl+N" },
-        new SearchAction { Id = Offboard, Title = "Offboard user…", Aliases = ["decom", "leaver", "terminate"], Description = "Run the offboarding checklist" },
+        new SearchAction { Id = Offboard, Title = "Offboard user…", Aliases = ["decom", "leaver", "terminate"], Description = "Run the offboarding checklist (Ctrl+Shift+O)" },
         new SearchAction { Id = Settings, Title = "Settings", Aliases = ["preferences", "options", "permissions"], Description = "Ctrl+," },
     ];
 }

@@ -348,6 +348,39 @@ public sealed class OffboardingStepTests : IDisposable
         preview.Reason.Should().Contain("cannot be undone");
     }
 
+    [Fact]
+    public async Task RetireDevices_FiltersOnUserPrincipalName_BecauseIntuneRejectsAUserIdFilter()
+    {
+        // Verified on the dev tenant: $filter=userId eq '...' answers 400 "Unsupported parameter found in query",
+        // with or without a $select. The UPN filter is accepted.
+        var step = new RetireDevicesStep(_devices, _graph);
+        _handler.Enqueue(HttpStatusCode.OK, """{"value":[]}""");
+
+        await step.PreviewAsync(Context(), CancellationToken.None);
+
+        var query = Uri.UnescapeDataString(_handler.Requests[0].Uri.Query);
+        query.Should().Contain("$filter=userPrincipalName eq 'ada@contoso.com'");
+        query.Should().NotContain("userId eq");
+    }
+
+    [Fact]
+    public async Task RetireDevices_APreviewThatIntuneRefuses_ReadsAsOneSentence_NotAJsonBlob()
+    {
+        // The deviceManagement endpoints answer with their own error shape, which carried the whole request URL into
+        // the reason the admin was shown.
+        var step = new RetireDevicesStep(_devices, _graph);
+        _handler.Enqueue(HttpStatusCode.BadRequest, """
+            {"_version":3,"Message":"Unsupported parameter found in query - Operation ID (for customer support): 00000000-0000-0000-0000-000000000000 - Url: https://example.invalid/very/long","CustomApiErrorPhrase":""}
+            """);
+
+        var runner = new OffboardingRunner([step], NullLogger<OffboardingRunner>.Instance);
+        var preview = (await runner.PreviewAsync(Context(), [step.Id], CancellationToken.None)).Single();
+
+        preview.Failed.Should().BeTrue();
+        preview.Reason.Should().Be("Intune refused the request: Unsupported parameter found in query.");
+        preview.Reason.Should().NotContain("Operation ID");
+    }
+
     // ---- 17. update-attributes --------------------------------------------------------------------------------------
 
     [Fact]

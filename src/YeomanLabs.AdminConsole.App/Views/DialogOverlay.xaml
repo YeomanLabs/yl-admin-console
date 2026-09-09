@@ -95,6 +95,145 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </DataTemplate>
+        <!-- Offboard (UX §8): one dialog, three phases. The checklist becomes the live log becomes the summary. -->
+        <DataTemplate DataType="{x:Type dlg:OffboardStepRow}">
+            <Border Padding="8,6" Margin="0,2,0,0" CornerRadius="4"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox Grid.Column="0" VerticalAlignment="Top" Margin="0,2,8,0"
+                              IsChecked="{Binding IsEnabled}" IsEnabled="{Binding CanToggle}"
+                              AutomationProperties.Name="{Binding Title}" />
+
+                    <StackPanel Grid.Column="1">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Glyph}" FontFamily="{StaticResource YlMono}" Margin="0,0,6,0" VerticalAlignment="Center"
+                                       Visibility="{Binding HasRun, Converter={StaticResource BoolToVisibility}}" />
+                            <ui:ProgressRing IsIndeterminate="True" Width="12" Height="12" Margin="0,0,6,0" VerticalAlignment="Center"
+                                             Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <Border Margin="6,0,0,0" Padding="5,1" CornerRadius="3" VerticalAlignment="Center"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                                    Visibility="{Binding HasSurfaceLabel, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock Text="{Binding SurfaceLabel}" FontSize="10" Opacity="0.8" />
+                            </Border>
+                            <TextBlock Text="{Binding DurationText}" FontSize="11" Opacity="0.5" Margin="8,0,0,0" VerticalAlignment="Center"
+                                       Visibility="{Binding HasDuration, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+
+                        <TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Visibility="{Binding HasSummary, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding ResultMessage}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Visibility="{Binding HasResultMessage, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding Reason}" FontSize="11" Opacity="0.55" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Visibility="{Binding HasReason, Converter={StaticResource BoolToVisibility}}" />
+
+                        <ItemsControl ItemsSource="{Binding Details}" Margin="0,3,0,0"
+                                      Visibility="{Binding IsEnabled, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="10,1,0,0" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Expander Header="Details" Margin="0,4,0,0" FontSize="11"
+                                  Visibility="{Binding HasErrorDetails, Converter={StaticResource BoolToVisibility}}">
+                            <TextBox Text="{Binding ErrorDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="140"
+                                     FontFamily="{StaticResource YlMono}" FontSize="11" VerticalScrollBarVisibility="Auto"
+                                     Background="Transparent" BorderThickness="0" />
+                        </Expander>
+                    </StackPanel>
+
+                    <ui:Button Grid.Column="2" Content="Retry" Padding="8,2" VerticalAlignment="Top"
+                               Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl, AncestorLevel=2}}"
+                               CommandParameter="{Binding}"
+                               Visibility="{Binding CanRetry, Converter={StaticResource BoolToVisibility}}"
+                               AutomationProperties.Name="Retry this step" />
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="{x:Type dlg:OffboardDialogViewModel}">
+            <StackPanel>
+                <!-- Phase 1 chrome: profile, delegate. Hidden once the run starts. -->
+                <Grid Margin="0,4,0,8" Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Profile" FontSize="12" Opacity="0.7" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ComboBox MinWidth="200" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
+                                  DisplayMemberPath="Name" AutomationProperties.Name="Offboarding profile" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <TextBlock Text="Delegate" FontSize="12" Opacity="0.7" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Text="{Binding DelegateLabel}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <ui:Button Content="Choose…" Padding="8,2" Command="{Binding ChooseDelegateCommand}" AutomationProperties.Name="Choose a delegate" />
+                        <ui:Button Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent" Padding="6,2" Margin="4,0,0,0"
+                                   Command="{Binding ClearDelegateCommand}" ToolTip="Clear the delegate" AutomationProperties.Name="Clear the delegate"
+                                   Visibility="{Binding ChosenDelegate, Converter={StaticResource NullToCollapsed}}" />
+                    </StackPanel>
+                </Grid>
+
+                <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,0,0,8"
+                            IsOpen="{Binding HasProfileError, Mode=OneWay}" Message="{Binding ProfileError}" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
+                            Visibility="{Binding IsPreviewing, Converter={StaticResource BoolToVisibility}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="0,0,8,0" />
+                    <TextBlock Text="Working out what each step would change…" FontSize="12" Opacity="0.7" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding Rows}" />
+                </ScrollViewer>
+
+                <TextBlock Text="{Binding SummaryText}" FontWeight="SemiBold" Margin="0,10,0,0"
+                           Visibility="{Binding HasSummaryText, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Visibility="{Binding StatusText, Converter={StaticResource NullToCollapsed}}" />
+
+                <!-- Footer: this dialog draws its own, because "Run" must not close it. -->
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}">
+                        <ui:TextBox MinWidth="160" PlaceholderText="Save these as…" Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                    AutomationProperties.Name="New profile name" />
+                        <ui:Button Content="Save profile" Margin="6,0,0,0" Command="{Binding SaveProfileCommand}" AutomationProperties.Name="Save profile" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <ui:Button Content="Copy log" Margin="0,0,8,0" Command="{Binding CopyLogCommand}"
+                                   Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}"
+                                   AutomationProperties.Name="Copy the log" />
+                        <ui:Button Content="Undo" Margin="0,0,8,0" Command="{Binding UndoCommand}" IsEnabled="{Binding CanUndoRun}"
+                                   Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}"
+                                   AutomationProperties.Name="Undo the reversible steps" />
+                        <ui:Button Content="Cancel" Margin="0,0,8,0" Command="{Binding CloseCommand}"
+                                   Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Content="Cancel run" Margin="0,0,8,0" Command="{Binding CancelRunCommand}"
+                                   Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}"
+                                   AutomationProperties.Name="Cancel the run" />
+                        <ui:Button Content="{Binding RunLabel}" Appearance="Danger" Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}"
+                                   Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}"
+                                   AutomationProperties.Name="Run the offboarding" />
+                        <ui:Button Content="Close" Appearance="Primary" Command="{Binding CloseCommand}"
+                                   Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid>
@@ -105,7 +244,7 @@
             </Border.InputBindings>
         </Border>
 
-        <Border Width="520" MaxHeight="620" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="20,18"
+        <Border Width="{Binding Current.Width, FallbackValue=520}" MaxHeight="700" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="20,18"
                 Background="{DynamicResource ApplicationBackgroundBrush}"
                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
             <Border.InputBindings>
@@ -150,7 +289,8 @@
                     </StackPanel>
                 </ScrollViewer>
 
-                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0"
+                            Visibility="{Binding ShowFooter, Converter={StaticResource BoolToVisibility}}">
                     <ui:Button Content="{Binding CancelText}" Margin="0,0,8,0" Command="{Binding CancelCommand}"
                                Visibility="{Binding ShowCancel, Converter={StaticResource BoolToVisibility}}" />
                     <ui:Button Content="{Binding ConfirmText}" Command="{Binding ConfirmCommand}" IsEnabled="{Binding CanConfirm}">

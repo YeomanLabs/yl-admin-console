@@ -1,4 +1,4 @@
-namespace YeomanLabs.AdminConsole.Core.Graph;
+﻿namespace YeomanLabs.AdminConsole.Core.Graph;
 
 /// <summary>
 /// UX §7: Graph error → friendly text. Extend as errors are encountered in the field. The raw error always stays
@@ -20,6 +20,16 @@ public static class GraphErrorText
         }
 
         var message = ex.Message ?? string.Empty;
+
+        // Intune's message carries a support operation id and the whole request URL after a dash. The first sentence
+        // is the only part an admin can act on; the rest stays behind the Details expander.
+        if (ex.ErrorCode == GraphException.IntuneErrorCode)
+        {
+            var cut = message.IndexOf(" - Operation ID", StringComparison.OrdinalIgnoreCase);
+            var head = cut > 0 ? message[..cut] : message;
+            return head.Length == 0 ? "Intune refused the request." : $"Intune refused the request: {head}.";
+        }
+
         switch (ex.ErrorCode)
         {
             case "Request_ResourceNotFound":

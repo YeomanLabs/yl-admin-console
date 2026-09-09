@@ -23,6 +23,8 @@ using YeomanLabs.AdminConsole.Core.Licensing;
 using YeomanLabs.AdminConsole.Core.Groups;
 using YeomanLabs.AdminConsole.Core.Search;
 using YeomanLabs.AdminConsole.Core.Sync;
+using YeomanLabs.AdminConsole.Core.Offboarding;
+using YeomanLabs.AdminConsole.Core.Offboarding.Steps;
 using YeomanLabs.AdminConsole.Core.Users;
 
 namespace YeomanLabs.AdminConsole.App;
@@ -135,6 +137,22 @@ public sealed partial class App : Application
         services.AddSingleton<GroupService>();
         services.AddSingleton<LicenseService>();
         services.AddSingleton<PermissionChecker>();
+
+        // Offboarding (M6). The catalog is built per resolve because it holds the per-tenant services, which only
+        // exist after sign-in; the runner itself is stateless.
+        services.AddSingleton(sp => new OffboardingRunner(
+            OffboardingCatalog.Build(
+                sp.GetRequiredService<UserService>(),
+                sp.GetRequiredService<GroupService>(),
+                sp.GetRequiredService<LicenseService>(),
+                sp.GetRequiredService<DeviceService>(),
+                sp.GetRequiredService<GraphClient>(),
+                sp.GetRequiredService<ActionLog>(),
+                sp.GetRequiredService<TenantContext>()),
+            sp.GetRequiredService<ILogger<OffboardingRunner>>()));
+        services.AddSingleton(sp => new OffboardingProfileStore(
+            OffboardingProfileStore.DefaultDirectory,
+            sp.GetRequiredService<ILogger<OffboardingProfileStore>>()));
         services.AddSingleton<ConsentService>();
         services.AddHostedService<SyncHostedService>();
 

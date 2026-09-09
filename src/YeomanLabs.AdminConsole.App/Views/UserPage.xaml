@@ -376,7 +376,8 @@
                                        ToolTip="{Binding ActionsDisabledReason, TargetNullValue='Set a new password for this user'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
                             <ui:Button Content="Revoke sessions" Command="{Binding RevokeSessionsCommand}" IsEnabled="{Binding CanRunActions}"
                                        ToolTip="{Binding ActionsDisabledReason, TargetNullValue='Sign this user out everywhere'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
-                            <ui:Button Content="Offboard…" Appearance="Primary" IsEnabled="False" ToolTip="{Binding OffboardDisabledReason}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
+                            <ui:Button Content="Offboard…" Appearance="Primary" Command="{Binding OffboardCommand}" IsEnabled="{Binding CanOffboard}"
+                                       ToolTip="{Binding OffboardDisabledReason, TargetNullValue='Run the offboarding checklist (Ctrl+Shift+O)'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
                             <ui:Button Icon="{ui:SymbolIcon MoreHorizontal24}" IsEnabled="False" ToolTip="More actions" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="More actions" />
                             <ui:Button Icon="{ui:SymbolIcon PanelRight24}" Command="{Binding ToggleSidebarCommand}" ToolTip="Toggle quick facts" AutomationProperties.Name="Toggle quick facts" Margin="8,0,0,0" />
                         </StackPanel>

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels.Dialogs;
@@ -31,6 +31,15 @@ public abstract partial class DialogViewModelBase : ObservableObject
     public virtual bool CanConfirm => true;
 
     public virtual bool ShowCancel => true;
+
+    /// <summary>
+    /// False when the dialog draws its own buttons. The offboard dialog does: its footer changes with the phase, and
+    /// "Run 11 steps" must not close the dialog the way a confirm does.
+    /// </summary>
+    public virtual bool ShowFooter => true;
+
+    /// <summary>Dialog width in pixels. A step checklist needs more room than a confirm.</summary>
+    public virtual double Width => 520;
 
     public bool HasMessage => Message.Length > 0;
 

@@ -1,4 +1,4 @@
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text.Json;
 
 namespace YeomanLabs.AdminConsole.Core.Graph;
@@ -10,6 +10,9 @@ namespace YeomanLabs.AdminConsole.Core.Graph;
 public sealed class GraphException : Exception
 {
     public const string NetworkErrorCode = "NetworkError";
+
+    /// <summary>Stand-in code for the Intune service endpoints, whose error bodies carry no code at all.</summary>
+    public const string IntuneErrorCode = "IntuneServiceError";
 
     public GraphException(
         int statusCode,
@@ -109,7 +112,11 @@ public sealed class GraphException : Exception
             using var doc = JsonDocument.Parse(body);
             if (!doc.RootElement.TryGetProperty("error", out var error) || error.ValueKind != JsonValueKind.Object)
             {
-                return (null, null, null, null);
+                // The Intune service endpoints behind deviceManagement answer with their own shape:
+                // { "_version": 3, "Message": "...", "CustomApiErrorPhrase": "", ... }. Without this the whole JSON
+                // blob ends up as the message an admin reads.
+                var intune = GetString(doc.RootElement, "Message");
+                return intune is null ? (null, null, null, null) : (IntuneErrorCode, intune, null, null);
             }
 
             string? requestId = null, clientRequestId = null;
