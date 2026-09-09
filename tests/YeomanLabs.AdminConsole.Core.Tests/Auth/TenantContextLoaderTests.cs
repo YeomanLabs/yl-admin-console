@@ -58,8 +58,8 @@ public sealed class TenantContextLoaderTests
         context.HasP1.Should().BeTrue();
         context.HasP2.Should().BeFalse("the P2 plan is Deleted, not Enabled");
         context.Roles.Should().HaveCount(3);
-        context.Roles.Select(r => r.DisplayName).Should().Equal("Global Administrator", "Intune Administrator", "Custom Role",
-            "Graph blanks displayName without Directory.Read.All, so known template IDs map to local names");
+        // Graph blanks displayName without Directory.Read.All, so known template IDs map to local names.
+        context.Roles.Select(r => r.DisplayName).Should().Equal("Global Administrator", "Intune Administrator", "Custom Role");
         context.IsGlobalAdmin.Should().BeTrue();
         context.HasRole(DirectoryRoleRef.IntuneAdministrator).Should().BeTrue();
         context.HasRole(DirectoryRoleRef.UserAdministrator).Should().BeFalse();
