@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -119,6 +119,25 @@ public sealed class UserServiceWriteTests : IDisposable
 
         r.Success.Should().BeTrue("usageLocation is in the always-writable list (doc 05)");
         _handler.Requests[0].Body.Should().Be("""{"usageLocation":"GB"}""");
+    }
+
+    [Fact]
+    public async Task Update_ClearingAProperty_SendsNull_NotAnEmptyString()
+    {
+        // Found by an offboarding run against the live tenant: the stamp step cleared officeLocation and department
+        // with "", Graph accepted the first and rejected the second with "Invalid value specified for property
+        // 'department'". Empty is not "no value" to Graph; null is. Same bug would hit an admin clearing a field on
+        // the Identity tab.
+        SeedUser();
+        _handler
+            .Enqueue(HttpStatusCode.NoContent)
+            .Enqueue(HttpStatusCode.OK, """{"id":"u-1","displayName":"Ada Lovelace","userPrincipalName":"ada@contoso.com","accountEnabled":true,"assignedLicenses":[]}""");
+
+        var r = await _sut.UpdateAsync(Id, "jobTitle", string.Empty, CancellationToken.None);
+
+        r.Success.Should().BeTrue();
+        _handler.Requests[0].Body.Should().Be("""{"jobTitle":null}""",
+            "an empty string is not how Graph is told to clear a property");
     }
 
     [Fact]

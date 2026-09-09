@@ -136,3 +136,29 @@ real gap, recorded in the backlog.
 Once the picker was visible it turned out to be asking the wrong question. `OpenPersonPicker` hardcoded "Choose who
 inherits ownership and access" — the offboarding delegate's wording — so choosing a new user's manager, or the person
 to snapshot a template from, all asked about inheriting ownership. The prompt is now passed in by whoever opens it.
+
+## M9 — Clearing a directory property sends null, never an empty string
+
+Found by Andrew running a real offboard against a disposable test user. The stamp step cleared `officeLocation` and
+`department` by sending `""`. Graph accepted the first and rejected the second with "Invalid value specified for
+property 'department' of resource 'User'", in the same request sequence — so the inconsistency is Graph's, not ours.
+
+Empty and null mean the same thing for a directory string — no value — but only `null` says so to Graph. `UpdateAsync`
+now normalises an empty string to `null` before building the PATCH body, and the no-op check treats them as equal so
+clearing an already-empty field still sends nothing.
+
+Fixing it in `UserService.UpdateAsync` rather than in the offboarding step's defaults is deliberate: the same bug was
+sitting under the Identity tab, where an admin clearing Department by hand would have hit the identical error.
+
+Verified against the live tenant on the admin's own account: set to a marker, cleared with `""`, read back empty,
+restored. Pinned by a test that asserts the body is `{"jobTitle":null}`.
+
+## M9 — Row and result text is pinned to the primary brush, not inherited
+
+The palette's result names came out darker than the sign-in names beside them — the one word you are reading, hardest
+to read. Same cause as the list rows: a `TextBlock` inside a `Button` inherits the button's dimmed foreground, and
+giving the *secondary* line an explicit brush had made it brighter than the primary, inverting the hierarchy.
+
+Pinned on the row styles (`ListRowButton`, `PaletteRowButton`) rather than per-TextBlock, so it holds for anything
+placed in a row later. An app-wide implicit `TextBlock` style was considered and rejected: a style setter beats an
+inherited value, so it would have overridden `YlOnNavy` on the navy chrome and undone the M8.4 light-theme fix.

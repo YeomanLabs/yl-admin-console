@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
@@ -35,12 +35,17 @@ public sealed partial class UserService
         }
 
         var previous = user is null ? null : ReadProperty(user, propertyName);
-        if (JsonEquals(previous, value))
+        if (JsonEquals(Blank(previous) ? null : previous, Blank(value) ? null : value))
         {
             return WriteOutcome.NoOp($"{friendly} is already set to that value");
         }
 
-        var body = new Dictionary<string, object?> { [propertyName] = value };
+        // Clearing a directory property means sending null. An empty string is not "no value" to Graph: it rejected
+        // department with "Invalid value specified for property 'department'" while accepting the same "" for
+        // officeLocation in the same run, so the inconsistency is Graph's and normalising here is the only safe
+        // reading. This bit the offboarding stamp step and would equally bite an admin clearing a field on the
+        // Identity tab.
+        var body = new Dictionary<string, object?> { [propertyName] = Blank(value) ? null : value };
 
         // The request summary is free text, so ActionLog.Redact (which only walks JSON) cannot clean it. Never put a
         // secret-valued property in it.
@@ -125,6 +130,9 @@ public sealed partial class UserService
             _ => v.GetRawText(),
         };
     }
+
+    /// <summary>Empty and null mean the same thing for a directory string: no value. Only null says so to Graph.</summary>
+    private static bool Blank(object? value) => value is null || (value is string s && s.Length == 0);
 
     private static bool JsonEquals(object? a, object? b)
     {

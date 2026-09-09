@@ -16,6 +16,9 @@
             <Setter Property="Padding" Value="10,0" />
             <Setter Property="Height" Value="32" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <!-- Without this a result row inherits the button's dimmed foreground and the name comes out darker than
+                 the sign-in name beside it — the one word you are actually reading, hardest to read. -->
+            <Setter Property="Foreground" Value="{DynamicResource YlTextPrimary}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Focusable" Value="False" />
