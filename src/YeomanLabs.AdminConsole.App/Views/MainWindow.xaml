@@ -78,6 +78,26 @@
         </Style>
     </ui:FluentWindow.Resources>
 
+    <!-- UX §11 keyboard table. Alt+1..6 nav, Alt+← back, Ctrl+T/W/Tab tabs, Ctrl+K palette, Ctrl+N new user, F5 refresh, Ctrl+Shift+S sync, Ctrl+, settings. -->
+    <ui:FluentWindow.InputBindings>
+        <KeyBinding Modifiers="Ctrl" Key="K" Command="{Binding OpenPaletteCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="N" Command="{Binding NewUserCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="T" Command="{Binding NewTabCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="W" Command="{Binding CloseTabCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="Tab" Command="{Binding NextTabCommand}" />
+        <KeyBinding Modifiers="Ctrl+Shift" Key="Tab" Command="{Binding PreviousTabCommand}" />
+        <KeyBinding Key="F5" Command="{Binding RefreshCommand}" />
+        <KeyBinding Modifiers="Ctrl+Shift" Key="S" Command="{Binding SyncNowCommand}" />
+        <KeyBinding Modifiers="Ctrl" Key="OemComma" Command="{Binding OpenSettingsCommand}" />
+        <KeyBinding Modifiers="Alt" Key="Left" Command="{Binding GoBackCommand}" />
+        <KeyBinding Modifiers="Alt" Key="D1" Command="{Binding NavigateOrdinalCommand}" CommandParameter="1" />
+        <KeyBinding Modifiers="Alt" Key="D2" Command="{Binding NavigateOrdinalCommand}" CommandParameter="2" />
+        <KeyBinding Modifiers="Alt" Key="D3" Command="{Binding NavigateOrdinalCommand}" CommandParameter="3" />
+        <KeyBinding Modifiers="Alt" Key="D4" Command="{Binding NavigateOrdinalCommand}" CommandParameter="4" />
+        <KeyBinding Modifiers="Alt" Key="D5" Command="{Binding NavigateOrdinalCommand}" CommandParameter="5" />
+        <KeyBinding Modifiers="Alt" Key="D6" Command="{Binding NavigateOrdinalCommand}" CommandParameter="6" />
+    </ui:FluentWindow.InputBindings>
+
     <Grid Background="{StaticResource YlNavy}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -145,9 +165,52 @@
                 <ItemsControl ItemsSource="{Binding NavItems}" ItemTemplate="{StaticResource NavRailItem}" Margin="0,4,0,0" />
             </DockPanel>
 
-            <Border Grid.Column="1" Background="{DynamicResource ApplicationBackgroundBrush}" CornerRadius="8,0,0,0" Margin="0,0,0,0">
-                <ContentControl Content="{Binding CurrentPage}" Focusable="False" />
-            </Border>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Tab strip (UX §11: Ctrl+T/W/Tab). Collapsed with a single tab to keep the density. -->
+                <ItemsControl Grid.Row="0" ItemsSource="{Binding Tabs}" Margin="8,0,0,0"
+                              Visibility="{Binding HasMultipleTabs, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type vm:WorkspaceTab}">
+                            <Border x:Name="TabChrome" CornerRadius="6,6,0,0" Padding="12,0,4,0" Height="32" Margin="0,4,2,0"
+                                    Background="Transparent">
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" FocusVisualStyle="{x:Null}"
+                                            Command="{Binding DataContext.SelectTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}" AutomationProperties.Name="{Binding Title}">
+                                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center" MaxWidth="180" TextTrimming="CharacterEllipsis"
+                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                    </Button>
+                                    <Button Background="Transparent" BorderThickness="0" Padding="6,0" Cursor="Hand" FocusVisualStyle="{x:Null}"
+                                            ToolTip="Close tab (Ctrl+W)" AutomationProperties.Name="Close tab"
+                                            Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                            CommandParameter="{Binding}">
+                                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                    </Button>
+                                </StackPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                    <Setter TargetName="TabChrome" Property="Background" Value="{DynamicResource ApplicationBackgroundBrush}" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <Border Grid.Row="1" Background="{DynamicResource ApplicationBackgroundBrush}" CornerRadius="8,0,0,0">
+                    <ContentControl Content="{Binding CurrentPage}" Focusable="False" />
+                </Border>
+            </Grid>
         </Grid>
 
         <!-- Status bar: cache age · last delta · errors · progress (UX §2) -->
@@ -158,6 +221,8 @@
                     <ProgressBar Width="120" Height="6" Minimum="0" Maximum="1" Value="{Binding ProgressFraction, Mode=OneWay}"
                                  Foreground="{StaticResource YlCoral}" VerticalAlignment="Center" />
                 </StackPanel>
+                <TextBlock DockPanel.Dock="Right" Text="{Binding StatusMessage}" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"
+                           Foreground="{StaticResource YlCoral}" Visibility="{Binding StatusMessage, Converter={StaticResource NullToCollapsed}}" />
                 <StackPanel Orientation="Horizontal">
                     <TextBlock Text="{Binding CacheAgeText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" />
                     <TextBlock Text=" · " FontSize="12" Opacity="0.5" VerticalAlignment="Center" />

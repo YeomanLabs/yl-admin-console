@@ -1,3 +1,5 @@
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -13,8 +15,8 @@ using YeomanLabs.AdminConsole.Core.Sync;
 namespace YeomanLabs.AdminConsole.App.ViewModels;
 
 /// <summary>
-/// Root of the UI (UX §2 shell): title bar state, nav rail, content region, status bar, the non-modal error bar, and the
-/// first-run flow (UX §9). One instance per process; page VMs are transient and created through DI when navigated to.
+/// Root of the UI (UX §2 shell): title bar state, nav rail, tabs + content region with per-tab back stacks, status bar,
+/// the non-modal error bar, the first-run flow (UX §9) and the keyboard table (UX §11). One instance per process.
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
@@ -26,6 +28,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private ISyncStatus? _sync;
     private SignInPageViewModel? _signInPage;
     private bool _scopesExplained;
+    private int _statusMessageVersion;
 
     public ShellViewModel(IServiceProvider services, IAuthService auth, TenantContext tenant, TenantContextLoader tenantLoader, ILogger<ShellViewModel> logger)
     {
@@ -46,6 +49,7 @@ public sealed partial class ShellViewModel : ObservableObject
         ];
         SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(PlaceholderPageViewModel));
 
+        Tabs.CollectionChanged += OnTabsChanged;
         _tenant.Changed += (_, _) => RunOnUi(RefreshTenantHeader);
     }
 
@@ -75,9 +79,7 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     private bool _isSessionReady;
 
-    [ObservableProperty]
-    private NavItem? _selectedNav;
-
+    /// <summary>What the content region shows: a first-run page before the session is ready, then the selected tab's page.</summary>
     [ObservableProperty]
     private object? _currentPage;
 
@@ -85,10 +87,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private void Navigate(NavItem item)
     {
         if (!IsSessionReady) return;
-        foreach (var n in NavItems) n.IsSelected = ReferenceEquals(n, item);
-        SettingsItem.IsSelected = ReferenceEquals(SettingsItem, item);
-        SelectedNav = item;
-        SetPage(CreatePage(item));
+        var tab = SelectedTab ?? OpenTab();
+        tab.Navigate(CreatePage(item), item);
+        ShowTab(tab);
         _logger.LogDebug("Navigated to {Nav}", item.Id);
     }
 
@@ -98,6 +99,10 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (int.TryParse(ordinal, out var n) && NavItems.FirstOrDefault(i => i.Ordinal == n) is { } item) Navigate(item);
     }
+
+    /// <summary>Ctrl+, (UX §11).</summary>
+    [RelayCommand]
+    private void OpenSettings() => Navigate(SettingsItem);
 
     private object CreatePage(NavItem item)
     {
@@ -118,10 +123,179 @@ public sealed partial class ShellViewModel : ObservableObject
         return page;
     }
 
-    private void SetPage(object page)
+    private void HighlightRail(NavItem? item)
     {
-        (CurrentPage as IDisposable)?.Dispose();
-        CurrentPage = page;
+        foreach (var n in NavItems) n.IsSelected = ReferenceEquals(n, item);
+        SettingsItem.IsSelected = ReferenceEquals(SettingsItem, item);
+    }
+
+    // ---- tabs + back stack (UX §11: Ctrl+T / Ctrl+W / Ctrl+Tab / Alt+←) ---------------------------------------------
+
+    public ObservableCollection<WorkspaceTab> Tabs { get; } = [];
+
+    [ObservableProperty]
+    private WorkspaceTab? _selectedTab;
+
+    [ObservableProperty]
+    private bool _hasMultipleTabs;
+
+    partial void OnSelectedTabChanged(WorkspaceTab? value)
+    {
+        foreach (var t in Tabs) t.IsSelected = ReferenceEquals(t, value);
+        if (value is null) return;
+        CurrentPage = value.CurrentPage;
+        HighlightRail(value.Nav);
+    }
+
+    private void OnTabsChanged(object? sender, NotifyCollectionChangedEventArgs e) => HasMultipleTabs = Tabs.Count > 1;
+
+    /// <summary>Opens a page in the current tab (rail items, palette hits, links). Pages that come from a rail item pass it for highlighting.</summary>
+    public void OpenPage(object page, NavItem? nav = null)
+    {
+        if (!IsSessionReady) return;
+        var tab = SelectedTab ?? OpenTab();
+        tab.Navigate(page, nav);
+        ShowTab(tab);
+    }
+
+    /// <summary>Ctrl+Enter in the palette (M3.5) and Ctrl+T: a fresh tab. Home when no page is given.</summary>
+    public WorkspaceTab OpenTab(object? page = null, NavItem? nav = null)
+    {
+        var tab = new WorkspaceTab();
+        Tabs.Add(tab);
+        if (page is null)
+        {
+            nav = NavItems[0];
+            page = CreatePage(nav);
+        }
+
+        tab.Navigate(page, nav);
+        SelectedTab = tab;
+        return tab;
+    }
+
+    private void ShowTab(WorkspaceTab tab)
+    {
+        if (!ReferenceEquals(SelectedTab, tab))
+        {
+            SelectedTab = tab;
+            return;
+        }
+
+        CurrentPage = tab.CurrentPage;
+        HighlightRail(tab.Nav);
+    }
+
+    [RelayCommand]
+    private void NewTab()
+    {
+        if (!IsSessionReady) return;
+        OpenTab();
+    }
+
+    [RelayCommand]
+    private void SelectTab(WorkspaceTab tab) => SelectedTab = tab;
+
+    /// <summary>Ctrl+W. The last tab is never closed; it resets to Home instead.</summary>
+    [RelayCommand]
+    private void CloseTab(WorkspaceTab? tab)
+    {
+        tab ??= SelectedTab;
+        if (tab is null || !IsSessionReady) return;
+        if (Tabs.Count == 1)
+        {
+            tab.DisposeAll();
+            tab.Navigate(CreatePage(NavItems[0]), NavItems[0]);
+            ShowTab(tab);
+            return;
+        }
+
+        var index = Tabs.IndexOf(tab);
+        Tabs.Remove(tab);
+        tab.DisposeAll();
+        if (ReferenceEquals(SelectedTab, tab) || SelectedTab is null)
+        {
+            SelectedTab = Tabs[Math.Min(index, Tabs.Count - 1)];
+        }
+    }
+
+    [RelayCommand]
+    private void NextTab() => CycleTab(+1);
+
+    [RelayCommand]
+    private void PreviousTab() => CycleTab(-1);
+
+    private void CycleTab(int direction)
+    {
+        if (Tabs.Count < 2 || SelectedTab is null) return;
+        var i = (Tabs.IndexOf(SelectedTab) + direction + Tabs.Count) % Tabs.Count;
+        SelectedTab = Tabs[i];
+    }
+
+    /// <summary>Alt+←.</summary>
+    [RelayCommand]
+    private void GoBack()
+    {
+        if (SelectedTab is { } tab && tab.GoBack())
+        {
+            CurrentPage = tab.CurrentPage;
+            HighlightRail(tab.Nav);
+        }
+    }
+
+    // ---- the rest of the UX §11 table ---------------------------------------------------------------------------
+
+    /// <summary>Ctrl+K. Wired to the overlay in M3.5.</summary>
+    [RelayCommand]
+    private void OpenPalette() => PaletteRequested?.Invoke(this, EventArgs.Empty);
+
+    public event EventHandler? PaletteRequested;
+
+    /// <summary>Ctrl+N (M7).</summary>
+    [RelayCommand]
+    private void NewUser() => ShowStatusMessage("New user from template arrives in M7.");
+
+    /// <summary>F5: re-read the current object from Graph. Pages opt in via <see cref="IRefreshable"/> (M4).</summary>
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        if (CurrentPage is IRefreshable refreshable)
+        {
+            await refreshable.RefreshAsync(CancellationToken.None);
+            return;
+        }
+
+        ShowStatusMessage("Nothing to refresh on this page.");
+    }
+
+    /// <summary>Ctrl+Shift+S: force a delta cycle now.</summary>
+    [RelayCommand]
+    private async Task SyncNowAsync()
+    {
+        if (_sync is null) return;
+        ShowStatusMessage("Syncing now…");
+        try
+        {
+            await _sync.SyncNowAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            ShowError(ex, "Sync failed");
+        }
+    }
+
+    /// <summary>Transient text in the middle of the status bar; clears itself after a few seconds.</summary>
+    [ObservableProperty]
+    private string? _statusMessage;
+
+    public void ShowStatusMessage(string text, int seconds = 4)
+    {
+        var version = ++_statusMessageVersion;
+        StatusMessage = text;
+        _ = Task.Delay(TimeSpan.FromSeconds(seconds)).ContinueWith(_ => RunOnUi(() =>
+        {
+            if (version == _statusMessageVersion) StatusMessage = null;
+        }), TaskScheduler.Default);
     }
 
     // ---- first-run flow (UX §9) --------------------------------------------------------------------------------
@@ -130,7 +304,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public async Task StartAsync()
     {
         _signInPage = new SignInPageViewModel(BeginInteractiveSignInAsync);
-        SetPage(_signInPage);
+        CurrentPage = _signInPage;
         try
         {
             await _auth.GetTokenAsync(Scopes.Read, CancellationToken.None);
@@ -145,7 +319,7 @@ public sealed partial class ShellViewModel : ObservableObject
         {
             _logger.LogError(ex, "Startup sign-in failed");
             _signInPage.ShowFailure(ex);
-            SetPage(_signInPage);
+            CurrentPage = _signInPage;
         }
     }
 
@@ -155,7 +329,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _signInPage!.ClearError();
         if (!_scopesExplained)
         {
-            SetPage(new ScopesPageViewModel(InteractiveSignInAsync, () => SetPage(_signInPage!)));
+            CurrentPage = new ScopesPageViewModel(InteractiveSignInAsync, () => CurrentPage = _signInPage!);
             return Task.CompletedTask;
         }
 
@@ -176,13 +350,13 @@ public sealed partial class ShellViewModel : ObservableObject
         catch (SignInException ex)
         {
             _signInPage.ShowFailure(ex);
-            SetPage(_signInPage);
+            CurrentPage = _signInPage;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Interactive sign-in failed");
             _signInPage.ShowFailure(ex);
-            SetPage(_signInPage);
+            CurrentPage = _signInPage;
         }
         finally
         {
@@ -214,14 +388,15 @@ public sealed partial class ShellViewModel : ObservableObject
 
         var progress = new SyncProgressPageViewModel(_sync);
         progress.UsersReady += (_, _) => RunOnUi(EnterHome);
-        SetPage(progress);
+        CurrentPage = progress;
     }
 
     private void EnterHome()
     {
         if (IsSessionReady) return;
+        (CurrentPage as IDisposable)?.Dispose();
         IsSessionReady = true;
-        Navigate(NavItems[0]);
+        OpenTab();
     }
 
     // ---- status bar (UX §2: cache age · last delta · errors · progress) ------------------------------------------
