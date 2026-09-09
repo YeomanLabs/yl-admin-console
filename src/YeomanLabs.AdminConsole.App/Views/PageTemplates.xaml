@@ -117,6 +117,121 @@
         </Grid>
     </DataTemplate>
 
+    <!-- Skeleton shown in a tab until its section has loaded (UX §4: each tab shows a skeleton until data arrives) -->
+    <DataTemplate x:Key="SkeletonBlock">
+        <StackPanel Margin="0,8,0,0">
+            <Border Height="14" Width="260" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" Margin="0,0,0,10" />
+            <Border Height="14" Width="380" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" Margin="0,0,0,10" />
+            <Border Height="14" Width="180" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" Margin="0,0,0,10" />
+            <Border Height="14" Width="320" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- User 360 (UX §4). M4.1: cache-first load + live hydration with per-tab skeletons; M4.2/4.3 fill header, sidebar and tabs. -->
+    <DataTemplate DataType="{x:Type pages:UserDetailViewModel}">
+        <Grid Margin="24,16,24,8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding User.UserPrincipalName}" FontFamily="{StaticResource YlMono}" Opacity="0.7" />
+                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                    <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="0,0,6,0" Visibility="{Binding IsHydrating, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="{Binding TimingText}" FontSize="11" Opacity="0.5" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding HydrateError}" FontSize="12" Foreground="{StaticResource YlDanger}" Margin="12,0,0,0" VerticalAlignment="Center"
+                               Visibility="{Binding HydrateError, Converter={StaticResource NullToCollapsed}}" />
+                </StackPanel>
+            </StackPanel>
+
+            <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0">
+                <TabItem Header="Identity">
+                    <ContentControl Content="{Binding}">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <TextBlock Text="Identity fields render in M4.3." Opacity="0.6" Margin="0,12,0,0" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasUser}" Value="False">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource SkeletonBlock}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </TabItem>
+                <TabItem Header="Access">
+                    <ContentControl Content="{Binding}">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <TextBlock Text="Licenses, groups, roles and auth methods render in M4.3." Opacity="0.6" Margin="0,12,0,0" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAccessLoaded}" Value="False">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource SkeletonBlock}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </TabItem>
+                <TabItem Header="Devices">
+                    <ContentControl Content="{Binding}">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <TextBlock Text="Device cards render in M4.3." Opacity="0.6" Margin="0,12,0,0" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasUser}" Value="False">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource SkeletonBlock}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </TabItem>
+                <TabItem Header="Activity">
+                    <ContentControl Content="{Binding}">
+                        <ContentControl.Style>
+                            <Style TargetType="ContentControl">
+                                <Setter Property="ContentTemplate">
+                                    <Setter.Value>
+                                        <DataTemplate>
+                                            <TextBlock Text="Sign-in activity renders in M4.3." Opacity="0.6" Margin="0,12,0,0" />
+                                        </DataTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsActivityLoaded}" Value="False">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource SkeletonBlock}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ContentControl.Style>
+                    </ContentControl>
+                </TabItem>
+                <TabItem Header="Mailbox" IsEnabled="False" ToolTip="{Binding MailboxDisabledReason}" ToolTipService.ShowOnDisabled="True" />
+            </TabControl>
+        </Grid>
+    </DataTemplate>
+
     <!-- Placeholder object page from the palette until M4 -->
     <DataTemplate DataType="{x:Type pages:ObjectPageViewModel}">
         <StackPanel Margin="24">

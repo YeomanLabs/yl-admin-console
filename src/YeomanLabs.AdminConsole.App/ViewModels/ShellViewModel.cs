@@ -273,7 +273,18 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         _services.GetRequiredService<CacheDb>().TouchRecent(hit.Id, hit.ObjectType.ToString().ToLowerInvariant());
-        var page = new ObjectPageViewModel(hit);
+        object page;
+        if (hit.ObjectType == ObjectType.User)
+        {
+            var user = _services.GetRequiredService<UserDetailViewModel>();
+            user.Start(hit.Id);
+            page = user;
+        }
+        else
+        {
+            page = new ObjectPageViewModel(hit);
+        }
+
         if (choice.NewTab) OpenTab(page);
         else OpenPage(page);
         _logger.LogInformation("Opened {Type} {Id} from the palette{NewTab}", hit.ObjectType, hit.Id, choice.NewTab ? " in a new tab" : string.Empty);

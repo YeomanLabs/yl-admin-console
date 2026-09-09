@@ -20,6 +20,7 @@ using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Search;
 using YeomanLabs.AdminConsole.Core.Sync;
+using YeomanLabs.AdminConsole.Core.Users;
 
 namespace YeomanLabs.AdminConsole.App;
 
@@ -126,6 +127,7 @@ public sealed partial class App : Application
         services.AddSingleton<DeltaSyncService>();
         services.AddSingleton<ISyncStatus>(sp => sp.GetRequiredService<DeltaSyncService>());
         services.AddSingleton(sp => new SearchService(sp.GetRequiredService<CacheDb>(), PaletteActions.All));
+        services.AddSingleton<UserService>();
         services.AddHostedService<SyncHostedService>();
 
         services.AddSingleton<ShellViewModel>();
@@ -135,6 +137,7 @@ public sealed partial class App : Application
         // Page ViewModels are transient (doc 03): a fresh instance per navigation.
         services.AddTransient<HomePageViewModel>();
         services.AddTransient<PlaceholderPageViewModel>();
+        services.AddTransient<UserDetailViewModel>();
     }
 
     private void HookGlobalExceptionHandlers()

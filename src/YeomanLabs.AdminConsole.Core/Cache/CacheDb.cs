@@ -11,7 +11,7 @@ namespace YeomanLabs.AdminConsole.Core.Cache;
 /// migrations, one keeper connection (so <c>:memory:</c> databases survive), pooled per-call connections for everything else.
 /// All methods are synchronous and fast; services own the threading and never call these on the UI thread.
 /// </summary>
-public sealed class CacheDb : IDisposable
+public sealed partial class CacheDb : IDisposable
 {
     private const string MigrationResourcePrefix = "YeomanLabs.AdminConsole.Core.Cache.Migrations.";
 
