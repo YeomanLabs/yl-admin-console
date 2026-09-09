@@ -1,8 +1,9 @@
-using System.Net;
+﻿using System.Net;
 using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
+using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Devices;
 using YeomanLabs.AdminConsole.Core.Graph;
@@ -14,15 +15,21 @@ public sealed class DeviceServiceTests : IDisposable
 {
     private readonly FakeHttpHandler _handler = new();
     private readonly CacheDb _db = CacheDb.OpenInMemory();
+    private readonly ActionLog _actions = ActionLog.OpenInMemory();
+    private readonly TenantContext _tenant = new();
     private readonly DeviceService _sut;
 
     public DeviceServiceTests()
     {
         var graph = new GraphClient(new HttpClient(_handler), new FakeAuthService(), NullLogger<GraphClient>.Instance);
-        _sut = new DeviceService(graph, _db, NullLogger<DeviceService>.Instance);
+        _sut = new DeviceService(graph, _db, _actions, _tenant, NullLogger<DeviceService>.Instance);
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        _actions.Dispose();
+    }
 
     [Fact]
     public async Task Hydrate_OneBatch_ThenSettingStatesOnlyForFailingPolicies()

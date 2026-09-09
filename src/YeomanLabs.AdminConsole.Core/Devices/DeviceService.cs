@@ -1,6 +1,7 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
@@ -9,9 +10,10 @@ namespace YeomanLabs.AdminConsole.Core.Devices;
 
 /// <summary>
 /// Device page data access (UX §5, doc 04 §Intune): cache first, then one <c>$batch</c> for the live device, registered
-/// users and per-policy compliance; a second batch fetches setting states for the policies that failed. Actions come in M5.6.
+/// users and per-policy compliance; a second batch fetches setting states for the policies that failed.
+/// Actions and the BitLocker/LAPS reveals live in <c>DeviceService.Actions.cs</c>.
 /// </summary>
-public sealed class DeviceService
+public sealed partial class DeviceService
 {
     private const string DeviceId = "device";
     private const string UsersId = "users";
@@ -19,12 +21,16 @@ public sealed class DeviceService
 
     private readonly GraphClient _graph;
     private readonly CacheDb _db;
+    private readonly ActionLog _actions;
+    private readonly TenantContext _tenant;
     private readonly ILogger<DeviceService> _logger;
 
-    public DeviceService(GraphClient graph, CacheDb db, ILogger<DeviceService> logger)
+    public DeviceService(GraphClient graph, CacheDb db, ActionLog actions, TenantContext tenant, ILogger<DeviceService> logger)
     {
         _graph = graph;
         _db = db;
+        _actions = actions;
+        _tenant = tenant;
         _logger = logger;
     }
 

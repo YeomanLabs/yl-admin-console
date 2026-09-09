@@ -68,6 +68,33 @@
                 <TextBlock Text="{Binding ForceChangeText}" FontSize="12" Opacity="0.75" Margin="0,10,0,0" TextWrapping="Wrap" />
             </StackPanel>
         </DataTemplate>
+
+        <!-- Revealed secrets (UX §5): BitLocker keys and the LAPS password, one row each with its own Copy. -->
+        <DataTemplate DataType="{x:Type dlg:SecretRevealDialogViewModel}">
+            <ItemsControl ItemsSource="{Binding Secrets}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type dlg:SecretRow}">
+                        <StackPanel Margin="0,8,0,0">
+                            <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:TextBox Text="{Binding Value, Mode=OneWay}" IsReadOnly="True" FontFamily="{StaticResource YlMono}"
+                                            AutomationProperties.Name="{Binding Label}" />
+                                <ui:Button Grid.Column="1" Content="Copy" Margin="6,0,0,0" Command="{Binding CopyCommand}"
+                                           AutomationProperties.Name="Copy value" />
+                            </Grid>
+                            <TextBlock Text="{Binding Caption}" FontSize="11" Opacity="0.55" Margin="0,3,0,0"
+                                       Visibility="{Binding HasCaption, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="Copied to the clipboard" FontSize="11" Opacity="0.6" Margin="0,3,0,0"
+                                       Visibility="{Binding IsCopied, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </DataTemplate>
     </UserControl.Resources>
 
     <Grid>

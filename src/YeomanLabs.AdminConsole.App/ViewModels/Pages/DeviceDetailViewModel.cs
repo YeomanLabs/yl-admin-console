@@ -1,36 +1,42 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.App.Services;
+using YeomanLabs.AdminConsole.App.ViewModels.Dialogs;
 using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Devices;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
+using YeomanLabs.AdminConsole.Core.Writes;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels.Pages;
 
 /// <summary>
-/// Device page (UX §5), read-only in M4: header badges, Overview, People, Hardware, Security (reveal buttons greyed until
-/// M5.6), Compliance per policy with failure reasons. Cache first, then one <c>$batch</c>.
+/// Device page (UX §5): header badges and actions, Overview, People, Hardware, Security (BitLocker and LAPS reveals),
+/// Compliance per policy with failure reasons. Cache first, then one <c>$batch</c>.
 /// </summary>
 public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewModel, IRefreshable, IDisposable
 {
     private readonly DeviceService _devices;
     private readonly TenantContext _tenant;
     private readonly PermissionChecker _permissions;
+    private readonly ConsentService _consent;
     private readonly ToastService _toasts;
+    private readonly IDialogService _dialogs;
     private readonly ILogger<DeviceDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
 
-    public DeviceDetailViewModel(DeviceService devices, TenantContext tenant, PermissionChecker permissions, ToastService toasts, ILogger<DeviceDetailViewModel> logger)
+    public DeviceDetailViewModel(DeviceService devices, TenantContext tenant, PermissionChecker permissions, ConsentService consent, ToastService toasts, IDialogService dialogs, ILogger<DeviceDetailViewModel> logger)
     {
         _devices = devices;
         _tenant = tenant;
         _permissions = permissions;
+        _consent = consent;
         _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
+        _dialogs = dialogs;
         _logger = logger;
     }
 
@@ -44,6 +50,9 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Title))]
     [NotifyPropertyChangedFor(nameof(HasDevice))]
+    [NotifyPropertyChangedFor(nameof(CanRunActions))]
+    [NotifyPropertyChangedFor(nameof(CanRevealBitLocker))]
+    [NotifyPropertyChangedFor(nameof(CanRevealLaps))]
     private ManagedDevice? _device;
 
     public bool HasDevice => Device is not null;
@@ -69,20 +78,40 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
     private string _timingText = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRunActions))]
     private string? _actionsDisabledReason;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRevealBitLocker))]
     private string? _bitLockerReason;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRevealLaps))]
     private string? _lapsReason;
+
+    /// <summary>A device action is running; the header buttons stay disabled until it comes back.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRunActions))]
+    [NotifyPropertyChangedFor(nameof(CanRevealBitLocker))]
+    [NotifyPropertyChangedFor(nameof(CanRevealLaps))]
+    private bool _isActionRunning;
+
+    public bool CanRunActions => HasDevice && ActionsDisabledReason is null && !IsActionRunning;
+
+    /// <summary>Windows only: neither secret exists on any other platform, and offering the button would mislead.</summary>
+    public bool CanRevealBitLocker => IsWindows && BitLockerReason is null && !IsActionRunning;
+
+    public bool CanRevealLaps => IsWindows && LapsReason is null && !IsActionRunning;
+
+    private bool IsWindows => Device?.OperatingSystem?.Contains("Windows", StringComparison.OrdinalIgnoreCase) == true;
 
     /// <summary>UX §6: consent first, then "not built yet". Recomputed whenever the granted scopes change.</summary>
     private void RecomputeReasons()
     {
-        ActionsDisabledReason = GreyRule.Reason(_permissions, Capabilities.DeviceActions, "Sync, Restart, Retire and Wipe arrive in M5.6");
-        BitLockerReason = GreyRule.Reason(_permissions, Capabilities.RevealBitLocker, "Reveal arrives in M5.6");
-        LapsReason = GreyRule.Reason(_permissions, Capabilities.RevealLaps, "Reveal arrives in M5.6");
+        ActionsDisabledReason = GreyRule.Reason(_permissions, Capabilities.DeviceActions, null);
+        var notWindows = IsWindows ? null : "Only Windows devices have BitLocker keys and a LAPS password";
+        BitLockerReason = notWindows ?? GreyRule.Reason(_permissions, Capabilities.RevealBitLocker, null);
+        LapsReason = notWindows ?? GreyRule.Reason(_permissions, Capabilities.RevealLaps, null);
     }
 
     // ---- header ---------------------------------------------------------------------------------------------------
@@ -294,6 +323,207 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
         }
     }
 
+    // ---- actions and secrets (UX 5) -------------------------------------------------------------------------------
+
+    private string DeviceLabel => Device?.DeviceName ?? Device?.SerialNumber ?? Id;
+
+    /// <summary>Pull policy now. The one action with no confirm: it costs the user nothing.</summary>
+    [RelayCommand]
+    private Task SyncAsync() => RunActionAsync(Capabilities.DeviceActions, ct => _devices.SyncAsync(Id, ct));
+
+    /// <summary>Restart. Confirmed because the user loses unsaved work.</summary>
+    [RelayCommand]
+    private async Task RestartAsync()
+    {
+        var confirmed = await _dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = $"Restart {DeviceLabel}?",
+            Message = "The device restarts as soon as it next checks in. Anyone using it loses unsaved work.",
+            ConfirmLabel = "Restart",
+            Destructive = true,
+        });
+
+        if (confirmed) await RunActionAsync(Capabilities.DeviceActions, ct => _devices.RestartAsync(Id, ct));
+    }
+
+    /// <summary>
+    /// Retire (UX 5): the preview dialog spells out what leaves the device and what stays, because the wording is the
+    /// only thing standing between the admin and an unenrolled device.
+    /// </summary>
+    [RelayCommand]
+    private async Task RetireAsync()
+    {
+        var confirmed = await _dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = $"Retire {DeviceLabel}?",
+            Message = "Retiring removes company data and unenrolls the device from Intune. It cannot be undone, and the device has to enrol again.",
+            Bullets =
+            [
+                "Company apps, profiles and certificates are removed",
+                "Company email accounts are removed",
+                "Personal data, apps and settings are left alone",
+                "The device disappears from Intune once it reports back",
+            ],
+            ConfirmLabel = "Retire device",
+            Destructive = true,
+        });
+
+        if (confirmed) await RunActionAsync(Capabilities.DeviceActions, ct => _devices.RetireAsync(Id, ct));
+    }
+
+    /// <summary>
+    /// Wipe (UX 5): a factory reset, so the admin types the device name before the button will fire. Nothing on the
+    /// device survives and there is no undo.
+    /// </summary>
+    [RelayCommand]
+    private async Task WipeAsync()
+    {
+        var confirmed = await _dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = $"Wipe {DeviceLabel}?",
+            Message = "A wipe factory-resets the device. Everything on it is erased, including personal data, and it cannot be undone.",
+            Bullets =
+            [
+                "The disk is erased and the device is reset to its factory state",
+                "Nothing is recoverable afterwards, by anyone",
+                "Retire is the gentler option if you only need company data removed",
+            ],
+            RequiredTypedValue = DeviceLabel,
+            ConfirmLabel = "Wipe device",
+            Destructive = true,
+        });
+
+        if (confirmed) await RunActionAsync(Capabilities.DeviceActions, ct => _devices.WipeAsync(Id, keepEnrollmentData: false, keepUserData: false, ct));
+    }
+
+    private async Task RunActionAsync(Capability capability, Func<CancellationToken, Task<WriteOutcome>> run)
+    {
+        if (!await EnsureAsync(capability)) return;
+        IsActionRunning = true;
+        try
+        {
+            var outcome = await run(CancellationToken.None);
+            _toasts.Show(outcome.Success ? outcome.Summary : outcome.FriendlyError ?? outcome.Summary);
+        }
+        finally
+        {
+            IsActionRunning = false;
+        }
+    }
+
+    /// <summary>
+    /// BitLocker reveal (UX 5). Lists the device keys, then reveals each one; every reveal is logged separately by the
+    /// service. The keys are shown in a dialog and never touch the cache.
+    /// </summary>
+    [RelayCommand]
+    private async Task RevealBitLockerAsync()
+    {
+        if (Device?.AzureAdDeviceId is not { } aadDeviceId)
+        {
+            _toasts.Show("This device has no Entra device ID, so its recovery keys cannot be looked up.");
+            return;
+        }
+
+        if (!await EnsureAsync(Capabilities.RevealBitLocker)) return;
+
+        IsActionRunning = true;
+        try
+        {
+            var keys = await _devices.GetBitLockerKeysAsync(aadDeviceId, CancellationToken.None);
+            if (keys.Count == 0)
+            {
+                _toasts.Show("No BitLocker recovery keys are escrowed for this device.");
+                return;
+            }
+
+            var rows = new List<SecretRow>(keys.Count);
+            foreach (var key in keys)
+            {
+                var revealed = await _devices.RevealBitLockerKeyAsync(Id, key.Id, CancellationToken.None);
+                if (!revealed.Success)
+                {
+                    _toasts.Show(revealed.FriendlyError ?? "The recovery key could not be revealed.");
+                    return;
+                }
+
+                rows.Add(new SecretRow(revealed.Value!.VolumeLabel, revealed.Value.Key ?? string.Empty, $"Escrowed {TimeText.Both(key.CreatedDateTime)}"));
+            }
+
+            await _dialogs.ShowAsync(new SecretRevealDialogViewModel($"BitLocker recovery keys - {DeviceLabel}", rows)
+            {
+                Message = "Every reveal is recorded in the activity log, here and in Microsoft's own audit log.",
+            });
+        }
+        catch (GraphException ex)
+        {
+            _logger.LogWarning("BitLocker key list for {DeviceId} failed: {Code}", Id, ex.ErrorCode);
+            _toasts.Show(GraphErrorText.Friendly(ex, Capabilities.RevealBitLocker.RoleHint));
+        }
+        finally
+        {
+            IsActionRunning = false;
+        }
+    }
+
+    /// <summary>
+    /// LAPS reveal (UX 5). Keyed on the Entra device ID, not the directory object ID, which answers 400 (verified on
+    /// the dev tenant; doc 04 corrected).
+    /// </summary>
+    [RelayCommand]
+    private async Task RevealLapsAsync()
+    {
+        if (Device?.AzureAdDeviceId is not { } aadDeviceId)
+        {
+            _toasts.Show("This device has no Entra device ID, so its LAPS password cannot be looked up.");
+            return;
+        }
+
+        if (!await EnsureAsync(Capabilities.RevealLaps)) return;
+
+        IsActionRunning = true;
+        try
+        {
+            var revealed = await _devices.RevealLapsAsync(Id, aadDeviceId, CancellationToken.None);
+            if (!revealed.Success)
+            {
+                _toasts.Show(revealed.FriendlyError ?? "The LAPS password could not be revealed.");
+                return;
+            }
+
+            var rows = revealed.Value!
+                .Select(c => new SecretRow(c.AccountName, c.Password, $"Backed up {TimeText.Both(c.BackupDateTime)}"))
+                .ToList();
+
+            await _dialogs.ShowAsync(new SecretRevealDialogViewModel($"LAPS password - {DeviceLabel}", rows)
+            {
+                Message = "Every reveal is recorded in the activity log. The device rotates this password after it is used.",
+            });
+        }
+        finally
+        {
+            IsActionRunning = false;
+        }
+    }
+
+    /// <summary>Consent on the first use of a capability; false means the admin declined or lacks the scope.</summary>
+    private async Task<bool> EnsureAsync(Capability capability)
+    {
+        var permission = _permissions.Check(capability);
+        if (!permission.NeedsConsent) return true;
+        try
+        {
+            permission = await _consent.EnsureAsync(capability, CancellationToken.None);
+        }
+        catch (SignInException)
+        {
+            _toasts.Show("Permission was not granted.");
+            return false;
+        }
+
+        if (!permission.CanRun) _toasts.Show(permission.Reason ?? "Not permitted.");
+        return permission.CanRun;
+    }
+
     // ---- loading --------------------------------------------------------------------------------------------------
 
     public void Start(string id)
@@ -352,6 +582,8 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
 
     private void RecomputeAll()
     {
+        // The Windows-only rule for the two reveals needs the loaded device, so the reasons are recomputed here too.
+        RecomputeReasons();
         RecomputeHeader();
         RecomputeOverview();
         RecomputePeople();

@@ -1,5 +1,6 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using YeomanLabs.AdminConsole.App.Services;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels.Dialogs;
 
@@ -34,18 +35,5 @@ public sealed partial class PasswordRevealDialogViewModel : DialogViewModelBase
     private bool _isCopied;
 
     [RelayCommand]
-    private void Copy()
-    {
-        // Clipboard.SetText intermittently throws when another process holds the clipboard; a failed copy must not
-        // take the dialog down and lose the only copy of the password.
-        try
-        {
-            System.Windows.Clipboard.SetDataObject(Password, true);
-            IsCopied = true;
-        }
-        catch (System.Runtime.InteropServices.ExternalException)
-        {
-            IsCopied = false;
-        }
-    }
+    private void Copy() => IsCopied = ClipboardText.TryCopy(Password);
 }
