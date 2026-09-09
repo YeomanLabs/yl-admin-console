@@ -22,7 +22,7 @@
                         <TextBlock Text="Sensitive" FontSize="11" />
                     </Border>
                 </StackPanel>
-                <TextBlock Text="{Binding ScopeList}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.45" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ScopeList}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding Reason}" Style="{StaticResource Caption}" Visibility="{Binding Reason, Converter={StaticResource NullToCollapsed}}" />
             </StackPanel>
 
@@ -36,7 +36,7 @@
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding NeedsConsent}" Value="True">
                 <Setter TargetName="Icon" Property="Symbol" Value="LockClosed24" />
-                <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+                <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding HasRoleWarning}" Value="True">
                 <Setter TargetName="Icon" Property="Symbol" Value="Warning24" />
@@ -63,19 +63,19 @@
                         <RowDefinition Height="26" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Signed in as" Opacity="0.65" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Signed in as" VerticalAlignment="Center" />
                     <TextBlock Grid.Column="1" Text="{Binding AccountName}" FontFamily="{StaticResource YlMono}" FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Grid.Row="1" Text="Tenant" Opacity="0.65" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="1" Text="Tenant" VerticalAlignment="Center" />
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TenantName}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Row="2" Text="Licence" Opacity="0.65" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="2" Text="Licence" VerticalAlignment="Center" />
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LicenseText}" VerticalAlignment="Center" />
-                    <TextBlock Grid.Row="3" Text="Directory roles" Opacity="0.65" Margin="0,4,0,0" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="3" Text="Directory roles" Margin="0,4,0,0" />
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RolesText}" TextWrapping="Wrap" Margin="0,4,0,0" />
                 </Grid>
 
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                     <ui:Button Content="Sign out" Command="{Binding SignOutCommand}" AutomationProperties.Name="Sign out" />
-                    <TextBlock Text="Removes the saved token from this machine" FontSize="11" Opacity="0.55" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Removes the saved token from this machine" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" />
                 </StackPanel>
 
                 <!-- Sync (UX §12) -->
@@ -113,7 +113,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                     <ui:Button Content="Rebuild index" Command="{Binding RebuildIndexCommand}" IsEnabled="{Binding IsRebuilding, Converter={StaticResource InverseBool}}"
                                AutomationProperties.Name="Rebuild the local index" />
-                    <TextBlock Text="Discards the cache and reads this tenant again" FontSize="11" Opacity="0.55" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Discards the cache and reads this tenant again" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" />
                 </StackPanel>
 
                 <!-- Appearance (UX §12) -->
@@ -151,13 +151,13 @@
                 <!-- Diagnostics (UX §12) -->
                 <TextBlock Text="Diagnostics" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="Logs" Style="{StaticResource FactLabel}" />
-                <TextBlock Text="{Binding LogsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding LogsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Cache" Style="{StaticResource FactLabel}" />
-                <TextBlock Text="{Binding CachePath}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CachePath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Action log" Style="{StaticResource FactLabel}" />
-                <TextBlock Text="{Binding ActionsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActionsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Cache size" Style="{StaticResource FactLabel}" />
-                <TextBlock Text="{Binding CacheSizeText}" FontSize="12" Opacity="0.8" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CacheSizeText}" FontSize="12" />
                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                     <ui:Button Content="Open logs folder" Margin="0,0,8,0" Command="{Binding OpenLogsFolderCommand}" AutomationProperties.Name="Open the logs folder" />
                     <ui:Button Content="Open cache folder" Margin="0,0,8,0" Command="{Binding OpenCacheFolderCommand}" AutomationProperties.Name="Open the cache folder" />

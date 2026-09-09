@@ -195,13 +195,13 @@
                                             Command="{Binding DataContext.SelectTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}" AutomationProperties.Name="{Binding Title}">
                                         <TextBlock Text="{Binding Title}" VerticalAlignment="Center" MaxWidth="180" TextTrimming="CharacterEllipsis"
-                                                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                                                   Foreground="{DynamicResource YlTextPrimary}" />
                                     </Button>
                                     <Button Background="Transparent" BorderThickness="0" Padding="6,0" Cursor="Hand" FocusVisualStyle="{x:Null}"
                                             ToolTip="Close tab (Ctrl+W)" AutomationProperties.Name="Close tab"
                                             Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}">
-                                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Foreground="{DynamicResource TextFillColorSecondaryBrush}" />
+                                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Foreground="{DynamicResource YlTextSecondary}" />
                                     </Button>
                                 </StackPanel>
                             </Border>
@@ -224,16 +224,16 @@
         <Border Grid.Row="3" Height="24" Background="#0A1F45" Padding="12,0" TextElement.Foreground="{StaticResource YlOnNavy}">
             <DockPanel VerticalAlignment="Center">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsProgressVisible, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="{Binding ProgressText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ProgressText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ProgressBar Width="120" Height="6" Minimum="0" Maximum="1" Value="{Binding ProgressFraction, Mode=OneWay}"
                                  Foreground="{StaticResource YlCoral}" VerticalAlignment="Center" />
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Right" Text="{Binding StatusMessage}" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"
                            Foreground="{StaticResource YlCoral}" Visibility="{Binding StatusMessage, Converter={StaticResource NullToCollapsed}}" />
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="{Binding CacheAgeText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" />
-                    <TextBlock Text=" · " FontSize="12" Opacity="0.5" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding LastDeltaText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CacheAgeText}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text=" · " FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding LastDeltaText}" FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -252,7 +252,7 @@
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Background="Transparent" BorderThickness="0" Padding="4,0" Cursor="Hand" FocusVisualStyle="{x:Null}"
                                     Command="{Binding DismissCommand}" ToolTip="Dismiss" AutomationProperties.Name="Dismiss notification">
-                                <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Opacity="0.7" />
+                                <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Opacity="0.75" />
                             </Button>
                             <ui:HyperlinkButton DockPanel.Dock="Right" Content="{Binding UndoLabel}" Command="{Binding UndoCommand}" Padding="8,0" VerticalAlignment="Center"
                                                 Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}" />

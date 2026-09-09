@@ -633,8 +633,11 @@ public sealed partial class ShellViewModel : ObservableObject
         (CurrentPage as IDisposable)?.Dispose();
         IsSessionReady = true;
         OpenTab();
-        // UX §9 step 4: land on Home with the palette open.
-        OpenPalette();
+        // UX §9 step 4 said to land with the palette open. That was written when Home was a single sentence telling
+        // you to press Ctrl+K, so there was nothing for the overlay to cover. Home is now a page worth reading, and
+        // opening the palette on top of it hides half of it behind a second search box — it reads as a bug. Home
+        // carries its own search, captioned with the shortcut, so the palette is still one keystroke and is now
+        // discoverable rather than imposed. Recorded in DECISIONS.
     }
 
     // ---- status bar (UX §2: cache age · last delta · errors · progress) ------------------------------------------

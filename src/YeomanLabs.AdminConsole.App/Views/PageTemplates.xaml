@@ -16,7 +16,7 @@
                 <StackPanel MaxWidth="980" HorizontalAlignment="Stretch">
 
                     <TextBlock Text="{Binding Greeting}" FontSize="26" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding TenantName}" FontSize="13" Opacity="0.6" Margin="0,2,0,0" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding TenantName}" FontSize="13" Margin="0,2,0,0" />
 
                     <!-- The search box is a button: clicking anywhere on it opens the palette, which is the real
                          search. A second text box that behaved differently would be worse than one that is honest. -->
@@ -31,17 +31,17 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <ui:SymbolIcon Symbol="Search24" FontSize="18" Opacity="0.7" VerticalAlignment="Center" />
-                            <TextBlock Grid.Column="1" Text="Search for a person, a device or a group" Margin="10,0,0,0"
-                                       FontSize="14" Opacity="0.7" VerticalAlignment="Center" />
+                            <ui:SymbolIcon Symbol="Search24" FontSize="18" Opacity="0.75" VerticalAlignment="Center" />
+                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="Search for a person, a device or a group" Margin="10,0,0,0"
+                                       FontSize="14" VerticalAlignment="Center" />
                             <Border Grid.Column="2" CornerRadius="3" Padding="6,2"
                                     Background="{DynamicResource ControlFillColorSecondaryBrush}">
-                                <TextBlock Text="Ctrl+K" FontSize="11" Opacity="0.8" FontFamily="{StaticResource YlMono}" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Ctrl+K" FontSize="11" FontFamily="{StaticResource YlMono}" />
                             </Border>
                         </Grid>
                     </Button>
 
-                    <TextBlock Text="Start something" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,24,0,8" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Start something" FontSize="13" FontWeight="SemiBold" Margin="0,24,0,8" />
                     <WrapPanel>
                         <ui:Button Icon="{ui:SymbolIcon PersonAdd24}" Content="New user from a template" Margin="0,0,8,8"
                                    Command="{Binding CreateUserCommand}"
@@ -54,7 +54,7 @@
                                    AutomationProperties.Name="Sync now" />
                     </WrapPanel>
 
-                    <TextBlock Text="In this tenant" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,20,0,8" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="In this tenant" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,8" />
                     <ItemsControl ItemsSource="{Binding Totals}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -66,7 +66,7 @@
                                     <StackPanel>
                                         <TextBlock Text="{Binding CountText}" FontSize="26" FontWeight="SemiBold" />
                                         <TextBlock Text="{Binding Label}" FontSize="13" Margin="0,2,0,0" />
-                                        <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.55" Margin="0,2,0,0"
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Description}" FontSize="11" Margin="0,2,0,0"
                                                    TextWrapping="Wrap" MaxWidth="190" />
                                     </StackPanel>
                                 </Button>
@@ -74,9 +74,9 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
-                    <TextBlock Text="Worth a look" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,20,0,8" />
-                    <TextBlock Text="Nothing needs attention — no disabled accounts holding licences, no non-compliant devices, no empty groups."
-                               FontSize="12" Opacity="0.6" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left"
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Worth a look" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,8" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Nothing needs attention — no disabled accounts holding licences, no non-compliant devices, no empty groups."
+                               FontSize="12" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left"
                                Visibility="{Binding NothingNeedsAttention, Converter={StaticResource BoolToVisibility}}" />
                     <ItemsControl ItemsSource="{Binding Attention}">
                         <ItemsControl.ItemsPanel>
@@ -90,7 +90,7 @@
                                         <TextBlock Text="{Binding CountText}" FontSize="26" FontWeight="SemiBold"
                                                    Foreground="{StaticResource YlCoral}" />
                                         <TextBlock Text="{Binding Label}" FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="190" />
-                                        <TextBlock Text="{Binding Description}" FontSize="11" Opacity="0.55" Margin="0,2,0,0"
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Description}" FontSize="11" Margin="0,2,0,0"
                                                    TextWrapping="Wrap" MaxWidth="190" />
                                     </StackPanel>
                                 </Button>
@@ -99,7 +99,7 @@
                     </ItemsControl>
 
                     <StackPanel Visibility="{Binding HasRecent, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="Where you were" FontSize="13" FontWeight="SemiBold" Opacity="0.8" Margin="0,20,0,8" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Where you were" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,8" />
                         <ItemsControl ItemsSource="{Binding Recent}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
@@ -110,8 +110,8 @@
                                             Margin="0,0,8,8" MinWidth="220"
                                             AutomationProperties.Name="{Binding Primary}">
                                         <StackPanel>
-                                            <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                                            <TextBlock Text="{Binding Secondary}" FontSize="11" Opacity="0.55"
+                                            <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Secondary}" FontSize="11"
                                                        TextTrimming="CharacterEllipsis" />
                                         </StackPanel>
                                     </Button>
@@ -130,7 +130,7 @@
         <Grid>
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="440">
                 <TextBlock Text="Admin Console" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="Entra ID and Intune in one search-first console." Opacity="0.7" HorizontalAlignment="Center" Margin="0,6,0,28" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Entra ID and Intune in one search-first console." HorizontalAlignment="Center" Margin="0,6,0,28" />
 
                 <ui:InfoBar Severity="Error" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,16"
                             Title="{Binding ErrorTitle}" Message="{Binding ErrorMessage}">
@@ -153,11 +153,10 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0"
                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
                     <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
-                    <TextBlock Text="{Binding BusyText}" Opacity="0.8" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding BusyText}" VerticalAlignment="Center" />
                 </StackPanel>
 
-                <TextBlock Text="Personal sign-in with the Windows account broker. No service accounts, no data leaves your tenant."
-                           Opacity="0.5" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,28,0,0" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Personal sign-in with the Windows account broker. No service accounts, no data leaves your tenant." FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,28,0,0" />
             </StackPanel>
         </Grid>
     </DataTemplate>
@@ -167,8 +166,7 @@
         <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="560" Margin="0,24">
                 <TextBlock Text="What the console will read" FontSize="22" FontWeight="SemiBold" />
-                <TextBlock Text="Read-only permissions only. Write permissions are requested later, the first time you change something."
-                           Opacity="0.7" TextWrapping="Wrap" Margin="0,6,0,12" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Read-only permissions only. Write permissions are requested later, the first time you change something." TextWrapping="Wrap" Margin="0,6,0,12" />
                 <ItemsControl ItemsSource="{Binding Scopes}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -180,8 +178,8 @@
                                 <ui:SymbolIcon Symbol="CheckmarkCircle24" Foreground="{StaticResource YlCoral}" Margin="0,2,10,0" VerticalAlignment="Top" />
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding Why}" Opacity="0.7" TextWrapping="Wrap" />
-                                    <TextBlock Text="{Binding Scope}" Opacity="0.45" FontSize="11" FontFamily="{StaticResource YlMono}" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Why}" TextWrapping="Wrap" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Scope}" FontSize="11" FontFamily="{StaticResource YlMono}" />
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>
@@ -194,7 +192,7 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0"
                             Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
                     <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
-                    <TextBlock Text="Waiting for Windows sign-in…" Opacity="0.8" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Waiting for Windows sign-in…" VerticalAlignment="Center" />
                 </StackPanel>
             </StackPanel>
         </ScrollViewer>
@@ -205,7 +203,7 @@
         <Grid>
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="480">
                 <TextBlock Text="{Binding Headline}" FontSize="22" FontWeight="SemiBold" />
-                <TextBlock Text="{Binding Detail}" Opacity="0.7" TextWrapping="Wrap" Margin="0,6,0,20" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Detail}" TextWrapping="Wrap" Margin="0,6,0,20" />
                 <ItemsControl ItemsSource="{Binding Rows}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
@@ -220,7 +218,7 @@
                                 <ui:SymbolIcon Symbol="ErrorCircle24" Foreground="#F04E4E" Visibility="{Binding IsFailed, Converter={StaticResource BoolToVisibility}}" />
                                 <Ellipse Width="6" Height="6" Fill="#8A8A8A" Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}" />
                                 <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2" Text="{Binding CountText}" VerticalAlignment="Center" FontFamily="{StaticResource YlMono}" Opacity="0.8" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding CountText}" VerticalAlignment="Center" FontFamily="{StaticResource YlMono}" />
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -242,9 +240,9 @@
     <!-- Placeholder object page from the palette until M4 -->
     <DataTemplate DataType="{x:Type pages:ObjectPageViewModel}">
         <StackPanel Margin="24">
-            <TextBlock Text="{Binding Kind}" FontSize="12" Opacity="0.6" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Kind}" FontSize="12" />
             <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding Secondary}" FontFamily="{StaticResource YlMono}" Opacity="0.7" Margin="0,4,0,0" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Secondary}" FontFamily="{StaticResource YlMono}" Margin="0,4,0,0" />
             <ItemsControl ItemsSource="{Binding Badges}" Margin="0,8,0,0">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
@@ -260,15 +258,15 @@
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <TextBlock Text="{Binding Id}" FontFamily="{StaticResource YlMono}" FontSize="12" Opacity="0.5" Margin="0,16,0,0" />
-            <TextBlock Text="{Binding ArrivesIn}" Opacity="0.6" Margin="0,8,0,0" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Id}" FontFamily="{StaticResource YlMono}" FontSize="12" Margin="0,16,0,0" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ArrivesIn}" Margin="0,8,0,0" />
         </StackPanel>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
         <StackPanel Margin="24">
             <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding ArrivesIn}" Opacity="0.6" Margin="0,8,0,0" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ArrivesIn}" Margin="0,8,0,0" />
         </StackPanel>
     </DataTemplate>
 
@@ -306,8 +304,8 @@
                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
                 <Grid>
-                    <TextBlock Text="No templates yet. Snapshot one from a user who already has the role."
-                               TextWrapping="Wrap" Opacity="0.6" FontSize="12" Margin="10" VerticalAlignment="Top"
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="No templates yet. Snapshot one from a user who already has the role."
+                               TextWrapping="Wrap" FontSize="12" Margin="10" VerticalAlignment="Top"
                                Visibility="{Binding TemplatesList.Count, Converter={StaticResource ZeroToVisible}}" />
                     <ListBox ItemsSource="{Binding TemplatesList}" SelectedItem="{Binding Selected}"
                              Background="Transparent" BorderThickness="0"
@@ -324,13 +322,13 @@
                             <DataTemplate DataType="{x:Type tpl:UserTemplate}">
                                 <StackPanel>
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding CreatedFrom.Upn}" FontSize="11" Opacity="0.6"
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CreatedFrom.Upn}" FontSize="11"
                                                FontFamily="{StaticResource YlMono}" TextTrimming="CharacterEllipsis"
                                                Visibility="{Binding CreatedFrom, Converter={StaticResource NullToCollapsed}}" />
                                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                        <TextBlock Text="{Binding Licenses.Count, StringFormat={}{0} licence(s)}" FontSize="11" Opacity="0.5" />
-                                        <TextBlock Text=" · " FontSize="11" Opacity="0.4" />
-                                        <TextBlock Text="{Binding Groups.Count, StringFormat={}{0} group(s)}" FontSize="11" Opacity="0.5" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Licenses.Count, StringFormat={}{0} licence(s)}" FontSize="11" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text=" · " FontSize="11" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Groups.Count, StringFormat={}{0} group(s)}" FontSize="11" />
                                     </StackPanel>
                                 </StackPanel>
                             </DataTemplate>
@@ -353,7 +351,7 @@
                          AutomationProperties.Name="Template JSON" />
 
                 <StackPanel Grid.Row="1" Margin="0,10,0,0">
-                    <TextBlock Text="{Binding ValidationError}" Foreground="{StaticResource YlDanger}" FontSize="12" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding ValidationError}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" TextWrapping="Wrap"
                                Visibility="{Binding HasValidationError, Converter={StaticResource BoolToVisibility}}" />
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
                         <ui:Button Content="Revert" Margin="0,0,8,0" Command="{Binding RevertCommand}" IsEnabled="{Binding HasSelection}" />
@@ -383,33 +381,33 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Margin="0,0,10,0">
-                                    <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding Upn}" FontSize="11" Opacity="0.6" FontFamily="{StaticResource YlMono}"
+                                    <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Upn}" FontSize="11" FontFamily="{StaticResource YlMono}"
                                                TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding JobTitle}" FontSize="12" Opacity="0.85" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding Department}" FontSize="11" Opacity="0.55" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding JobTitle}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Department}" FontSize="11" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDanger}"
+                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDangerFill}"
                                             Visibility="{Binding Enabled, Converter={StaticResource InverseBoolToVisibility}}">
-                                        <TextBlock Text="Disabled" FontSize="10" Foreground="White" />
+                                        <TextBlock Text="Disabled" FontSize="11" Foreground="White" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding IsGuest, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="Guest" FontSize="10" />
+                                        <TextBlock Text="Guest" FontSize="11" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding Licensed, Converter={StaticResource InverseBoolToVisibility}}">
-                                        <TextBlock Text="Unlicensed" FontSize="10" />
+                                        <TextBlock Text="Unlicensed" FontSize="11" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding Synced, Converter={StaticResource BoolToVisibility}}"
                                             ToolTip="Mastered in on-prem AD — most attributes are read-only until Phase 2">
-                                        <TextBlock Text="From AD" FontSize="10" />
+                                        <TextBlock Text="From AD" FontSize="11" />
                                     </Border>
                                 </StackPanel>
                             </Grid>
@@ -441,31 +439,31 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Margin="0,0,10,0">
-                                    <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding SubtitleText}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding SubtitleText}" FontSize="11" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding OwnerText}" FontSize="12" Opacity="0.85" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding OsText}" FontSize="11" Opacity="0.55" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OwnerText}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OsText}" FontSize="11" TextTrimming="CharacterEllipsis" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Column="2" Text="{Binding LastSeenText}" FontSize="11" Opacity="0.6"
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding LastSeenText}" FontSize="11"
                                            VerticalAlignment="Center" Margin="0,0,10,0" TextTrimming="CharacterEllipsis" />
 
                                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
-                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDanger}"
+                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDangerFill}"
                                             Visibility="{Binding IsNonCompliant, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="Not compliant" FontSize="10" Foreground="White" />
+                                        <TextBlock Text="Not compliant" FontSize="11" Foreground="White" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding IsEntraOnly, Converter={StaticResource BoolToVisibility}}"
                                             ToolTip="Registered in Entra but never enrolled in Intune — no compliance state and no remote actions">
-                                        <TextBlock Text="Not in Intune" FontSize="10" />
+                                        <TextBlock Text="Not in Intune" FontSize="11" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding IsUnencrypted, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="Not encrypted" FontSize="10" />
+                                        <TextBlock Text="Not encrypted" FontSize="11" />
                                     </Border>
                                 </StackPanel>
                             </Grid>
@@ -497,36 +495,36 @@
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel Margin="0,0,10,0">
-                                    <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Text="{Binding Mail}" FontSize="11" Opacity="0.6" FontFamily="{StaticResource YlMono}"
+                                    <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Mail}" FontSize="11" FontFamily="{StaticResource YlMono}"
                                                TextTrimming="CharacterEllipsis"
                                                Visibility="{Binding Mail, Converter={StaticResource NullToCollapsed}}" />
                                 </StackPanel>
 
-                                <TextBlock Grid.Column="1" Text="{Binding Description}" FontSize="11" Opacity="0.6"
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="{Binding Description}" FontSize="11"
                                            VerticalAlignment="Center" Margin="0,0,10,0" TextTrimming="CharacterEllipsis" />
 
-                                <TextBlock Grid.Column="2" Text="{Binding MemberCountText}" FontSize="11" Opacity="0.7"
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding MemberCountText}" FontSize="11"
                                            VerticalAlignment="Center" Margin="0,0,10,0" />
 
                                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                                     <Border Style="{StaticResource RowBadge}">
-                                        <TextBlock Text="{Binding KindText}" FontSize="10" />
+                                        <TextBlock Text="{Binding KindText}" FontSize="11" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding Dynamic, Converter={StaticResource BoolToVisibility}}"
                                             ToolTip="Membership comes from a rule — members cannot be added or removed by hand">
-                                        <TextBlock Text="Dynamic" FontSize="10" />
+                                        <TextBlock Text="Dynamic" FontSize="11" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding Synced, Converter={StaticResource BoolToVisibility}}"
                                             ToolTip="Mastered in on-prem AD — membership is changed in AD until Phase 2">
-                                        <TextBlock Text="From AD" FontSize="10" />
+                                        <TextBlock Text="From AD" FontSize="11" />
                                     </Border>
                                     <Border Style="{StaticResource RowBadge}"
                                             Visibility="{Binding RoleAssignable, Converter={StaticResource BoolToVisibility}}"
                                             ToolTip="Can hold a directory role — changing it needs Privileged Role Administrator">
-                                        <TextBlock Text="Role-assignable" FontSize="10" />
+                                        <TextBlock Text="Role-assignable" FontSize="11" />
                                     </Border>
                                 </StackPanel>
                             </Grid>
@@ -550,7 +548,7 @@
 
             <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
                 <TextBlock Text="Activity log" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <TextBlock Text="{Binding CountText}" FontSize="12" Opacity="0.6" VerticalAlignment="Center" Margin="14,0,0,0" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CountText}" FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0" />
             </StackPanel>
 
             <Grid Grid.Row="1" Margin="0,0,0,10">
@@ -581,8 +579,8 @@
                     Background="{DynamicResource ControlFillColorDefaultBrush}"
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
                 <Grid>
-                    <TextBlock Text="Nothing matches these filters. Writes appear here as you make them."
-                               TextWrapping="Wrap" Opacity="0.6" FontSize="12" Margin="10" VerticalAlignment="Top"
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Nothing matches these filters. Writes appear here as you make them."
+                               TextWrapping="Wrap" FontSize="12" Margin="10" VerticalAlignment="Top"
                                Visibility="{Binding Rows.Count, Converter={StaticResource ZeroToVisible}}" />
                     <ScrollViewer VerticalScrollBarVisibility="Auto"
                                   Visibility="{Binding HasRows, Converter={StaticResource BoolToVisibility}}">
@@ -599,35 +597,35 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
 
-                                            <TextBlock Text="{Binding WhenText}" FontSize="11" Opacity="0.6" VerticalAlignment="Top" Margin="0,1,8,0" />
+                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding WhenText}" FontSize="11" VerticalAlignment="Top" Margin="0,1,8,0" />
 
                                             <StackPanel Grid.Column="1" Margin="0,0,8,0">
                                                 <TextBlock Text="{Binding ActionText}" FontSize="12" FontFamily="{StaticResource YlMono}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding CorrelationText}" FontSize="10" Opacity="0.5" TextTrimming="CharacterEllipsis"
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CorrelationText}" FontSize="11" TextTrimming="CharacterEllipsis"
                                                            Visibility="{Binding HasCorrelation, Converter={StaticResource BoolToVisibility}}" />
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="2">
                                                 <ui:HyperlinkButton Content="{Binding TargetName}" Command="{Binding OpenCommand}" Padding="0"
                                                                     HorizontalAlignment="Left" AutomationProperties.Name="{Binding TargetName}" />
-                                                <TextBlock Text="{Binding DetailText}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding DetailText}" FontSize="11" TextWrapping="Wrap" />
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="3" VerticalAlignment="Top">
                                                 <TextBlock Text="{Binding OutcomeText}" FontSize="11" HorizontalAlignment="Right">
                                                     <TextBlock.Style>
                                                         <Style TargetType="TextBlock">
-                                                            <Setter Property="Opacity" Value="0.6" />
+                                                            <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
                                                             <Style.Triggers>
                                                                 <DataTrigger Binding="{Binding IsFailed}" Value="True">
-                                                                    <Setter Property="Foreground" Value="{StaticResource YlDanger}" />
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
                                                                     <Setter Property="Opacity" Value="1" />
                                                                 </DataTrigger>
                                                             </Style.Triggers>
                                                         </Style>
                                                     </TextBlock.Style>
                                                 </TextBlock>
-                                                <TextBlock Text="undone" FontSize="10" Opacity="0.5" HorizontalAlignment="Right"
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="undone" FontSize="11" HorizontalAlignment="Right"
                                                            Visibility="{Binding WasUndone, Converter={StaticResource BoolToVisibility}}" />
                                             </StackPanel>
                                         </Grid>

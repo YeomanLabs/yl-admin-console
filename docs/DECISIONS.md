@@ -71,3 +71,40 @@ and the automation tree goes from 0 to 3 headings and 3 live counts.
 
 The general lesson, worth keeping: rendering correctly is not evidence of being accessible, and the automation tree
 has to be dumped to know. M8.4 audited the pages that existed then; anything built since needs the same pass.
+
+## M9.6 — Contrast is measured from the screen, not from the palette
+
+The M8.4 accessibility pass computed contrast from the hex values in `Theme.xaml` and reported everything passing. It
+was checking the wrong things. It looked at the brand colours — coral on navy, danger on the page — and never looked at
+ordinary body text, which is almost all the text in the app. Andrew, using it, said it was "insanely hard to read, all
+greyscale", and he was right.
+
+Three faults, none visible from the palette alone:
+
+1. **`Opacity` compounds.** 139 TextBlocks dimmed themselves on top of a theme brush that was already dimmed. A
+   `0.55` that measures 5.9:1 against the page lands at 4.06:1 once it multiplies with the inherited foreground, and
+   the empty-filter chip reached 2.79:1 — unreadable, in order to convey "not worth reading".
+2. **The library's semantic brushes do not match their names.** Switching to `TextFillColorSecondaryBrush` looked like
+   the principled fix and changed almost nothing: in WPF-UI 3.0.5 it renders about #868686, and even
+   `TextFillColorPrimaryBrush` came out #999999 inside a button. Its tertiary brush is 3.32:1 in the light theme.
+3. **The danger colour was measured against the wrong background.** M8.4 recorded 4.63:1 for danger text on the page.
+   It is used on rows, where it is 3.87:1. And as a badge fill with white text it was 3.56:1.
+
+What settled it was sampling the pixels of an actual screenshot, which is now how this gets checked: `Shot-Launch.ps1`
+captures the window untouched and `Measure-Contrast.ps1` reports the real ratio per region. Secondary text went from
+4.86:1 to 8.23:1 and primary from 6.05:1 to 13.77:1.
+
+The rule that follows: a colour is only checked against the surface it is actually drawn on, in a rendered frame. A
+computed ratio from a stylesheet is a hypothesis.
+
+## M9.6 — The palette no longer opens on top of Home
+
+UX §9 step 4 says to land on Home with the palette open. That was written when Home was a single sentence telling the
+admin to press Ctrl+K — there was nothing for the overlay to cover, and it was the only way to do anything.
+
+Now that Home is a real page, the overlay lands across the middle of it: two search boxes stacked, the second hiding
+the first and the "Start something" buttons. Andrew's words were "you have a search bar over the whole thing". It
+reads as a bug even though it was the spec.
+
+Home now carries its own search, which opens the palette and is captioned Ctrl+K, so the shortcut is taught instead of
+being imposed. Deviating from the spec here is deliberate and recorded, per CLAUDE.md.

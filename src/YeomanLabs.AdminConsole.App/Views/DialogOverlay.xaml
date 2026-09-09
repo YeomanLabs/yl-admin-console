@@ -15,7 +15,7 @@
         <!-- Confirm: optional "type the name" gate for the irreversible ones. -->
         <DataTemplate DataType="{x:Type dlg:ConfirmDialogViewModel}">
             <StackPanel Visibility="{Binding NeedsTyping, Converter={StaticResource BoolToVisibility}}">
-                <TextBlock Text="{Binding TypedPrompt}" FontSize="12" Opacity="0.75" Margin="0,4,0,4" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding TypedPrompt}" FontSize="12" Margin="0,4,0,4" />
                 <ui:TextBox Text="{Binding TypedValue, UpdateSourceTrigger=PropertyChanged}"
                             FontFamily="{StaticResource YlMono}"
                             b:FocusBehavior.FocusWhen="{Binding NeedsTyping}"
@@ -44,7 +44,7 @@
                                 b:FocusBehavior.FocusWhen="{Binding IsTyped}"
                                 PlaceholderText="The password is visible on screen"
                                 AutomationProperties.Name="New password" />
-                    <TextBlock Text="{Binding TypedError}" FontSize="11" Foreground="{StaticResource YlDanger}" Margin="0,4,0,0" TextWrapping="Wrap"
+                    <TextBlock Text="{Binding TypedError}" FontSize="11" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Margin="0,4,0,0" TextWrapping="Wrap"
                                Visibility="{Binding TypedError, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
 
@@ -64,9 +64,9 @@
                                 b:FocusBehavior.FocusWhen="True" AutomationProperties.Name="New password" />
                     <ui:Button Grid.Column="1" Content="Copy" Margin="6,0,0,0" Command="{Binding CopyCommand}" AutomationProperties.Name="Copy password" />
                 </Grid>
-                <TextBlock Text="Copied to the clipboard" FontSize="11" Opacity="0.6" Margin="0,4,0,0"
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Copied to the clipboard" FontSize="11" Margin="0,4,0,0"
                            Visibility="{Binding IsCopied, Converter={StaticResource BoolToVisibility}}" />
-                <TextBlock Text="{Binding ForceChangeText}" FontSize="12" Opacity="0.75" Margin="0,10,0,0" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ForceChangeText}" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap" />
             </StackPanel>
         </DataTemplate>
 
@@ -76,7 +76,7 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type dlg:SecretRow}">
                         <StackPanel Margin="0,8,0,0">
-                            <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Label}" FontSize="11" Margin="0,0,0,3" />
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
@@ -87,9 +87,9 @@
                                 <ui:Button Grid.Column="1" Content="Copy" Margin="6,0,0,0" Command="{Binding CopyCommand}"
                                            AutomationProperties.Name="Copy value" />
                             </Grid>
-                            <TextBlock Text="{Binding Caption}" FontSize="11" Opacity="0.55" Margin="0,3,0,0"
+                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Caption}" FontSize="11" Margin="0,3,0,0"
                                        Visibility="{Binding HasCaption, Converter={StaticResource BoolToVisibility}}" />
-                            <TextBlock Text="Copied to the clipboard" FontSize="11" Opacity="0.6" Margin="0,3,0,0"
+                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Copied to the clipboard" FontSize="11" Margin="0,3,0,0"
                                        Visibility="{Binding IsCopied, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
                     </DataTemplate>
@@ -99,7 +99,7 @@
         <!-- One line of text: a template name, a profile name. -->
         <DataTemplate DataType="{x:Type dlg:TextPromptDialogViewModel}">
             <StackPanel Margin="0,4,0,0">
-                <TextBlock Text="{Binding Prompt}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,0,6" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Prompt}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,6" />
                 <ui:TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                             PlaceholderText="{Binding Placeholder}"
                             b:FocusBehavior.FocusWhen="True"
@@ -136,24 +136,24 @@
                             <Border Margin="6,0,0,0" Padding="5,1" CornerRadius="3" VerticalAlignment="Center"
                                     Background="{DynamicResource ControlFillColorSecondaryBrush}"
                                     Visibility="{Binding HasSurfaceLabel, Converter={StaticResource BoolToVisibility}}">
-                                <TextBlock Text="{Binding SurfaceLabel}" FontSize="10" Opacity="0.8" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding SurfaceLabel}" FontSize="11" />
                             </Border>
-                            <TextBlock Text="{Binding DurationText}" FontSize="11" Opacity="0.5" Margin="8,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding DurationText}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
                                        Visibility="{Binding HasDuration, Converter={StaticResource BoolToVisibility}}" />
                         </StackPanel>
 
-                        <TextBlock Text="{Binding Summary}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" Margin="0,2,0,0"
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Summary}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
                                    Visibility="{Binding HasSummary, Converter={StaticResource BoolToVisibility}}" />
                         <TextBlock Text="{Binding ResultMessage}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
                                    Visibility="{Binding HasResultMessage, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding Reason}" FontSize="11" Opacity="0.55" TextWrapping="Wrap" Margin="0,2,0,0"
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Reason}" FontSize="11" TextWrapping="Wrap" Margin="0,2,0,0"
                                    Visibility="{Binding HasReason, Converter={StaticResource BoolToVisibility}}" />
 
                         <ItemsControl ItemsSource="{Binding Details}" Margin="0,3,0,0"
                                       Visibility="{Binding IsEnabled, Converter={StaticResource BoolToVisibility}}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" FontSize="11" Opacity="0.6" TextWrapping="Wrap" Margin="10,1,0,0" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding}" FontSize="11" TextWrapping="Wrap" Margin="10,1,0,0" />
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
@@ -184,12 +184,12 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="Profile" FontSize="12" Opacity="0.7" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Profile" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ComboBox MinWidth="200" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
                                   DisplayMemberPath="Name" AutomationProperties.Name="Offboarding profile" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
-                        <TextBlock Text="Delegate" FontSize="12" Opacity="0.7" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Delegate" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <TextBlock Text="{Binding DelegateLabel}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ui:Button Content="Choose…" Padding="8,2" Command="{Binding ChooseDelegateCommand}" AutomationProperties.Name="Choose a delegate" />
                         <ui:Button Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent" Padding="6,2" Margin="4,0,0,0"
@@ -204,7 +204,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
                             Visibility="{Binding IsPreviewing, Converter={StaticResource BoolToVisibility}}">
                     <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="0,0,8,0" />
-                    <TextBlock Text="Working out what each step would change…" FontSize="12" Opacity="0.7" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Working out what each step would change…" FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
 
                 <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
@@ -213,7 +213,7 @@
 
                 <TextBlock Text="{Binding SummaryText}" FontWeight="SemiBold" Margin="0,10,0,0"
                            Visibility="{Binding HasSummaryText, Converter={StaticResource BoolToVisibility}}" />
-                <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Margin="0,4,0,0"
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding StatusText}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
                            Visibility="{Binding StatusText, Converter={StaticResource NullToCollapsed}}" />
 
                 <!-- Footer: this dialog draws its own, because "Run" must not close it. -->
@@ -260,8 +260,8 @@
 
                 <!-- 1. Pick a template -->
                 <StackPanel Visibility="{Binding IsPickingTemplate, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Text="No templates yet. Open Templates from the nav rail and snapshot one from a user who already has the role."
-                               TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,0"
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="No templates yet. Open Templates from the nav rail and snapshot one from a user who already has the role."
+                               TextWrapping="Wrap" Margin="0,4,0,0"
                                Visibility="{Binding HasNoTemplates, Converter={StaticResource BoolToVisibility}}" />
                     <ItemsControl ItemsSource="{Binding Templates}" Margin="0,4,0,0">
                         <ItemsControl.ItemTemplate>
@@ -275,12 +275,12 @@
                                             BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
                                         <StackPanel>
                                             <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding CreatedFrom.Upn, StringFormat=from {0}}" FontSize="11" Opacity="0.6"
+                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CreatedFrom.Upn, StringFormat=from {0}}" FontSize="11"
                                                        Visibility="{Binding CreatedFrom, Converter={StaticResource NullToCollapsed}}" />
                                             <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                                <TextBlock Text="{Binding Licenses.Count, StringFormat={}{0} licence(s)}" FontSize="11" Opacity="0.5" />
-                                                <TextBlock Text=" · " FontSize="11" Opacity="0.4" />
-                                                <TextBlock Text="{Binding Groups.Count, StringFormat={}{0} group(s)}" FontSize="11" Opacity="0.5" />
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Licenses.Count, StringFormat={}{0} licence(s)}" FontSize="11" />
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text=" · " FontSize="11" />
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Groups.Count, StringFormat={}{0} group(s)}" FontSize="11" />
                                             </StackPanel>
                                         </StackPanel>
                                     </Border>
@@ -301,20 +301,20 @@
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
                             <StackPanel>
-                                <TextBlock Text="First name" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="First name" FontSize="11" Margin="0,0,0,3" />
                                 <ui:TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}"
                                             b:FocusBehavior.FocusWhen="True" AutomationProperties.Name="First name" />
                             </StackPanel>
                             <StackPanel Grid.Column="2">
-                                <TextBlock Text="Last name" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Last name" FontSize="11" Margin="0,0,0,3" />
                                 <ui:TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Last name" />
                             </StackPanel>
                         </Grid>
 
-                        <TextBlock Text="Display name" FontSize="11" Opacity="0.6" Margin="0,10,0,0" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Display name" FontSize="11" Margin="0,10,0,0" />
                         <ui:TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Display name" />
 
-                        <TextBlock Text="Sign-in name" FontSize="11" Opacity="0.6" Margin="0,10,0,0" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Sign-in name" FontSize="11" Margin="0,10,0,0" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -323,7 +323,7 @@
                             </Grid.ColumnDefinitions>
                             <ui:TextBox Text="{Binding UpnLocal, UpdateSourceTrigger=PropertyChanged}"
                                         FontFamily="{StaticResource YlMono}" AutomationProperties.Name="Sign-in name" />
-                            <TextBlock Grid.Column="1" Text="@" VerticalAlignment="Center" Margin="6,0" Opacity="0.6"
+                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="@" VerticalAlignment="Center" Margin="6,0"
                                        FontFamily="{StaticResource YlMono}" />
                             <ComboBox Grid.Column="2" MinWidth="180" ItemsSource="{Binding Domains}" SelectedItem="{Binding Domain}"
                                       AutomationProperties.Name="Domain" />
@@ -335,10 +335,10 @@
                                        Visibility="{Binding HasUpnMessage, Converter={StaticResource BoolToVisibility}}">
                                 <TextBlock.Style>
                                     <Style TargetType="TextBlock">
-                                        <Setter Property="Opacity" Value="0.7" />
+                                        <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
                                         <Style.Triggers>
                                             <DataTrigger Binding="{Binding UpnIsBad}" Value="True">
-                                                <Setter Property="Foreground" Value="{StaticResource YlDanger}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
                                                 <Setter Property="Opacity" Value="1" />
                                             </DataTrigger>
                                         </Style.Triggers>
@@ -347,7 +347,7 @@
                             </TextBlock>
                         </StackPanel>
 
-                        <TextBlock Text="Manager" FontSize="11" Opacity="0.6" Margin="0,10,0,0" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Manager" FontSize="11" Margin="0,10,0,0" />
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding ManagerLabel}" VerticalAlignment="Center" Margin="0,0,8,0" />
                             <ui:Button Content="Choose…" Padding="8,2" Command="{Binding ChooseManagerCommand}" AutomationProperties.Name="Choose a manager" />
@@ -358,7 +358,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type dlg:CreateFieldRow}">
                                     <StackPanel Margin="0,0,0,8">
-                                        <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Label}" FontSize="11" Margin="0,0,0,3" />
                                         <ui:TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                     AutomationProperties.Name="{Binding Label}" />
                                     </StackPanel>
@@ -380,11 +380,11 @@
                                                   AutomationProperties.Name="{Binding Name}">
                                             <StackPanel>
                                                 <TextBlock Text="{Binding Name}" />
-                                                <TextBlock Text="{Binding BlockedReason}" FontSize="11" Foreground="{StaticResource YlDanger}"
+                                                <TextBlock Text="{Binding BlockedReason}" FontSize="11" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
                                                            Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
                                             </StackPanel>
                                         </CheckBox>
-                                        <TextBlock Grid.Column="1" Text="{Binding SeatsText}" FontSize="11" Opacity="0.55" VerticalAlignment="Center" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="{Binding SeatsText}" FontSize="11" VerticalAlignment="Center" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -410,7 +410,7 @@
                                             <Button Background="Transparent" BorderThickness="0" Padding="4,0" Margin="4,0,0,0" Cursor="Hand"
                                                     FocusVisualStyle="{x:Null}" Command="{Binding RemoveCommand}"
                                                     AutomationProperties.Name="Remove from this group">
-                                                <ui:SymbolIcon Symbol="Dismiss24" FontSize="10" Opacity="0.7" />
+                                                <ui:SymbolIcon Symbol="Dismiss24" FontSize="11" Opacity="0.75" />
                                             </Button>
                                         </StackPanel>
                                     </Border>
@@ -439,7 +439,7 @@
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Top" />
                                     <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" Opacity="0.85" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" />
                                         <Expander Header="Details" FontSize="11" Margin="0,3,0,0"
                                                   Visibility="{Binding Details, Converter={StaticResource NullToCollapsed}}">
                                             <TextBox Text="{Binding Details, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="120"
@@ -455,7 +455,7 @@
                     <TextBlock Text="{Binding ResultSummary}" FontWeight="SemiBold" Margin="0,12,0,0" />
 
                     <StackPanel Margin="0,10,0,0" Visibility="{Binding HasResultPassword, Converter={StaticResource BoolToVisibility}}">
-                        <TextBlock Text="Temporary password — shown only here, and stored nowhere" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Temporary password — shown only here, and stored nowhere" FontSize="11" Margin="0,0,0,3" />
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -466,15 +466,15 @@
                             <ui:Button Grid.Column="1" Content="Copy" Margin="6,0,0,0" Command="{Binding CopyPasswordCommand}"
                                        AutomationProperties.Name="Copy the password" />
                         </Grid>
-                        <TextBlock Text="Copied to the clipboard" FontSize="11" Opacity="0.6" Margin="0,4,0,0"
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Copied to the clipboard" FontSize="11" Margin="0,4,0,0"
                                    Visibility="{Binding IsPasswordCopied, Converter={StaticResource BoolToVisibility}}" />
-                        <TextBlock Text="{Binding SendHint}" FontSize="11" Opacity="0.6" Margin="0,4,0,0" TextWrapping="Wrap" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding SendHint}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" />
                     </StackPanel>
                 </StackPanel>
 
-                <TextBlock Text="{Binding PreviewText}" FontSize="12" Opacity="0.85" TextWrapping="Wrap" Margin="0,12,0,0"
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding PreviewText}" FontSize="12" TextWrapping="Wrap" Margin="0,12,0,0"
                            Visibility="{Binding IsForm, Converter={StaticResource BoolToVisibility}}" />
-                <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Margin="0,6,0,0"
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding StatusText}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"
                            Visibility="{Binding StatusText, Converter={StaticResource NullToCollapsed}}" />
 
                 <!-- This dialog draws its own footer: "Create" must not close it. -->
@@ -524,7 +524,7 @@
 
                 <StackPanel>
                     <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding Message}" Margin="0,8,0,0" TextWrapping="Wrap" Opacity="0.85"
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Message}" Margin="0,8,0,0" TextWrapping="Wrap"
                                Visibility="{Binding HasMessage, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>
 
@@ -539,8 +539,8 @@
                                             <ColumnDefinition Width="18" />
                                             <ColumnDefinition Width="*" />
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Text="·" Opacity="0.6" HorizontalAlignment="Center" />
-                                        <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" Opacity="0.85" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="·" HorizontalAlignment="Center" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" />
                                     </Grid>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
