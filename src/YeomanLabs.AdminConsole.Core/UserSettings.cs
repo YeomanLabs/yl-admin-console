@@ -29,6 +29,13 @@ public sealed record UserSettings
     public AppTheme Theme { get; init; } = AppTheme.Dark;
     public AppDensity Density { get; init; } = AppDensity.Comfortable;
 
+    /// <summary>
+    /// False until the admin dismisses the "new here?" panel on Home. Kept as a setting rather than shown once and
+    /// forgotten, so a console handed to somebody else still explains itself, and so the panel survives a restart if
+    /// they did not read it.
+    /// </summary>
+    public bool IntroDismissed { get; init; }
+
     /// <summary>The intervals an admin may choose. Anything faster than a minute just burns Graph quota.</summary>
     public static IReadOnlyList<int> DeltaChoices { get; } = [60, 120, 300, 600, 1800];
 

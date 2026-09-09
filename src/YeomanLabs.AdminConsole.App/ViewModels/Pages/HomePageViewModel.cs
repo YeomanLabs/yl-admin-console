@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.Core.Auth;
+using YeomanLabs.AdminConsole.Core;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Cache.Browse;
 using YeomanLabs.AdminConsole.Core.Models;
@@ -18,13 +19,16 @@ public sealed partial class HomePageViewModel : ObservableObject, IPageViewModel
 {
     private readonly CacheDb _cache;
     private readonly TenantContext _tenant;
+    private readonly UserSettingsStore _settings;
     private readonly ILogger<HomePageViewModel> _logger;
 
-    public HomePageViewModel(CacheDb cache, TenantContext tenant, ILogger<HomePageViewModel> logger)
+    public HomePageViewModel(CacheDb cache, TenantContext tenant, UserSettingsStore settings, ILogger<HomePageViewModel> logger)
     {
         _cache = cache;
         _tenant = tenant;
+        _settings = settings;
         _logger = logger;
+        _showIntro = !settings.Load().IntroDismissed;
     }
 
     public string Title => "Home";
@@ -68,6 +72,22 @@ public sealed partial class HomePageViewModel : ObservableObject, IPageViewModel
 
     [ObservableProperty]
     private bool _hasLoaded;
+
+    /// <summary>
+    /// The "new here?" panel, shown until it is dismissed. Three lines, not a tour: what search does, that the rail
+    /// browses, and that nothing destructive happens without a preview — which is the thing a nervous admin most needs
+    /// to be told before they touch anything.
+    /// </summary>
+    [ObservableProperty]
+    private bool _showIntro;
+
+    [RelayCommand]
+    private void DismissIntro()
+    {
+        ShowIntro = false;
+        var current = _settings.Load();
+        _settings.Save(current with { IntroDismissed = true });
+    }
 
     [RelayCommand]
     private void Search() => OpenPalette?.Invoke();

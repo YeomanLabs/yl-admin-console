@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Wpf.Ui.Controls;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels;
@@ -22,6 +22,12 @@ public sealed partial class NavItem : ObservableObject
     public Type PageViewModelType { get; }
 
     public string ToolTip => Ordinal > 0 ? $"{Title} (Alt+{Ordinal})" : Title;
+
+    /// <summary>
+    /// What the rail prints under the icon. "Activity log" is the page's name but does not fit a 76 px rail, and a
+    /// truncated "Activity l…" is worse than the short word everyone uses for it.
+    /// </summary>
+    public string RailLabel => Title == "Activity log" ? "Activity" : Title;
 
     [ObservableProperty]
     private bool _isSelected;

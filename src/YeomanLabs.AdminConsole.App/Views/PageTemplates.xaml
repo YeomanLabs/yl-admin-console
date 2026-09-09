@@ -41,6 +41,32 @@
                         </Grid>
                     </Button>
 
+                    <!-- First run (M9.8). Three lines, not a tour. The third is the one that matters to someone who
+                         has just been handed the keys to a directory. -->
+                    <Border Margin="0,20,0,0" Padding="16,14" CornerRadius="6"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{StaticResource YlCoral}" BorderThickness="1"
+                            Visibility="{Binding ShowIntro, Converter={StaticResource BoolToVisibility}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="New here?" FontSize="14" FontWeight="SemiBold" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"
+                                           Text="Search finds anyone or anything by name, sign-in name, serial or phone number — the box above, or Ctrl+K from anywhere." />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Text="The rail on the left browses everything: users, groups and devices, with filters for the questions a helpdesk actually asks." />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Text="Nothing destructive happens without showing you exactly what it will change first, and most of it can be undone. Everything you change is recorded in the activity log." />
+                            </StackPanel>
+                            <ui:Button Grid.Column="1" Content="Got it" VerticalAlignment="Top" Margin="16,0,0,0"
+                                       Command="{Binding DismissIntroCommand}"
+                                       AutomationProperties.Name="Dismiss the introduction" />
+                        </Grid>
+                    </Border>
+
                     <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Start something" FontSize="13" FontWeight="SemiBold" Margin="0,24,0,8" />
                     <WrapPanel>
                         <ui:Button Icon="{ui:SymbolIcon PersonAdd24}" Content="New user from a template" Margin="0,0,8,8"

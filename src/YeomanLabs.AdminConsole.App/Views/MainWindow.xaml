@@ -17,10 +17,13 @@
                  WindowCornerPreference="Round">
     <!-- UX §1: Mica/acrylic off. UX §2 layout: title bar / nav rail + content / status bar. -->
     <ui:FluentWindow.Resources>
-        <!-- Nav rail button: 48 px square, coral indicator on the active item (UX §1: coral only for accent/active). -->
+        <!-- Nav rail button: icon over a label, coral indicator on the active item (UX §1: coral only for accent/active).
+             It was a 48 px icon-only square with a tooltip. Tooltips are fine for someone who already knows the app and
+             useless to a client meeting it: six unlabelled glyphs is a guessing game, and hovering each one to find out
+             is not navigation. Labelling costs 28 px of width. -->
         <Style x:Key="NavRailButton" TargetType="Button">
-            <Setter Property="Width" Value="48" />
-            <Setter Property="Height" Value="48" />
+            <Setter Property="Width" Value="76" />
+            <Setter Property="Height" Value="56" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
             <!-- The rail is navy in every theme, so its icons are light in every theme. -->
@@ -58,7 +61,11 @@
                     AutomationProperties.Name="{Binding Title}"
                     Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                     CommandParameter="{Binding}">
-                <ui:SymbolIcon Symbol="{Binding Symbol}" FontSize="20" />
+                <StackPanel HorizontalAlignment="Center">
+                    <ui:SymbolIcon Symbol="{Binding Symbol}" FontSize="20" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding RailLabel}" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0"
+                               TextTrimming="CharacterEllipsis" MaxWidth="72" />
+                </StackPanel>
             </Button>
         </DataTemplate>
 
@@ -163,7 +170,7 @@
         <!-- Nav rail + content -->
         <Grid Grid.Row="2">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="76" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
