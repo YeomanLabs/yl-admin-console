@@ -75,3 +75,23 @@ Legend: 🧪 has a unit test requirement · 🖥 requires launching the app agai
 
 ## Not in Phase 1 (do not build even if tempting)
 Exchange Online anything · on-prem AD · multi-tenant switcher · MSIX/installer/auto-update · licensing enforcement · telemetry · bulk CSV · reporting · scheduling · light theme polish beyond "doesn't look broken".
+
+## M9 — Make it usable by someone who is not me
+
+The M8 gate never ran. Clicking Users, Groups or Devices showed a stub reading "Object lists arrive with User 360
+(M4)" — a promise M3 made and M4 never kept — and Home was a single sentence pointing at Ctrl+K. Three of the six nav
+items were dead and the only working path through the app was a keyboard shortcut. Doc 02 §2 names the six rail items
+but never says what those three pages contain, and no task in this plan built them; I stubbed the rail in M3 and never
+came back. Every gate went through the palette, so nothing ever caught it.
+
+The data is already there — synced, cached and FTS-indexed. This milestone is missing screens, not missing sync.
+
+- [x] 9.1 🧪 Browse reads on `CacheDb`: list users, devices and groups with paging, sorting, free-text narrowing and named filters. Filter SQL is a fixed catalog in code, never built from input. — done: `CacheDb.Browse.cs` with `BrowseUsers`/`BrowseGroups`/`BrowseDevices` returning a page plus the total behind it, so a list can say "100 of 4,812" rather than leaving the admin to guess. Filters are a per-entity catalog (`UserBrowse`, `GroupBrowse`, `DeviceBrowse`) of the questions a helpdesk actually asks — disabled, unlicensed, guests, not compliant, quiet 90+ days, no primary user. Chips in the same group OR, groups AND, so ticking a second box widens rather than emptying the list. Devices union Entra and Intune: a device in both appears once from Intune, and one registered but never enrolled appears with no serial and no compliance, which is itself the answer. Free text is a substring rather than FTS, because a filter box has to match mid-word while someone is still typing, and `%` typed into it is a literal. `CountUserFilters` and friends count each chip against the other groups so a chip can show what ticking it would do. 24 tests, including one that runs every filter and sort in all three catalogs so a typo in a fragment fails here rather than the first time an admin ticks that chip. 332/332 green, 0 warnings.
+- [ ] 9.2 🖥 Users page: sortable, filterable list from the cache; row opens the User 360 page.
+- [ ] 9.3 🖥 Devices page: same, joining Entra and Intune, with compliance and last check-in.
+- [ ] 9.4 🖥 Groups page: same, with kind, dynamic and synced badges and member counts.
+- [ ] 9.5 🖥 Home rebuilt as a landing page: search in the middle of the page, recent objects, counts, and visible buttons for the things people actually do.
+- [ ] 9.6 🖥 Empty states and next steps everywhere: no page ever shows nothing without saying why and what to do.
+- [ ] 9.7 🖥 First run for someone who has never seen it: what this is, what it can do, where to start.
+- [ ] 9.8 🖥 Wording pass over every label, button and message, read as someone who is not the author.
+- **Gate:** hand the app to someone who has not seen it and watch without helping. Every place they hesitate goes into `docs/BACKLOG.md`.
