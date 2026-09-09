@@ -117,6 +117,32 @@
         </Grid>
     </DataTemplate>
 
+    <!-- Placeholder object page from the palette until M4 -->
+    <DataTemplate DataType="{x:Type pages:ObjectPageViewModel}">
+        <StackPanel Margin="24">
+            <TextBlock Text="{Binding Kind}" FontSize="12" Opacity="0.6" />
+            <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Secondary}" FontFamily="{StaticResource YlMono}" Opacity="0.7" Margin="0,4,0,0" />
+            <ItemsControl ItemsSource="{Binding Badges}" Margin="0,8,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="3" Padding="6,1" Margin="0,0,4,0" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                            <TextBlock Text="{Binding}" FontSize="11" />
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Text="{Binding Id}" FontFamily="{StaticResource YlMono}" FontSize="12" Opacity="0.5" Margin="0,16,0,0" />
+            <TextBlock Text="{Binding ArrivesIn}" Opacity="0.6" Margin="0,8,0,0" />
+        </StackPanel>
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
         <StackPanel Margin="24">
             <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />

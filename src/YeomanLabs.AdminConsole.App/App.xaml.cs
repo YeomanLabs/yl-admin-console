@@ -12,6 +12,7 @@ using YeomanLabs.AdminConsole.App.Logging;
 using YeomanLabs.AdminConsole.App.Services;
 using YeomanLabs.AdminConsole.App.ViewModels;
 using YeomanLabs.AdminConsole.App.ViewModels.Pages;
+using YeomanLabs.AdminConsole.App.ViewModels.Palette;
 using YeomanLabs.AdminConsole.App.Views;
 using YeomanLabs.AdminConsole.Core;
 using YeomanLabs.AdminConsole.Core.Auth;
@@ -124,11 +125,12 @@ public sealed partial class App : Application
         });
         services.AddSingleton<DeltaSyncService>();
         services.AddSingleton<ISyncStatus>(sp => sp.GetRequiredService<DeltaSyncService>());
-        services.AddSingleton(sp => new SearchService(sp.GetRequiredService<CacheDb>()));
+        services.AddSingleton(sp => new SearchService(sp.GetRequiredService<CacheDb>(), PaletteActions.All));
         services.AddHostedService<SyncHostedService>();
 
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<MainWindow>();
+        services.AddTransient<PaletteViewModel>();
 
         // Page ViewModels are transient (doc 03): a fresh instance per navigation.
         services.AddTransient<HomePageViewModel>();

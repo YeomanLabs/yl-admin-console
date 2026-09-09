@@ -6,10 +6,13 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Controls;
+using YeomanLabs.AdminConsole.App.Services;
 using YeomanLabs.AdminConsole.App.ViewModels.Pages;
+using YeomanLabs.AdminConsole.App.ViewModels.Palette;
 using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Graph;
+using YeomanLabs.AdminConsole.Core.Models;
 using YeomanLabs.AdminConsole.Core.Sync;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels;
@@ -245,11 +248,58 @@ public sealed partial class ShellViewModel : ObservableObject
 
     // ---- the rest of the UX §11 table ---------------------------------------------------------------------------
 
-    /// <summary>Ctrl+K. Wired to the overlay in M3.5.</summary>
-    [RelayCommand]
-    private void OpenPalette() => PaletteRequested?.Invoke(this, EventArgs.Empty);
+    // ---- command palette (UX §3) ----------------------------------------------------------------------------------
 
-    public event EventHandler? PaletteRequested;
+    /// <summary>Null until the session is ready (needs the per-tenant SearchService).</summary>
+    [ObservableProperty]
+    private PaletteViewModel? _palette;
+
+    /// <summary>Ctrl+K. Re-opening while open just re-focuses the search box.</summary>
+    [RelayCommand]
+    private void OpenPalette()
+    {
+        if (!IsSessionReady || Palette is null) return;
+        if (Palette.IsOpen) Palette.IsOpen = false;
+        Palette.Open();
+    }
+
+    private void OnPaletteChosen(object? sender, PaletteChoice choice)
+    {
+        var hit = choice.Hit;
+        if (hit.ObjectType == ObjectType.Action)
+        {
+            RunAction(hit.Id);
+            return;
+        }
+
+        _services.GetRequiredService<CacheDb>().TouchRecent(hit.Id, hit.ObjectType.ToString().ToLowerInvariant());
+        var page = new ObjectPageViewModel(hit);
+        if (choice.NewTab) OpenTab(page);
+        else OpenPage(page);
+        _logger.LogInformation("Opened {Type} {Id} from the palette{NewTab}", hit.ObjectType, hit.Id, choice.NewTab ? " in a new tab" : string.Empty);
+    }
+
+    private void RunAction(string id)
+    {
+        switch (id)
+        {
+            case PaletteActions.SyncNow:
+                _ = SyncNowAsync();
+                break;
+            case PaletteActions.NewUser:
+                NewUser();
+                break;
+            case PaletteActions.Offboard:
+                ShowStatusMessage("Offboarding arrives in M6.");
+                break;
+            case PaletteActions.Settings:
+                OpenSettings();
+                break;
+            default:
+                _logger.LogWarning("Unknown palette action {Id}", id);
+                break;
+        }
+    }
 
     /// <summary>Ctrl+N (M7).</summary>
     [RelayCommand]
@@ -397,6 +447,8 @@ public sealed partial class ShellViewModel : ObservableObject
         (CurrentPage as IDisposable)?.Dispose();
         IsSessionReady = true;
         OpenTab();
+        // UX §9 step 4: land on Home with the palette open.
+        OpenPalette();
     }
 
     // ---- status bar (UX §2: cache age · last delta · errors · progress) ------------------------------------------
@@ -424,6 +476,8 @@ public sealed partial class ShellViewModel : ObservableObject
         _sync = _services.GetRequiredService<ISyncStatus>();
         _sync.ProgressChanged += (_, p) => RunOnUi(() => OnSyncProgress(p));
         _sync.CycleCompleted += (_, _) => RunOnUi(OnCycleCompleted);
+        Palette = _services.GetRequiredService<PaletteViewModel>();
+        Palette.Chosen += OnPaletteChosen;
         SyncState = SyncPillState.Syncing;
         SyncStatusText = "Preparing…";
         var last = _services.GetRequiredService<CacheDb>().GetAllSyncState().Select(s => s.LastSync).Max();
