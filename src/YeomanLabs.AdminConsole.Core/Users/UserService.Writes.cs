@@ -161,7 +161,7 @@ public sealed partial class UserService
     };
 
     /// <summary>Graph property name → the words the toast and the action log use.</summary>
-    internal static string FriendlyProperty(string propertyName) => propertyName switch
+    public static string FriendlyProperty(string propertyName) => propertyName switch
     {
         "displayName" => "display name",
         "givenName" => "first name",
