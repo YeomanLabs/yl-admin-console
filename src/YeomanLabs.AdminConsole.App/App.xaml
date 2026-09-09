@@ -1,0 +1,23 @@
+<Application x:Class="YeomanLabs.AdminConsole.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!-- No StartupUri: the window is created by the host in App.xaml.cs after DI is up. -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+            </ResourceDictionary.MergedDictionaries>
+
+            <!-- UX §1 palette: navy window base, coral accent for primary actions, focus rings and the active nav item only. -->
+            <Color x:Key="YlNavyColor">#041635</Color>
+            <Color x:Key="YlCoralColor">#FF6950</Color>
+            <SolidColorBrush x:Key="YlNavy" Color="{StaticResource YlNavyColor}" />
+            <SolidColorBrush x:Key="YlCoral" Color="{StaticResource YlCoralColor}" />
+            <SolidColorBrush x:Key="YlCoralDim" Color="#B3FF6950" />
+            <FontFamily x:Key="YlMono">Cascadia Mono, Consolas</FontFamily>
+            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
