@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -151,9 +151,11 @@ public sealed partial class PaletteViewModel : ObservableObject
         var top = r.Top;
         Select(top is null ? null : _flat.FirstOrDefault(row => ReferenceEquals(row.Hit, top)) ?? _flat.FirstOrDefault());
 
+        // The rows are deliberately not focusable (UX §3: arrows move the selection, Enter opens), so the footer is
+        // what a screen reader has to work from. It names the selected row and is marked as a live region.
         FooterText = HitCount == 0
             ? $"No matches for \"{r.Query.Text}\"" + (r.Query.Scope == SearchScope.All ? string.Empty : $" in {r.Query.Scope.ToString().ToLowerInvariant()}")
-            : $"{HitCount} result{(HitCount == 1 ? string.Empty : "s")} · {r.ElapsedMilliseconds:F1} ms";
+            : $"{HitCount} result{(HitCount == 1 ? string.Empty : "s")} · {r.ElapsedMilliseconds:F1} ms" + SelectedSuffix;
         RefreshPartialWarning();
         _logger.LogDebug("Palette \"{Query}\" → {Count} hit(s) in {Ms:F1} ms", r.Query.Text, HitCount, r.ElapsedMilliseconds);
     }
@@ -179,6 +181,19 @@ public sealed partial class PaletteViewModel : ObservableObject
         if (Selected is not null) Selected.IsSelected = false;
         Selected = row;
         if (row is not null) row.IsSelected = true;
+        AnnounceSelection();
+    }
+
+    private string SelectedSuffix => Selected is null ? string.Empty : $" · {Selected.Primary} selected";
+
+    /// <summary>Keeps the footer's live-region text in step as the arrows move, so the selection is spoken.</summary>
+    private void AnnounceSelection()
+    {
+        if (HitCount == 0 || Selected is null) return;
+        var head = FooterText.Contains(" · ", StringComparison.Ordinal)
+            ? string.Join(" · ", FooterText.Split(" · ").Take(2))
+            : FooterText;
+        FooterText = head + SelectedSuffix;
     }
 
     [RelayCommand]

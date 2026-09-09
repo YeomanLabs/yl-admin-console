@@ -50,6 +50,31 @@ public sealed class UserSettingsTests : IDisposable
     }
 
     [Fact]
+    public void Save_WritesEnumsAsNames_SoTheFileCanBeEditedByHand()
+    {
+        // "theme": 2 tells a reader nothing, and a hand-typed "Light" against a numeric file fails to parse and is
+        // silently replaced by the default — which is exactly how the M8.4 light-theme check looked like it passed.
+        _store.Save(new UserSettings { Theme = AppTheme.Light, Density = AppDensity.Compact });
+
+        var json = File.ReadAllText(_path);
+
+        json.Should().Contain("\"Light\"").And.Contain("\"Compact\"");
+        json.Should().NotContain("\"theme\": 2");
+    }
+
+    [Fact]
+    public void Load_ReadsAHandTypedEnumName()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+        File.WriteAllText(_path, """{"deltaIntervalSeconds":120,"deviceRefreshIntervalSeconds":600,"theme":"Light","density":"Compact"}""");
+
+        var settings = _store.Load();
+
+        settings.Theme.Should().Be(AppTheme.Light);
+        settings.Density.Should().Be(AppDensity.Compact);
+    }
+
+    [Fact]
     public void Load_ABrokenFile_FallsBackToDefaults_RatherThanFailingToStart()
     {
         Directory.CreateDirectory(Path.GetDirectoryName(_path)!);

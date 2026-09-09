@@ -23,7 +23,8 @@
             <Setter Property="Height" Value="48" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <!-- The rail is navy in every theme, so its icons are light in every theme. -->
+            <Setter Property="Foreground" Value="#A8B6CC" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Template">
@@ -37,11 +38,11 @@
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                 <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource YlOnNavy}" />
                             </DataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource YlOnNavy}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
@@ -112,11 +113,12 @@
         </Grid.RowDefinitions>
 
         <!-- Title bar: app name · tenant · sync pill · account (UX §2) -->
-        <ui:TitleBar Grid.Row="0" Title="Admin Console" ShowMaximize="True" ShowMinimize="True">
+        <ui:TitleBar Grid.Row="0" Title="Admin Console" ShowMaximize="True" ShowMinimize="True" AutomationProperties.Name="Window controls">
             <ui:TitleBar.Header>
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,12,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,12,0"
+                            TextElement.Foreground="{StaticResource YlOnNavy}">
                     <TextBlock Text="{Binding TenantName}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"
-                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+                               Foreground="{StaticResource YlOnNavy}" />
 
                     <Border CornerRadius="10" Padding="8,2" VerticalAlignment="Center" Margin="0,0,12,0"
                             Background="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -165,9 +167,9 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <DockPanel Grid.Column="0" Background="#0A1F45" Visibility="{Binding IsSessionReady, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel Grid.Column="0" Background="#0A1F45" TextElement.Foreground="{StaticResource YlOnNavy}" Visibility="{Binding IsSessionReady, Converter={StaticResource BoolToVisibility}}">
                 <ContentControl DockPanel.Dock="Bottom" Content="{Binding SettingsItem}" ContentTemplate="{StaticResource NavRailItem}" Margin="0,0,0,4" />
-                <ItemsControl ItemsSource="{Binding NavItems}" ItemTemplate="{StaticResource NavRailItem}" Margin="0,4,0,0" />
+                <ItemsControl ItemsSource="{Binding NavItems}" AutomationProperties.Name="Navigation" ItemTemplate="{StaticResource NavRailItem}" Margin="0,4,0,0" />
             </DockPanel>
 
             <Grid Grid.Column="1">
@@ -219,7 +221,7 @@
         </Grid>
 
         <!-- Status bar: cache age · last delta · errors · progress (UX §2) -->
-        <Border Grid.Row="3" Height="24" Background="#0A1F45" Padding="12,0">
+        <Border Grid.Row="3" Height="24" Background="#0A1F45" Padding="12,0" TextElement.Foreground="{StaticResource YlOnNavy}">
             <DockPanel VerticalAlignment="Center">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsProgressVisible, Converter={StaticResource BoolToVisibility}}">
                     <TextBlock Text="{Binding ProgressText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -237,7 +239,7 @@
         </Border>
 
         <!-- Toasts (UX §10): bottom-right, up to 3, above the content, below the palette -->
-        <ItemsControl Grid.Row="2" ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,12" IsHitTestVisible="True">
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding Toasts}" AutomationProperties.Name="Notifications" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,12" IsHitTestVisible="True">
             <ItemsControl.ItemTemplate>
                 <DataTemplate>
                     <Border CornerRadius="6" Padding="12,8" Margin="0,6,0,0" MinWidth="280" MaxWidth="420"

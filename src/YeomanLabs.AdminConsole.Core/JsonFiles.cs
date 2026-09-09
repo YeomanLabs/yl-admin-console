@@ -1,5 +1,6 @@
 ﻿using System.Text.Encodings.Web;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace YeomanLabs.AdminConsole.Core;
 
@@ -14,6 +15,10 @@ public static class JsonFiles
     {
         WriteIndented = true,
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+
+        // Enums as names, not numbers. These files are edited by hand, and "theme": 2 tells the reader nothing —
+        // worse, a hand-typed "Light" would fail to parse and be silently replaced by the default.
+        Converters = { new JsonStringEnumConverter(allowIntegerValues: true) },
     };
 
     /// <summary>

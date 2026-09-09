@@ -58,7 +58,10 @@
         <Setter Property="Padding" Value="4,1" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="FontFamily" Value="{StaticResource YlMono}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+        <!-- Inherited, not fixed: this style is used on the page surface and on the navy sidebar, which need
+             opposite foregrounds once the light theme is in play. -->
+        <Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+        <Setter Property="Opacity" Value="0.8" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="ToolTip" Value="Click to copy" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -386,7 +389,8 @@
                     </StackPanel>
                 </Grid>
 
-                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}">
+                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
+                            AutomationProperties.Name="User sections">
                     <!-- 1. Identity: read-only property sheet with hybrid captions (M5.2 adds edit-on-blur) -->
                     <TabItem Header="Identity">
                         <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -583,6 +587,7 @@
 
             <!-- Sidebar (UX §4): 280 px quick facts, collapsible -->
             <Border Grid.Column="1" Width="280" Background="{StaticResource YlRailBackground}" Padding="16,16,16,8"
+                    TextElement.Foreground="{StaticResource YlOnNavy}"
                     Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>

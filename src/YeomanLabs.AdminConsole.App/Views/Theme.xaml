@@ -10,6 +10,9 @@
     <SolidColorBrush x:Key="YlCoral" Color="{StaticResource YlCoralColor}" />
     <SolidColorBrush x:Key="YlCoralDim" Color="#B3FF6950" />
     <SolidColorBrush x:Key="YlRailBackground" Color="#0A1F45" />
+    <!-- The chrome is navy in every theme, so text on it is light in every theme. Without this the light
+         theme paints dark text on the navy rail, status bar and quick-facts panel. -->
+    <SolidColorBrush x:Key="YlOnNavy" Color="#F2F5FA" />
     <SolidColorBrush x:Key="YlSuccess" Color="#4CC38A" />
     <SolidColorBrush x:Key="YlDanger" Color="#F04E4E" />
     <FontFamily x:Key="YlMono">Cascadia Mono, Consolas</FontFamily>

@@ -104,7 +104,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Border Width="48" Height="48" CornerRadius="8" Background="{StaticResource YlRailBackground}"
+                <Border Width="48" Height="48" CornerRadius="8" Background="{StaticResource YlRailBackground}" TextElement.Foreground="{StaticResource YlOnNavy}"
                         BorderBrush="{StaticResource YlCoral}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
                     <ui:SymbolIcon Symbol="Laptop24" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
