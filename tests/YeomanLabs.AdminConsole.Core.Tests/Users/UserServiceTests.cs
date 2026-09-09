@@ -17,15 +17,21 @@ public sealed class UserServiceTests : IDisposable
     private const string Id = "u-1";
     private readonly FakeHttpHandler _handler = new();
     private readonly CacheDb _db = CacheDb.OpenInMemory();
+    private readonly ActionLog _actions = ActionLog.OpenInMemory();
+    private readonly TenantContext _tenant = new();
     private readonly UserService _sut;
 
     public UserServiceTests()
     {
         var graph = new GraphClient(new HttpClient(_handler), new FakeAuthService(), NullLogger<GraphClient>.Instance);
-        _sut = new UserService(graph, _db, NullLogger<UserService>.Instance);
+        _sut = new UserService(graph, _db, _actions, _tenant, NullLogger<UserService>.Instance);
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        _actions.Dispose();
+    }
 
     [Fact]
     public async Task Hydrate_OneBatch_FillsEverySection_AndWritesThroughToCache()

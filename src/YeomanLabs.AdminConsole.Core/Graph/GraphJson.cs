@@ -1,3 +1,4 @@
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -14,5 +15,10 @@ public static class GraphJson
     {
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
         WriteIndented = false,
+
+        // Default escaping mangles '+' and anything non-ASCII, which makes phone numbers and non-English names
+        // unreadable in the action log. Relaxed escaping is safe for a JSON HTTP body; the extra escaping it skips
+        // only matters when JSON is embedded in HTML, which never happens here.
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 }

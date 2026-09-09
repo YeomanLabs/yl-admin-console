@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:vm="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels"
+                    xmlns:b="clr-namespace:YeomanLabs.AdminConsole.App.Behaviors"
                     xmlns:pages="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Pages"
                     xmlns:models="clr-namespace:YeomanLabs.AdminConsole.Core.Models;assembly=YeomanLabs.AdminConsole.Core"
                     xmlns:auth="clr-namespace:YeomanLabs.AdminConsole.Core.Auth;assembly=YeomanLabs.AdminConsole.Core">
@@ -104,33 +105,57 @@
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
-    <!-- Identity property sheet row: label · value · hybrid caption (UX §6) -->
-    <DataTemplate x:Key="IdentityFieldRow" DataType="{x:Type pages:IdentityField}">
-        <Grid Height="32">
+    <!-- Identity property sheet row (UX §4 tab 1): edit-on-blur, spinner then check, no Save button.
+         Read-only rows show the hybrid caption instead of an editor (UX §6). -->
+    <DataTemplate x:Key="EditableFieldRow" DataType="{x:Type pages:EditableField}">
+        <Grid MinHeight="34" Margin="0,0,0,2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="170" />
+                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
+
             <TextBlock Text="{Binding Label}" Opacity="0.65" VerticalAlignment="Center" />
-            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock x:Name="Value" Text="{Binding Display}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="520" />
-                <ui:SymbolIcon x:Name="Lock" Symbol="LockClosed24" FontSize="12" Opacity="0.5" Margin="8,0,4,0" VerticalAlignment="Center" Visibility="Collapsed"
-                               ToolTip="{Binding ReadOnlyReason}" />
-                <TextBlock x:Name="Reason" Text="{Binding ReadOnlyReason}" Style="{StaticResource Caption}" VerticalAlignment="Center" Visibility="Collapsed" />
+
+            <!-- Editable -->
+            <ui:TextBox x:Name="Editor" Grid.Column="1" VerticalAlignment="Center"
+                        Text="{Binding Value, UpdateSourceTrigger=LostFocus}"
+                        PlaceholderText="{Binding Placeholder}"
+                        b:CommitOnBlur.Command="{Binding CommitCommand}"
+                        b:CommitOnBlur.RevertCommand="{Binding RevertCommand}"
+                        AutomationProperties.Name="{Binding Label}"
+                        Visibility="{Binding IsEditable, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- Read-only (hybrid) -->
+            <TextBlock x:Name="ReadOnlyValue" Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center" Opacity="0.6"
+                       TextTrimming="CharacterEllipsis"
+                       Visibility="{Binding IsReadOnly, Converter={StaticResource BoolToVisibility}}" />
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14"
+                                 Visibility="{Binding IsSaving, Converter={StaticResource BoolToVisibility}}" />
+                <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="14" Foreground="{StaticResource YlSuccess}"
+                               Visibility="{Binding JustSaved, Converter={StaticResource BoolToVisibility}}" />
+                <ui:SymbolIcon Symbol="LockClosed24" FontSize="12" Opacity="0.5" ToolTip="{Binding ReadOnlyReason}"
+                               Visibility="{Binding IsReadOnly, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
+
+            <TextBlock Grid.Column="3" Text="{Binding ReadOnlyReason}" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="6,0,0,0"
+                       Visibility="{Binding HasReadOnlyReason, Converter={StaticResource BoolToVisibility}}" />
+            <TextBlock Grid.Column="3" Text="{Binding ErrorText}" FontSize="11" Foreground="{StaticResource YlDanger}" TextWrapping="Wrap"
+                       VerticalAlignment="Center" Margin="6,0,0,0"
+                       Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
         </Grid>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsMono}" Value="True">
-                <Setter TargetName="Value" Property="FontFamily" Value="{StaticResource YlMono}" />
-                <Setter TargetName="Value" Property="FontSize" Value="12" />
+                <Setter TargetName="Editor" Property="FontFamily" Value="{StaticResource YlMono}" />
+                <Setter TargetName="Editor" Property="FontSize" Value="12" />
+                <Setter TargetName="ReadOnlyValue" Property="FontFamily" Value="{StaticResource YlMono}" />
+                <Setter TargetName="ReadOnlyValue" Property="FontSize" Value="12" />
             </DataTrigger>
-            <DataTrigger Binding="{Binding HasValue}" Value="False">
-                <Setter TargetName="Value" Property="Opacity" Value="0.35" />
-            </DataTrigger>
-            <DataTrigger Binding="{Binding IsReadOnly}" Value="True">
-                <Setter TargetName="Value" Property="Opacity" Value="0.6" />
-                <Setter TargetName="Lock" Property="Visibility" Value="Visible" />
-                <Setter TargetName="Reason" Property="Visibility" Value="Visible" />
+            <DataTrigger Binding="{Binding IsSaving}" Value="True">
+                <Setter TargetName="Editor" Property="IsEnabled" Value="False" />
             </DataTrigger>
         </DataTemplate.Triggers>
     </DataTemplate>
@@ -359,10 +384,10 @@
                                                     <DataTemplate>
                                                         <ItemsControl ItemsSource="{Binding IdentitySections}">
                                                             <ItemsControl.ItemTemplate>
-                                                                <DataTemplate DataType="{x:Type pages:IdentitySection}">
+                                                                <DataTemplate DataType="{x:Type pages:EditableSection}">
                                                                     <StackPanel>
                                                                         <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitle}" />
-                                                                        <ItemsControl ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource IdentityFieldRow}" />
+                                                                        <ItemsControl ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource EditableFieldRow}" />
                                                                     </StackPanel>
                                                                 </DataTemplate>
                                                             </ItemsControl.ItemTemplate>

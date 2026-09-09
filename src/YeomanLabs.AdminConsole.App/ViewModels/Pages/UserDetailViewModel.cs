@@ -10,6 +10,7 @@ using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
 using YeomanLabs.AdminConsole.Core.Users;
+using YeomanLabs.AdminConsole.Core.Writes;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels.Pages;
 
@@ -27,17 +28,19 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private readonly CacheDb _db;
     private readonly TenantContext _tenant;
     private readonly PermissionChecker _permissions;
+    private readonly ConsentService _consent;
     private readonly ToastService _toasts;
     private readonly ILogger<UserDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ToastService toasts, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, ToastService toasts, ILogger<UserDetailViewModel> logger)
     {
         _users = users;
         _db = db;
         _tenant = tenant;
         _permissions = permissions;
+        _consent = consent;
         _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
         _logger = logger;
@@ -203,7 +206,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     // ---- Identity tab (UX §4 tab 1, hybrid rule per doc 05) --------------------------------------------------------
 
     [ObservableProperty]
-    private IReadOnlyList<IdentitySection> _identitySections = [];
+    private IReadOnlyList<EditableSection> _identitySections = [];
 
     [ObservableProperty]
     private string? _identityCaption;
@@ -213,61 +216,128 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         if (User is null) return;
         using var raw = User.ParseRaw();
         var e = raw.RootElement;
-        var synced = User.OnPremisesSyncEnabled;
-        IdentityCaption = synced ? "This account is synced from on-prem AD. Greyed fields are mastered there." : null;
+        IdentityCaption = User.OnPremisesSyncEnabled
+            ? "This account is synced from on-prem AD. Greyed fields are mastered there and must be edited in AD."
+            : null;
 
-        IdentityField F(string label, string prop, string? value, bool mono = false)
+        // Rebuilding on every refresh would throw away half-typed text, so update in place once the rows exist.
+        if (IdentitySections.Count > 0)
         {
-            var ro = User.IsReadOnly(prop);
-            return new IdentityField(label, prop, value, mono, ro, ro ? HybridCaption : null);
+            foreach (var field in IdentitySections.SelectMany(x => x.Fields))
+            {
+                if (!field.IsSaving) field.Reset(ReadField(e, field.PropertyName, field.IsArray));
+            }
+
+            return;
         }
 
-        string? Join(string prop) { var v = e.GetStrings(prop); return v.Count == 0 ? null : string.Join(", ", v); }
+        EditableField F(string label, string prop, bool mono = false, bool array = false, string? placeholder = null)
+        {
+            var ro = User!.IsReadOnly(prop);
+            return new EditableField(label, prop, ReadField(e, prop, array), SaveFieldAsync, mono, array, ro,
+                ro ? HybridCaption : null, placeholder);
+        }
 
         IdentitySections =
         [
-            new IdentitySection("Name",
+            new EditableSection("Name",
             [
-                F("Display name", "displayName", e.GetString("displayName")),
-                F("First name", "givenName", e.GetString("givenName")),
-                F("Last name", "surname", e.GetString("surname")),
-                F("User principal name", "userPrincipalName", e.GetString("userPrincipalName"), mono: true),
-                F("Mail nickname", "mailNickname", e.GetString("mailNickname"), mono: true),
+                F("Display name", "displayName"),
+                F("First name", "givenName"),
+                F("Last name", "surname"),
+                F("User principal name", "userPrincipalName", mono: true),
+                F("Mail nickname", "mailNickname", mono: true),
             ]),
-            new IdentitySection("Job",
+            new EditableSection("Job",
             [
-                F("Job title", "jobTitle", e.GetString("jobTitle")),
-                F("Department", "department", e.GetString("department")),
-                F("Company", "companyName", e.GetString("companyName")),
-                F("Office", "officeLocation", e.GetString("officeLocation")),
-                F("Employee ID", "employeeId", e.GetString("employeeId"), mono: true),
-                F("Employee type", "employeeType", e.GetString("employeeType")),
-                F("Hire date", "employeeHireDate", TimeText.Absolute(e.GetDate("employeeHireDate")) is var hd && hd != "—" ? hd : null),
+                F("Job title", "jobTitle"),
+                F("Department", "department"),
+                F("Company", "companyName"),
+                F("Office", "officeLocation"),
+                F("Employee ID", "employeeId", mono: true),
+                F("Employee type", "employeeType"),
             ]),
-            new IdentitySection("Contact",
+            new EditableSection("Contact",
             [
-                F("Email", "mail", e.GetString("mail"), mono: true),
-                F("Other emails", "otherMails", Join("otherMails"), mono: true),
-                F("Proxy addresses", "proxyAddresses", Join("proxyAddresses"), mono: true),
-                F("Business phones", "businessPhones", Join("businessPhones"), mono: true),
-                F("Mobile phone", "mobilePhone", e.GetString("mobilePhone"), mono: true),
+                F("Email", "mail", mono: true),
+                F("Business phones", "businessPhones", mono: true, array: true, placeholder: "comma separated"),
+                F("Mobile phone", "mobilePhone", mono: true),
             ]),
-            new IdentitySection("Address",
+            new EditableSection("Address",
             [
-                F("Street", "streetAddress", e.GetString("streetAddress")),
-                F("City", "city", e.GetString("city")),
-                F("State", "state", e.GetString("state")),
-                F("Postal code", "postalCode", e.GetString("postalCode")),
-                F("Country", "country", e.GetString("country")),
+                F("Street", "streetAddress"),
+                F("City", "city"),
+                F("State", "state"),
+                F("Postal code", "postalCode"),
+                F("Country", "country"),
             ]),
-            new IdentitySection("Settings",
+            new EditableSection("Settings",
             [
-                F("Usage location", "usageLocation", e.GetString("usageLocation")),
-                F("Preferred language", "preferredLanguage", e.GetString("preferredLanguage")),
-                F("User type", "userType", e.GetString("userType")),
-                F("Account enabled", "accountEnabled", User.AccountEnabled ? "Yes" : "No"),
+                F("Usage location", "usageLocation", placeholder: "two-letter country code, e.g. GB"),
+                F("Preferred language", "preferredLanguage", placeholder: "e.g. en-GB"),
             ]),
         ];
+    }
+
+    private static string? ReadField(JsonElement e, string prop, bool array)
+    {
+        if (array)
+        {
+            var values = e.GetStrings(prop);
+            return values.Count == 0 ? null : string.Join(", ", values);
+        }
+
+        return e.GetString(prop);
+    }
+
+    /// <summary>
+    /// Edit-on-blur save (UX §4 tab 1). Requests write consent on the first write of the session, PATCHes one property,
+    /// and raises the undo toast (UX §10). Failures come back to the field as an inline message (UX §7).
+    /// </summary>
+    private async Task<WriteOutcome> SaveFieldAsync(string propertyName, object? value)
+    {
+        var permission = _permissions.Check(Capabilities.EditUser);
+        if (permission.NeedsConsent)
+        {
+            try
+            {
+                permission = await _consent.EnsureAsync(Capabilities.EditUser, CancellationToken.None);
+            }
+            catch (SignInException ex)
+            {
+                _logger.LogInformation("Consent for user edits not completed: {Kind}", ex.Kind);
+                return new WriteOutcome { Success = false, Summary = "Not saved", FriendlyError = "Write permission was not granted." };
+            }
+
+            if (!permission.CanRun)
+            {
+                return new WriteOutcome { Success = false, Summary = "Not saved", FriendlyError = permission.Reason };
+            }
+        }
+
+        var outcome = await _users.UpdateAsync(Id, propertyName, value, CancellationToken.None);
+        if (outcome.WasNoOp) return outcome;
+
+        if (outcome.Success)
+        {
+            RefreshFromCache();
+            _toasts.Show(outcome.Summary, outcome.CanUndo ? "Undo" : null, outcome.CanUndo ? () => UndoAsync(outcome) : null);
+        }
+
+        return outcome;
+    }
+
+    private async Task UndoAsync(WriteOutcome outcome)
+    {
+        var back = await outcome.Undo!(CancellationToken.None);
+        RefreshFromCache();
+        _toasts.Show(back.Success ? back.Summary : back.FriendlyError ?? "Undo failed");
+    }
+
+    /// <summary>Re-reads the written-through cache row so the header, badges and fields all reflect the new value.</summary>
+    private void RefreshFromCache()
+    {
+        if (_users.GetCached(Id) is { } fresh) User = fresh;
     }
 
     // ---- Access tab (UX §4 tab 2) ----------------------------------------------------------------------------------

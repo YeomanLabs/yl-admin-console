@@ -12,7 +12,7 @@ namespace YeomanLabs.AdminConsole.Core.Users;
 /// User 360 data access (doc 03 §Cache &amp; sync, doc 04 §Users/§Batching): the cache answers instantly, then one
 /// <c>$batch</c> hydrates the live sections. Writes come in M5.
 /// </summary>
-public sealed class UserService
+public sealed partial class UserService
 {
     private const string UserId = "user";
     private const string ManagerId = "manager";
@@ -24,12 +24,16 @@ public sealed class UserService
 
     private readonly GraphClient _graph;
     private readonly CacheDb _db;
+    private readonly ActionLog _actions;
+    private readonly TenantContext _tenant;
     private readonly ILogger<UserService> _logger;
 
-    public UserService(GraphClient graph, CacheDb db, ILogger<UserService> logger)
+    public UserService(GraphClient graph, CacheDb db, ActionLog actions, TenantContext tenant, ILogger<UserService> logger)
     {
         _graph = graph;
         _db = db;
+        _actions = actions;
+        _tenant = tenant;
         _logger = logger;
     }
 
