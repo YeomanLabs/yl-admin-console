@@ -36,7 +36,7 @@ public sealed partial class TemplatesPageViewModel : ObservableObject, IPageView
     public string Title => "Templates";
 
     /// <summary>Set by the shell: opens the palette restricted to users and calls back with the pick.</summary>
-    public Action<Action<PersonRef>>? PickPerson { get; set; }
+    public Action<string, Action<PersonRef>>? PickPerson { get; set; }
 
     // ---- the list -------------------------------------------------------------------------------------------------
 
@@ -146,7 +146,7 @@ public sealed partial class TemplatesPageViewModel : ObservableObject, IPageView
 
     /// <summary>Doc 07: a template is snapshotted from a real user, so this picks one and reads it live.</summary>
     [RelayCommand]
-    private void NewFromUser() => PickPerson?.Invoke(person => _ = SnapshotAsync(person));
+    private void NewFromUser() => PickPerson?.Invoke("Choose someone whose setup this template should copy", person => _ = SnapshotAsync(person));
 
     private async Task SnapshotAsync(PersonRef person)
     {

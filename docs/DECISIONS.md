@@ -108,3 +108,31 @@ reads as a bug even though it was the spec.
 
 Home now carries its own search, which opens the palette and is captioned Ctrl+K, so the shortcut is taught instead of
 being imposed. Deviating from the spec here is deliberate and recorded, per CLAUDE.md.
+
+## M9 — A picker opened by a dialog sits above that dialog
+
+Reported by Andrew: in the create-user dialog, clicking **Choose** for the manager did nothing.
+
+The button was wired correctly. `MainWindow.xaml` declared `PaletteOverlay` before `DialogOverlay`, and later siblings
+in a WPF `Grid` paint on top, so the picker opened *underneath* the dialog and its scrim — present in the automation
+tree, invisible on screen, and unclickable. The comment above it said the dialog sits "above everything, including the
+palette, because a confirm must be answered", which is right for a confirm and wrong when the dialog is the thing
+asking for the palette.
+
+Three buttons were dead, not one: the manager and **Add to group** in the create-user dialog, and the delegate in the
+offboard dialog — all the same picker.
+
+The rule now: the palette takes `ZIndex 2` only while `IsPicking`, so a picker a dialog opened is on top, and a plain
+Ctrl+K still sits below an open dialog. The original intent survives and the picker works.
+
+Two things worth keeping from how this was missed. The M6.4 and M7 gates both drove these dialogs — the M7 gate created
+three users from a template — and neither caught it, because the template already carried a manager, so nothing ever
+pressed **Choose**. A gate that walks only the path it set up will miss exactly this. And the WPF project has no unit
+tests by design, so the regression check here is a driver script (`Drive-Pickers.ps1`) rather than a test; that is a
+real gap, recorded in the backlog.
+
+## M9 — The person picker takes its prompt from the caller
+
+Once the picker was visible it turned out to be asking the wrong question. `OpenPersonPicker` hardcoded "Choose who
+inherits ownership and access" — the offboarding delegate's wording — so choosing a new user's manager, or the person
+to snapshot a template from, all asked about inheriting ownership. The prompt is now passed in by whoever opens it.

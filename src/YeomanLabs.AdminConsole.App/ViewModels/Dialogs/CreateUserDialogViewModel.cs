@@ -78,7 +78,7 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
     public override double Width => 760;
 
     /// <summary>Set by the shell: opens the palette restricted to users, for the manager.</summary>
-    public Action<Action<PersonRef>>? PickPerson { get; set; }
+    public Action<string, Action<PersonRef>>? PickPerson { get; set; }
 
     /// <summary>Set by the shell: opens the palette restricted to groups.</summary>
     public Action<Action<DirectoryGroup>>? PickGroup { get; set; }
@@ -236,7 +236,7 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
     private string _managerLabel = "None";
 
     [RelayCommand]
-    private void ChooseManager() => PickPerson?.Invoke(person =>
+    private void ChooseManager() => PickPerson?.Invoke("Choose this person's manager", person =>
     {
         ManagerId = person.Id;
         ManagerLabel = person.Label;

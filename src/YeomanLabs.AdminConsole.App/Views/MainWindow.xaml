@@ -263,12 +263,28 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <!-- Command palette overlay (UX §3): last child so it paints above the content and status bar. -->
+        <!-- Command palette overlay (UX §3): paints above the content and status bar.
+             ZIndex 2 while it is picking for a dialog, 0 otherwise. Declared before DialogOverlay, so without this it
+             painted behind the modal layer: pressing "Choose…" for a manager, a group or an offboarding delegate
+             opened the picker underneath the dialog and its scrim, where it was invisible and could not be clicked —
+             the button looked dead. -->
         <views:PaletteOverlay Grid.Row="1" Grid.RowSpan="3" DataContext="{Binding Palette}"
-                              Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
+                              Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}">
+            <views:PaletteOverlay.Style>
+                <Style TargetType="views:PaletteOverlay">
+                    <Setter Property="Panel.ZIndex" Value="0" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsPicking}" Value="True">
+                            <Setter Property="Panel.ZIndex" Value="2" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </views:PaletteOverlay.Style>
+        </views:PaletteOverlay>
 
-        <!-- Modal dialogs (UX §2): above everything, including the palette, because a confirm must be answered. -->
-        <views:DialogOverlay Grid.Row="1" Grid.RowSpan="3" DataContext="{Binding Dialogs}"
+        <!-- Modal dialogs (UX §2): above everything except a picker the dialog itself opened, because a confirm must
+             be answered. -->
+        <views:DialogOverlay Grid.Row="1" Grid.RowSpan="3" Panel.ZIndex="1" DataContext="{Binding Dialogs}"
                              Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
     </Grid>
 </ui:FluentWindow>

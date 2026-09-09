@@ -117,7 +117,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     // ---- delegate -------------------------------------------------------------------------------------------------
 
     /// <summary>Set by the shell: opens the palette restricted to users and calls back with the pick.</summary>
-    public Action<Action<PersonRef>>? PickDelegate { get; set; }
+    public Action<string, Action<PersonRef>>? PickDelegate { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DelegateLabel))]
@@ -129,7 +129,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     public string DelegateLabel => ChosenDelegate?.Label ?? "None chosen";
 
     [RelayCommand]
-    private void ChooseDelegate() => PickDelegate?.Invoke(person =>
+    private void ChooseDelegate() => PickDelegate?.Invoke("Choose who inherits ownership and access", person =>
     {
         ChosenDelegate = person;
         _ = RefreshPreviewAsync();

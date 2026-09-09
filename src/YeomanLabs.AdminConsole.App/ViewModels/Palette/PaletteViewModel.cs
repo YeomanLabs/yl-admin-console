@@ -82,7 +82,15 @@ public sealed partial class PaletteViewModel : ObservableObject
 
     /// <summary>Non-null while the palette is picking one object of a type for a caller (UX §4: group picker, palette-style).</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPicking))]
     private ObjectType? _pickMode;
+
+    /// <summary>
+    /// True while a dialog is waiting for this palette to hand something back. The window raises the palette above the
+    /// modal layer only in this state: a plain Ctrl+K stays below an open dialog, because a confirm still has to be
+    /// answered, but a picker the dialog itself opened must be visible and clickable.
+    /// </summary>
+    public bool IsPicking => PickMode is not null;
 
     /// <summary>Opens the palette restricted to one object type; <see cref="Chosen"/> carries the pick.</summary>
     public void OpenPicker(ObjectType type, string placeholder)

@@ -672,7 +672,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     }
 
     /// <summary>Set by the shell: opens the palette restricted to users and calls back with the pick.</summary>
-    public Action<Action<PersonRef>>? PickPerson { get; set; }
+    public Action<string, Action<PersonRef>>? PickPerson { get; set; }
 
     // ---- Devices tab (UX §4 tab 3) ---------------------------------------------------------------------------------
 

@@ -331,12 +331,16 @@ public sealed partial class ShellViewModel : ObservableObject
         Palette.OpenPicker(ObjectType.Group, "Choose a group to add this user to");
     }
 
-    /// <summary>Opens the palette restricted to users and hands the pick back (UX §8: the offboarding delegate).</summary>
-    private void OpenPersonPicker(Action<PersonRef> onPicked)
+    /// <summary>
+    /// Opens the palette restricted to users and hands the pick back. The prompt comes from the caller: this picker
+    /// serves the offboarding delegate, a new user's manager and the template snapshot, and it used to ask all three
+    /// "Choose who inherits ownership and access", which is only true of the first.
+    /// </summary>
+    private void OpenPersonPicker(string prompt, Action<PersonRef> onPicked)
     {
         if (Palette is null) return;
         _pendingPersonPick = onPicked;
-        Palette.OpenPicker(ObjectType.User, "Choose who inherits ownership and access");
+        Palette.OpenPicker(ObjectType.User, prompt);
     }
 
     private void OnPaletteChosen(object? sender, PaletteChoice choice)
