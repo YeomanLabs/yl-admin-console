@@ -96,3 +96,26 @@ The data is already there — synced, cached and FTS-indexed. This milestone is 
 - [x] 9.8 🖥 First run for someone who has never seen it: what this is, what it can do, where to start. — done. The sign-in and consent pages already explained the app and its permissions, so the gap was the moment after landing. Two changes. **The nav rail is labelled.** It was six unlabelled glyphs with tooltips, which is fine for someone who already knows the app and a guessing game for a client meeting it; hovering each icon to learn what it is is not navigation. 28 px of width buys the labels. **Home carries a "New here?" panel** until it is dismissed: what search covers, that the rail browses, and — the line that matters to somebody just handed the keys to a directory — that nothing destructive happens without showing what it will change, that most of it can be undone, and that everything is recorded. Dismissal is a setting rather than a one-shot, so a console handed to somebody else still explains itself. Verified: shown on launch, gone on "Got it", `"introDismissed": true` on disk, still gone after a restart.
 - [x] 9.9 🖥 Wording pass over every label, button and message, read as someone who is not the author. — done. Pulled every user-facing literal out of the ten views and the Core messages and read them cold. The prose held up — errors, previews and skip reasons are already in plain English — so what this found was inconsistency rather than jargon, which is the kind of thing only a sweep catches. **Spelling:** the app writes British English ("licence" the noun, "licensed" the adjective) and had three American strays left, one of them the Access tab heading; "organization" in the sync status became "tenant details", which is what it actually is. **Two names for one thing:** Settings called the store an "Action log" while the nav page calls it the "Activity log". **Two phrasings for one action:** "Clear all filters" under the chips and "Clear the filters" in the empty state, on the same page, doing the same thing. Deliberately left alone: "License Administrator" and "available licenses" are Microsoft's own role name and error text, and changing them would stop them matching what the portal says.
 - [ ] **Gate:** hand the app to someone who has not seen it and watch without helping. Every place they hesitate goes into `docs/BACKLOG.md`. — **yours to run.** Watching someone meet it cold is the whole point and cannot be simulated. What this milestone already answered came from Andrew using it rather than from the plan: three dead nav items, a landing page that was one sentence, text at 4.06:1 that the M8.4 audit had passed, a palette dumped on top of Home, three "Choose…" buttons that opened behind their own dialog, and a Graph write that failed because it cleared a field with "" instead of null. Every one of those was in a flow an earlier gate had called verified.
+
+## M10 — Tenant-agnostic setup
+
+The app is already tenant-agnostic where it counts: the registration is multi-tenant and the authority is the
+`organizations` endpoint, so any tenant's admin can consent. Two things stop it being something you hand to a client.
+
+The client ID is baked into `appsettings.json` in the install directory — the wrong place for a value each tenant sets,
+for the same reason the sync and theme settings were moved out of it in M8.1: an update overwrites the file, and
+Program Files may be read-only.
+
+And `docs/08-APP-REGISTRATION.md` is a six-step manual click-through with 22 scopes added by hand. Reasonable once;
+unreasonable per client.
+
+Decision (2026-09-09, Andrew): **a registration per tenant, created by a script**, rather than every client consenting
+to one multi-tenant app owned by YeomanLabs. The app object then belongs to the client, it survives their security
+review, and nothing YeomanLabs owns holds standing access to their directory.
+
+- [ ] 10.1 🧪 Client ID moves to `%LOCALAPPDATA%` beside `settings.json`; `appsettings.json` becomes a default, not the truth.
+- [ ] 10.2 🖥 First-run setup: ask for the client ID when none is configured, validate it, remember it; Settings can change it.
+- [ ] 10.3 📜 `scripts/New-AppRegistration.ps1`: create the registration in the signed-in tenant — multi-tenant public client, redirect URIs, all delegated scopes, admin consent — and print the client ID. Read-only `-WhatIf` first.
+- [ ] 10.4 🧪 A test that fails if the script's scope list and `Scopes` in code ever drift apart.
+- [ ] 10.5 📄 Rewrite doc 08 around the script, keeping the manual steps as the fallback.
+- **Gate:** run the script against a real tenant into a second registration, point a clean install at it, sign in and use it, then delete that registration.

@@ -113,14 +113,32 @@ public sealed partial class App : Application
         base.OnExit(e);
     }
 
+    /// <summary>
+    /// The registration this installation actually signs in with: <c>tenant.json</c> if it holds one, otherwise
+    /// whatever the build shipped with.
+    /// </summary>
+    private static AuthOptions Effective(IServiceProvider sp)
+    {
+        var config = sp.GetRequiredService<TenantConfigStore>().Load();
+        return new AuthOptions { ClientId = config.ClientId, Authority = config.Authority };
+    }
+
     private static void ConfigureServices(HostBuilderContext ctx, IServiceCollection services)
     {
         services.AddSingleton(ctx.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions());
         services.AddSingleton(ctx.Configuration.GetSection(SyncOptions.SectionName).Get<SyncOptions>() ?? new SyncOptions());
 
+        // M10.1: which registration this installation uses comes from %LOCALAPPDATA%, with appsettings.json as the
+        // fallback. A client installation can be pointed at their own registration without editing a file under
+        // Program Files that the next update would overwrite anyway.
+        services.AddSingleton(sp => new TenantConfigStore(
+            TenantConfigStore.DefaultPath,
+            sp.GetRequiredService<AuthOptions>(),
+            sp.GetRequiredService<ILogger<TenantConfigStore>>()));
+
         services.AddSingleton<WindowHandleProvider>();
         services.AddSingleton<IAuthService>(sp => new AuthService(
-            sp.GetRequiredService<AuthOptions>(),
+            Effective(sp),
             () => sp.GetRequiredService<WindowHandleProvider>().Handle,
             sp.GetRequiredService<ILogger<AuthService>>()));
 
