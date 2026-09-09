@@ -1,0 +1,101 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:pages="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Pages">
+    <!-- Settings (UX §12). Merged after UserPage.xaml: reuses SectionTitle, Caption, FactLabel, FactValue, CopyableMono. -->
+
+    <DataTemplate x:Key="PermissionRowTemplate" DataType="{x:Type pages:PermissionRow}">
+        <Grid Margin="0,0,0,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="28" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <ui:SymbolIcon x:Name="Icon" Symbol="CheckmarkCircle24" FontSize="16" Foreground="{StaticResource YlSuccess}" VerticalAlignment="Top" Margin="0,2,0,0" />
+
+            <StackPanel Grid.Column="1">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                    <Border Style="{StaticResource Chip}" Visibility="{Binding IsSensitive, Converter={StaticResource BoolToVisibility}}"
+                            ToolTip="Requested only when you click the reveal button">
+                        <TextBlock Text="Sensitive" FontSize="11" />
+                    </Border>
+                </StackPanel>
+                <TextBlock Text="{Binding ScopeList}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.45" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Reason}" Style="{StaticResource Caption}" Visibility="{Binding Reason, Converter={StaticResource NullToCollapsed}}" />
+            </StackPanel>
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Top">
+                <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" Margin="0,4,8,0" Visibility="{Binding IsGranting, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Content="Grant" Appearance="Primary" Command="{Binding GrantCommand}" Padding="12,4"
+                           Visibility="{Binding NeedsConsent, Converter={StaticResource BoolToVisibility}}"
+                           AutomationProperties.Name="{Binding Title}" />
+            </StackPanel>
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding NeedsConsent}" Value="True">
+                <Setter TargetName="Icon" Property="Symbol" Value="LockClosed24" />
+                <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding HasRoleWarning}" Value="True">
+                <Setter TargetName="Icon" Property="Symbol" Value="Warning24" />
+                <Setter TargetName="Icon" Property="Foreground" Value="#E0A030" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pages:SettingsPageViewModel}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="24,16,24,24" MaxWidth="860" HorizontalAlignment="Left">
+                <TextBlock Text="Settings" FontSize="24" FontWeight="SemiBold" />
+
+                <!-- Account -->
+                <TextBlock Text="Account" Style="{StaticResource SectionTitle}" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="150" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="26" />
+                        <RowDefinition Height="26" />
+                        <RowDefinition Height="26" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Signed in as" Opacity="0.65" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding AccountName}" FontFamily="{StaticResource YlMono}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="1" Text="Tenant" Opacity="0.65" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TenantName}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="2" Text="Licence" Opacity="0.65" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LicenseText}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Row="3" Text="Directory roles" Opacity="0.65" Margin="0,4,0,0" />
+                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RolesText}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                </Grid>
+
+                <!-- Permissions (UX §12) -->
+                <TextBlock Text="Permissions" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="Read permissions were granted at sign-in. Write permissions are requested the first time you change something, and sensitive ones only when you click a reveal button."
+                           Style="{StaticResource Caption}" Margin="0,0,0,6" />
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <ui:Button Content="Grant all write permissions" Command="{Binding GrantAllWriteCommand}" Margin="0,0,10,0" />
+                    <TextBlock Text="{Binding GrantedSummary}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
+                </StackPanel>
+                <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,0,0,10"
+                            IsOpen="{Binding ConsentError, Converter={StaticResource NullToBool}, Mode=OneWay}"
+                            Message="{Binding ConsentError}" />
+                <ItemsControl ItemsSource="{Binding Permissions}" ItemTemplate="{StaticResource PermissionRowTemplate}" />
+
+                <!-- Diagnostics: paths now, actions in M8.1 -->
+                <TextBlock Text="Diagnostics" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="Logs" Style="{StaticResource FactLabel}" />
+                <TextBlock Text="{Binding LogsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock Text="Cache" Style="{StaticResource FactLabel}" />
+                <TextBlock Text="{Binding CachePath}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock Text="Action log" Style="{StaticResource FactLabel}" />
+                <TextBlock Text="{Binding ActionsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding OtherSectionsNote}" Style="{StaticResource Caption}" Margin="0,12,0,0" />
+            </StackPanel>
+        </ScrollViewer>
+    </DataTemplate>
+</ResourceDictionary>

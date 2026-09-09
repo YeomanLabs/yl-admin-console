@@ -19,14 +19,17 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
 {
     private readonly DeviceService _devices;
     private readonly TenantContext _tenant;
+    private readonly PermissionChecker _permissions;
     private readonly ToastService _toasts;
     private readonly ILogger<DeviceDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
 
-    public DeviceDetailViewModel(DeviceService devices, TenantContext tenant, ToastService toasts, ILogger<DeviceDetailViewModel> logger)
+    public DeviceDetailViewModel(DeviceService devices, TenantContext tenant, PermissionChecker permissions, ToastService toasts, ILogger<DeviceDetailViewModel> logger)
     {
         _devices = devices;
         _tenant = tenant;
+        _permissions = permissions;
+        _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
         _logger = logger;
     }
@@ -65,7 +68,22 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
     [ObservableProperty]
     private string _timingText = string.Empty;
 
-    public string ActionsDisabledReason => "Sync, Restart, Retire and Wipe arrive in M5.6";
+    [ObservableProperty]
+    private string? _actionsDisabledReason;
+
+    [ObservableProperty]
+    private string? _bitLockerReason;
+
+    [ObservableProperty]
+    private string? _lapsReason;
+
+    /// <summary>UX §6: consent first, then "not built yet". Recomputed whenever the granted scopes change.</summary>
+    private void RecomputeReasons()
+    {
+        ActionsDisabledReason = GreyRule.Reason(_permissions, Capabilities.DeviceActions, "Sync, Restart, Retire and Wipe arrive in M5.6");
+        BitLockerReason = GreyRule.Reason(_permissions, Capabilities.RevealBitLocker, "Reveal arrives in M5.6");
+        LapsReason = GreyRule.Reason(_permissions, Capabilities.RevealLaps, "Reveal arrives in M5.6");
+    }
 
     // ---- header ---------------------------------------------------------------------------------------------------
 
@@ -233,16 +251,6 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
         return clean.Length == 12 ? string.Join(":", Enumerable.Range(0, 6).Select(i => clean.Substring(i * 2, 2))) : mac;
     }
 
-    // ---- Security (UX §5; reveal wiring is M5.6) --------------------------------------------------------------------
-
-    public string BitLockerReason => _tenant.HasScope(Scopes.BitLockerKeyReadAll)
-        ? "Reveal arrives in M5.6"
-        : $"Needs the '{Scopes.BitLockerKeyReadAll}' permission — click to grant";
-
-    public string LapsReason => _tenant.HasScope(Scopes.DeviceLocalCredentialReadAll)
-        ? "Reveal arrives in M5.6"
-        : $"Needs the '{Scopes.DeviceLocalCredentialReadAll}' permission — click to grant";
-
     // ---- Compliance -----------------------------------------------------------------------------------------------
 
     [ObservableProperty]
@@ -291,6 +299,7 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
     public void Start(string id)
     {
         Id = id;
+        RecomputeReasons();
         _ = LoadAsync(CancellationToken.None);
     }
 

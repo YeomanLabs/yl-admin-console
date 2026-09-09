@@ -44,7 +44,7 @@ Legend: 🧪 has a unit test requirement · 🖥 requires launching the app agai
 - **Gate:** open 20 different users; every field populated correctly vs the Entra portal; no UI stall.
 
 ## M5 — Writes (small, reversible)
-- [ ] 5.1 Incremental consent: `EnsureWriteScopesAsync` on first write; Permissions page in Settings (UX §12); grey rule wiring for missing scopes (UX §6).
+- [x] 5.1 Incremental consent: `EnsureWriteScopesAsync` on first write; Permissions page in Settings (UX §12); grey rule wiring for missing scopes (UX §6). — done: `AuthService.EnsureScopesAsync` (incremental consent; force-refreshes the token afterwards because the pre-consent token still satisfies a silent subset request), `ConsentService.EnsureAsync/EnsureWriteScopesAsync` refreshing `TenantContext.GrantedScopes` so every grey rule re-evaluates, `Capability`/`Capabilities` (12 capabilities covering every write + sensitive scope, each w/ role hints from doc 08), `PermissionChecker` (NeedsConsent blocks; missing role only warns since scopes are necessary-not-sufficient), `GreyRule` helper wired into the User/Device/Group action reasons, Settings page w/ Account + Permissions (per-capability Grant, Grant-all-write, granted summary) + Diagnostics paths; 10 tests, 125/125 green, 0 warnings; also fixed: navigating no longer leaves the palette open on top
 - [ ] 5.2 🖥 Identity tab per-field edit-on-blur with spinner/check, PATCH via `UserService.UpdateAsync`, write-through to cache, undo toast, error mapping (UX §7). Hybrid guard.
 - [ ] 5.3 🖥 `Licensing/LicenseService`: toggle assign/remove with usageLocation pre-check and friendly SKU names; undo.
 - [ ] 5.4 🖥 Group add/remove from Access tab with skip rules; undo. Group picker (palette-style, groups only).

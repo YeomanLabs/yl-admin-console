@@ -70,6 +70,45 @@ public sealed class AuthService : IAuthService
         return SetAccount(result.Account);
     }
 
+    public async Task<IReadOnlyList<string>> EnsureScopesAsync(IReadOnlyList<string> scopes, CancellationToken ct)
+    {
+        var granted = await GetGrantedScopesAsync(ct).ConfigureAwait(false);
+        var missing = scopes.Where(s => !granted.Any(g => Scopes.Matches(g, s))).ToList();
+        if (missing.Count == 0) return granted;
+
+        _logger.LogInformation("Requesting consent for {Count} additional scope(s)", missing.Count);
+        var pca = await GetPcaAsync(ct).ConfigureAwait(false);
+        var account = await ResolveAccountAsync(pca, ct).ConfigureAwait(false);
+
+        await _interactiveLock.WaitAsync(ct).ConfigureAwait(false);
+        try
+        {
+            var builder = pca.AcquireTokenInteractive(scopes);
+            builder = account is not null
+                ? builder.WithAccount(account)
+                : builder.WithAccount(PublicClientApplication.OperatingSystemAccount);
+            var result = await builder.ExecuteAsync(ct).ConfigureAwait(false);
+            SetAccount(result.Account);
+        }
+        catch (MsalException msal)
+        {
+            var mapped = Map(msal);
+            _logger.LogWarning("Consent failed: {Kind} ({ErrorCode})", mapped.Kind, mapped.ErrorCode);
+            throw mapped;
+        }
+        finally
+        {
+            _interactiveLock.Release();
+        }
+
+        // The pre-consent access token is still cached and would satisfy a silent request for a subset of scopes,
+        // so force a refresh before reading `scp` back — otherwise the new grants look absent.
+        var refreshed = await GetTokenAsync([Scopes.UserRead], ct, forceRefresh: true).ConfigureAwait(false);
+        var now = AccessTokenClaims.GetScopes(refreshed);
+        _logger.LogInformation("Consent complete; {Count} scope(s) granted", now.Count);
+        return now;
+    }
+
     /// <summary>MSAL → the UX §9 failure states. Kept here so the App never depends on MSAL error codes.</summary>
     private static SignInException Map(MsalException ex)
     {

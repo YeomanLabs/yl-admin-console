@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.App.Services;
 using YeomanLabs.AdminConsole.Core.Graph;
+using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Groups;
 using YeomanLabs.AdminConsole.Core.Models;
 
@@ -18,14 +19,16 @@ namespace YeomanLabs.AdminConsole.App.ViewModels.Pages;
 public sealed partial class GroupDetailViewModel : ObservableObject, IPageViewModel, IRefreshable, IDisposable
 {
     private readonly GroupService _groups;
+    private readonly PermissionChecker _permissions;
     private readonly ToastService _toasts;
     private readonly ILogger<GroupDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
     private string? _nextLink;
 
-    public GroupDetailViewModel(GroupService groups, ToastService toasts, ILogger<GroupDetailViewModel> logger)
+    public GroupDetailViewModel(GroupService groups, PermissionChecker permissions, ToastService toasts, ILogger<GroupDetailViewModel> logger)
     {
         _groups = groups;
+        _permissions = permissions;
         _toasts = toasts;
         _logger = logger;
     }
@@ -90,7 +93,10 @@ public sealed partial class GroupDetailViewModel : ObservableObject, IPageViewMo
         MembershipRule = raw.RootElement.GetString("membershipRule");
         OnPropertyChanged(nameof(HasMembershipRule));
 
-        MembershipDisabledReason = Group.MembershipChangeBlockedReason() ?? "Adding and removing members arrives in M5.4";
+        // The group's own skip rules (dynamic / synced / role-assignable) outrank consent: consenting would not help.
+        MembershipDisabledReason = Group.MembershipChangeBlockedReason()
+                                   ?? GreyRule.Reason(_permissions, Capabilities.ChangeGroupMembership, "Adding and removing members arrives in M5.4")
+                                   ?? string.Empty;
     }
 
     // ---- members --------------------------------------------------------------------------------------------------

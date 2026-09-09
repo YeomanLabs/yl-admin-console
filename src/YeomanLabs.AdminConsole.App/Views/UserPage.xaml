@@ -143,7 +143,8 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <CheckBox IsChecked="{Binding IsAssigned, Mode=OneWay}" IsEnabled="False" VerticalAlignment="Center" ToolTip="License toggles arrive in M5.3" ToolTipService.ShowOnDisabled="True" />
+            <CheckBox IsChecked="{Binding IsAssigned, Mode=OneWay}" IsEnabled="False" VerticalAlignment="Center" ToolTipService.ShowOnDisabled="True"
+                      ToolTip="{Binding DataContext.LicenseEditReason, RelativeSource={RelativeSource AncestorType=TabControl}}" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding PartNumber}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.45" Margin="8,0,0,0" VerticalAlignment="Center" />
@@ -207,7 +208,8 @@
                 <TextBlock Text="{Binding Detail}" FontSize="11" Opacity="0.55" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}" />
             </StackPanel>
             <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Delete24}" Appearance="Transparent" IsEnabled="False" Padding="6,2"
-                       ToolTip="Deleting methods arrives in M5.5" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Delete method"
+                       ToolTip="{Binding DataContext.AuthDeleteReason, RelativeSource={RelativeSource AncestorType=TabControl}}"
+                       ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Delete method"
                        Visibility="{Binding CanDelete, Converter={StaticResource BoolToVisibility}}" />
         </Grid>
     </DataTemplate>

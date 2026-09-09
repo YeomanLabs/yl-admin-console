@@ -18,8 +18,31 @@ public sealed class FakeAuthService : IAuthService
 
     public event EventHandler<AuthAccount?>? AccountChanged;
 
+    /// <summary>What <see cref="GetGrantedScopesAsync"/> and <see cref="HasScopeAsync"/> report. Tests mutate this directly.</summary>
+    public List<string> GrantedScopes { get; } = [.. Scopes.Read];
+
+    /// <summary>Scopes the next <see cref="EnsureScopesAsync"/> will add, simulating the admin accepting consent.</summary>
+    public bool ConsentSucceeds { get; set; } = true;
+
+    public int ConsentPrompts { get; private set; }
+
     public Task<AuthAccount> EnsureSignedInAsync(IReadOnlyList<string> scopes, CancellationToken ct) =>
         Task.FromResult(CurrentAccount!);
+
+    public Task<IReadOnlyList<string>> EnsureScopesAsync(IReadOnlyList<string> scopes, CancellationToken ct)
+    {
+        var missing = scopes.Where(s => !GrantedScopes.Any(g => Scopes.Matches(g, s))).ToList();
+        if (missing.Count == 0) return Task.FromResult<IReadOnlyList<string>>(GrantedScopes);
+
+        ConsentPrompts++;
+        if (!ConsentSucceeds)
+        {
+            throw new SignInException(SignInFailureKind.ConsentDeclined, "Consent was declined.", "access_denied", null, null);
+        }
+
+        GrantedScopes.AddRange(missing);
+        return Task.FromResult<IReadOnlyList<string>>(GrantedScopes);
+    }
 
     public Task<string> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken ct, bool forceRefresh = false)
     {
@@ -33,10 +56,11 @@ public sealed class FakeAuthService : IAuthService
         return Task.FromResult(Token);
     }
 
-    public Task<bool> HasScopeAsync(string scope, CancellationToken ct) => Task.FromResult(true);
+    public Task<bool> HasScopeAsync(string scope, CancellationToken ct) =>
+        Task.FromResult(GrantedScopes.Any(g => Scopes.Matches(g, scope)));
 
     public Task<IReadOnlyList<string>> GetGrantedScopesAsync(CancellationToken ct) =>
-        Task.FromResult<IReadOnlyList<string>>(Scopes.Read);
+        Task.FromResult<IReadOnlyList<string>>(GrantedScopes);
 
     public Task SignOutAsync(CancellationToken ct)
     {

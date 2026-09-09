@@ -26,16 +26,19 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private readonly UserService _users;
     private readonly CacheDb _db;
     private readonly TenantContext _tenant;
+    private readonly PermissionChecker _permissions;
     private readonly ToastService _toasts;
     private readonly ILogger<UserDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, ToastService toasts, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ToastService toasts, ILogger<UserDetailViewModel> logger)
     {
         _users = users;
         _db = db;
         _tenant = tenant;
+        _permissions = permissions;
+        _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
         _logger = logger;
     }
@@ -79,7 +82,31 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     public bool IsActivityLoaded => Live is not null;
 
     public string MailboxDisabledReason => "Exchange Online integration arrives in Phase 3";
-    public string ActionsDisabledReason => "Reset password and Revoke sessions arrive in M5; Offboard in M6";
+
+    /// <summary>UX §6: consent first, then "not built yet". Recomputed whenever the granted scopes change.</summary>
+    [ObservableProperty]
+    private string? _actionsDisabledReason;
+
+    [ObservableProperty]
+    private string? _identityEditReason;
+
+    [ObservableProperty]
+    private string? _licenseEditReason;
+
+    [ObservableProperty]
+    private string? _groupEditReason;
+
+    [ObservableProperty]
+    private string? _authDeleteReason;
+
+    private void RecomputeReasons()
+    {
+        ActionsDisabledReason = GreyRule.Reason(_permissions, [Capabilities.ResetPassword, Capabilities.RevokeSessions], "Reset password and Revoke sessions arrive in M5; Offboard in M6");
+        IdentityEditReason = GreyRule.Reason(_permissions, Capabilities.EditUser, "Editing fields arrives in M5.2");
+        LicenseEditReason = GreyRule.Reason(_permissions, Capabilities.AssignLicense, "License toggles arrive in M5.3");
+        GroupEditReason = GreyRule.Reason(_permissions, Capabilities.ChangeGroupMembership, "Adding and removing groups arrives in M5.4");
+        AuthDeleteReason = GreyRule.Reason(_permissions, Capabilities.DeleteAuthMethod, "Deleting methods arrives in M5.5");
+    }
 
     // ---- header ---------------------------------------------------------------------------------------------------
 
@@ -464,6 +491,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     public void Start(string id)
     {
         Id = id;
+        RecomputeReasons();
         _ = LoadAsync(CancellationToken.None);
     }
 

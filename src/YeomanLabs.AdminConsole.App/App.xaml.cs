@@ -132,6 +132,8 @@ public sealed partial class App : Application
         services.AddSingleton<UserService>();
         services.AddSingleton<DeviceService>();
         services.AddSingleton<GroupService>();
+        services.AddSingleton<PermissionChecker>();
+        services.AddSingleton<ConsentService>();
         services.AddHostedService<SyncHostedService>();
 
         services.AddSingleton<ToastService>();
@@ -145,6 +147,7 @@ public sealed partial class App : Application
         services.AddTransient<UserDetailViewModel>();
         services.AddTransient<DeviceDetailViewModel>();
         services.AddTransient<GroupDetailViewModel>();
+        services.AddTransient<SettingsPageViewModel>();
     }
 
     private void HookGlobalExceptionHandlers()

@@ -14,6 +14,7 @@
                 <ResourceDictionary Source="Views/UserPage.xaml" />
                 <ResourceDictionary Source="Views/DevicePage.xaml" />
                 <ResourceDictionary Source="Views/GroupPage.xaml" />
+                <ResourceDictionary Source="Views/SettingsPage.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

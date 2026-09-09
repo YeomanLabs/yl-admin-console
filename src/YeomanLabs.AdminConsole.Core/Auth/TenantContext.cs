@@ -57,6 +57,13 @@ public sealed class TenantContext
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>Applies a fresh grant list after incremental consent, without re-reading the tenant.</summary>
+    public void UpdateGrantedScopes(IReadOnlyList<string> scopes)
+    {
+        GrantedScopes = scopes;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public void Clear()
     {
         Update(new TenantContextSnapshot());

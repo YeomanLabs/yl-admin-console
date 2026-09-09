@@ -12,6 +12,13 @@ public interface IAuthService
     Task<AuthAccount> EnsureSignedInAsync(IReadOnlyList<string> scopes, CancellationToken ct);
 
     /// <summary>
+    /// Incremental consent (doc 03 §Auth flow item 2): returns immediately when every scope is already in the cached
+    /// token, otherwise prompts. Returns the scopes granted afterwards, so callers can re-check before writing.
+    /// Throws <see cref="SignInException"/> when the admin cancels or declines.
+    /// </summary>
+    Task<IReadOnlyList<string>> EnsureScopesAsync(IReadOnlyList<string> scopes, CancellationToken ct);
+
+    /// <summary>
     /// Silent only. Throws <see cref="SignInRequiredException"/> if interaction would be needed.
     /// <paramref name="forceRefresh"/> bypasses the cached access token (used once after a 401).
     /// </summary>

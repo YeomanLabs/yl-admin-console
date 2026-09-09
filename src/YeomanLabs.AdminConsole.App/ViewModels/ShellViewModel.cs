@@ -51,7 +51,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new NavItem("templates", "Templates", SymbolRegular.DocumentBulletList24, 5, typeof(PlaceholderPageViewModel)),
             new NavItem("activity", "Activity log", SymbolRegular.History24, 6, typeof(PlaceholderPageViewModel)),
         ];
-        SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(PlaceholderPageViewModel));
+        SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(SettingsPageViewModel));
 
         Tabs.CollectionChanged += OnTabsChanged;
         _tenant.Changed += (_, _) => RunOnUi(RefreshTenantHeader);
@@ -183,6 +183,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private void ShowTab(WorkspaceTab tab)
     {
+        // Any navigation dismisses the palette; leaving it open would cover the page the admin just asked for.
+        if (Palette is { IsOpen: true }) Palette.IsOpen = false;
+
         if (!ReferenceEquals(SelectedTab, tab))
         {
             SelectedTab = tab;
