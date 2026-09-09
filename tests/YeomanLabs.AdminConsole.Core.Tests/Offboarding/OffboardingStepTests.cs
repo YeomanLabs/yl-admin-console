@@ -204,7 +204,7 @@ public sealed class OffboardingStepTests : IDisposable
     }
 
     [Fact]
-    public async Task RemoveManager_IsOffByDefault_BecauseTheLinkIsOftenWhatTheNextPersonNeeds()
+    public void RemoveManager_IsOffByDefault_BecauseTheLinkIsOftenWhatTheNextPersonNeeds()
     {
         new RemoveManagerStep(_graph, _actions, _tenant).DefaultEnabled.Should().BeFalse();
     }
