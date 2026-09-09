@@ -146,7 +146,14 @@ public sealed class CacheDb : IDisposable
     public SyncState? GetSyncState(CacheEntity entity)
     {
         using var conn = OpenConnection();
+        return ReadSyncState(conn, null, entity);
+    }
+
+    /// <summary>Shared by <see cref="GetSyncState"/> and <see cref="CacheWriter.GetSyncState"/> so a writer never opens a second connection mid-transaction.</summary>
+    internal static SyncState? ReadSyncState(SqliteConnection conn, SqliteTransaction? tx, CacheEntity entity)
+    {
         using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
         cmd.CommandText = "SELECT delta_link, last_full_sync, last_delta_sync, row_count FROM sync_state WHERE entity=$e;";
         cmd.Parameters.AddWithValue("$e", entity.Key());
         using var r = cmd.ExecuteReader();
@@ -159,6 +166,14 @@ public sealed class CacheDb : IDisposable
             LastDeltaSync = ReadDate(r, 2),
             RowCount = r.GetInt32(3),
         };
+    }
+
+    internal static int ReadCount(SqliteConnection conn, SqliteTransaction? tx, CacheEntity entity)
+    {
+        using var cmd = conn.CreateCommand();
+        cmd.Transaction = tx;
+        cmd.CommandText = $"SELECT COUNT(*) FROM {entity.Table()};";
+        return (int)(long)cmd.ExecuteScalar()!;
     }
 
     public IReadOnlyList<SyncState> GetAllSyncState()
@@ -176,7 +191,7 @@ public sealed class CacheDb : IDisposable
     public int Count(CacheEntity entity)
     {
         using var conn = OpenConnection();
-        return (int)(long)Scalar(conn, $"SELECT COUNT(*) FROM {entity.Table()};")!;
+        return ReadCount(conn, null, entity);
     }
 
     /// <summary>The stored Graph JSON for one object, or null.</summary>

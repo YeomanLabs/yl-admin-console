@@ -229,8 +229,9 @@ public sealed class GraphClient
         request.Headers.TryAddWithoutValidation("client-request-id", Guid.NewGuid().ToString());
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        var query = uri.Query;
-        if (query.Contains("$count", StringComparison.OrdinalIgnoreCase) || query.Contains("$search", StringComparison.OrdinalIgnoreCase))
+        // Doc 04: ConsistencyLevel is required for $count (query option or the /$count segment) and $search.
+        var pathAndQuery = uri.PathAndQuery;
+        if (pathAndQuery.Contains("$count", StringComparison.OrdinalIgnoreCase) || pathAndQuery.Contains("$search", StringComparison.OrdinalIgnoreCase))
         {
             request.Headers.TryAddWithoutValidation("ConsistencyLevel", "eventual");
         }

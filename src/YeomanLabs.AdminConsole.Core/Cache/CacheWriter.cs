@@ -270,6 +270,31 @@ public sealed class CacheWriter : IDisposable
         cmd.ExecuteNonQuery();
     }
 
+    /// <summary>
+    /// Deletes rows of <paramref name="entity"/> that were not upserted by this writer. Every upsert in one
+    /// <see cref="CacheDb.Write(Action{CacheWriter})"/> stamps the same <c>updated_at</c>, so "stale" is exactly "not seen in this pass".
+    /// Use after a full walk of a no-delta entity (managed devices).
+    /// </summary>
+    public int DeleteStale(CacheEntity entity)
+    {
+        if (entity is CacheEntity.Skus or CacheEntity.Organization)
+        {
+            throw new ArgumentOutOfRangeException(nameof(entity), entity, "table has no updated_at column");
+        }
+
+        var cmd = Command($"stale-{entity.Key()}", $"DELETE FROM {entity.Table()} WHERE updated_at <> $now;", "$now");
+        Set(cmd, "$now", _now);
+        return cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>SKUs are few and have no delta; a refresh replaces the table.</summary>
+    public void DeleteAllSkus() => Exec("DELETE FROM skus;");
+
+    /// <summary>Reads on this transaction's connection. Never call <see cref="CacheDb"/> readers from inside a write — they open a second connection and block on the table lock.</summary>
+    public SyncState? GetSyncState(CacheEntity entity) => CacheDb.ReadSyncState(_conn, _tx, entity);
+
+    public int Count(CacheEntity entity) => CacheDb.ReadCount(_conn, _tx, entity);
+
     public void SetSyncState(SyncState state)
     {
         var cmd = Command("sync-state-upsert", """
