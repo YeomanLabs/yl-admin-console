@@ -89,5 +89,15 @@ the template. **To close:** decide whether to fork, or document it once here and
 
 ## From the workday
 
-Nothing yet — the M8 gate has not been run. New entries go here with the date and the task that was being done at the
-time, not tidied into the sections above until they are understood.
+### 2026-09-09 — The WPF layer has no automated regression check
+Found when the "Choose…" pickers turned out to open behind their dialog and three buttons were dead. CLAUDE.md says
+the WPF project is not unit-tested, which is a reasonable call, but it means a fix like that is held only by a driver
+script in a scratchpad that is never committed and never runs again. The M6.4 and M7 gates both drove those dialogs
+and missed it, because the template they used already carried a manager so nothing ever pressed the button.
+**To close:** commit the UI drivers into the repo and give them a way to run — even manually before a release. A
+handful of scripted paths that actually click things would have caught this and the grey-text problem.
+
+### 2026-09-09 — Gates walk the path they set up
+Two of the three bugs Andrew found in ten minutes of real use were in flows a milestone gate had already "verified".
+The gates were honest about what they ran; they just ran the arrangement that made the feature work. Worth changing
+how a gate is written: pick the path a person would take who does not know what the feature needs.
