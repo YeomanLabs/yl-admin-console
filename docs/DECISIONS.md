@@ -38,3 +38,20 @@ Append-only. Format: `YYYY-MM-DD · <area> · <decision> · <why> · <alternativ
 - 2026-09-09 · templates · The snapshot filters `memberOf` to groups by `@odata.type` · a `directoryRole` parses as a group perfectly happily, and adding a member to one answers 404; the M7 gate put two of the admin's directory roles into a template as groups · relying on the group-kind derivation, which cannot tell a role from a group
 - 2026-09-09 · create · The licence step retries a 409 `Directory_ConcurrencyViolation` up to four times with a 1/2/3 s backoff · Entra needs a moment after a user is created before it accepts a licence for them, and its own message says to wait briefly and retry; one of the three gate creates hit it · retrying every 409 in `GraphClient` (a conflict elsewhere is usually genuine)
 - 2026-09-09 · create · A uniqueness check that Graph cannot answer reports "could not check", never "available" · telling an admin a sign-in name is free when nobody looked is worse than admitting the check failed, and a UPN cannot be quietly corrected afterwards · treating an error as available (optimistic, and wrong exactly when it matters)
+
+## M8.5 — The backlog is seeded before the workday, not after it
+
+`docs/BACKLOG.md` is the M8 gate's artefact, and the gate has not been run. It would have been tidier to create the
+file empty and let the workday fill it. It is seeded instead, with the twelve things this build already knows are
+rough or unverified, because those are exactly the things a workday will not find: nobody discovers "high-contrast
+mode is untested" by doing a day of tickets. Writing them down now keeps them from being re-found, and keeps the
+workday's own entries — which go in a separate section at the bottom, dated — clearly distinct from what was known
+before it started.
+
+## M8.5 — The README's screenshots are of the live tenant
+
+The four screenshots are the real app against the real dev tenant, not mockups, because a README of an admin tool that
+shows invented data is a README you cannot trust. The cost is that `offboard-preview.png` shows the admin's own device
+names and registered authentication methods, and `activity-log.png` shows the M7 gate's test accounts. The repository
+has no remote, so nothing has left the machine — but if it is ever pushed anywhere public, those two images are what
+to look at first.
