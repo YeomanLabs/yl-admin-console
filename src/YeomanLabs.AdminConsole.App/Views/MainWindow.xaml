@@ -140,7 +140,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <DockPanel Grid.Column="0" Background="#0A1F45">
+            <DockPanel Grid.Column="0" Background="#0A1F45" Visibility="{Binding IsSessionReady, Converter={StaticResource BoolToVisibility}}">
                 <ContentControl DockPanel.Dock="Bottom" Content="{Binding SettingsItem}" ContentTemplate="{StaticResource NavRailItem}" Margin="0,0,0,4" />
                 <ItemsControl ItemsSource="{Binding NavItems}" ItemTemplate="{StaticResource NavRailItem}" Margin="0,4,0,0" />
             </DockPanel>

@@ -13,6 +13,110 @@
         </Grid>
     </DataTemplate>
 
+    <!-- UX §9 step 1: splash + Sign in with Microsoft, with the three failure states -->
+    <DataTemplate DataType="{x:Type pages:SignInPageViewModel}">
+        <Grid>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="440">
+                <TextBlock Text="Admin Console" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="Entra ID and Intune in one search-first console." Opacity="0.7" HorizontalAlignment="Center" Margin="0,6,0,28" />
+
+                <ui:InfoBar Severity="Error" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,16"
+                            Title="{Binding ErrorTitle}" Message="{Binding ErrorMessage}">
+                    <ui:InfoBar.Content>
+                        <StackPanel>
+                            <TextBlock Text="{Binding ErrorHint}" FontWeight="SemiBold" Margin="0,4,0,0"
+                                       Visibility="{Binding ErrorHint, Converter={StaticResource NullToCollapsed}}" />
+                            <Expander Header="Details" Margin="0,4,0,0" Visibility="{Binding HasErrorDetails, Converter={StaticResource BoolToVisibility}}">
+                                <TextBox Text="{Binding ErrorDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="160"
+                                         FontFamily="{StaticResource YlMono}" FontSize="12" VerticalScrollBarVisibility="Auto" />
+                            </Expander>
+                        </StackPanel>
+                    </ui:InfoBar.Content>
+                </ui:InfoBar>
+
+                <ui:Button Appearance="Primary" HorizontalAlignment="Stretch" Height="40" FontSize="14"
+                           Content="Sign in with Microsoft" Icon="{ui:SymbolIcon Person24}"
+                           Command="{Binding SignInCommand}" IsDefault="True" />
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
+                    <TextBlock Text="{Binding BusyText}" Opacity="0.8" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <TextBlock Text="Personal sign-in with the Windows account broker. No service accounts, no data leaves your tenant."
+                           Opacity="0.5" FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,28,0,0" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <!-- UX §9 step 2: our own scope explanation before the prompt -->
+    <DataTemplate DataType="{x:Type pages:ScopesPageViewModel}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="560" Margin="0,24">
+                <TextBlock Text="What the console will read" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="Read-only permissions only. Write permissions are requested later, the first time you change something."
+                           Opacity="0.7" TextWrapping="Wrap" Margin="0,6,0,12" />
+                <ItemsControl ItemsSource="{Binding Scopes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon Symbol="CheckmarkCircle24" Foreground="{StaticResource YlCoral}" Margin="0,2,10,0" VerticalAlignment="Top" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding Why}" Opacity="0.7" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding Scope}" Opacity="0.45" FontSize="11" FontFamily="{StaticResource YlMono}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                    <ui:Button Content="Back" Command="{Binding BackCommand}" Margin="0,0,8,0" />
+                    <ui:Button Appearance="Primary" Content="Continue to sign-in" Command="{Binding ContinueCommand}" IsDefault="True" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
+                    <TextBlock Text="Waiting for Windows sign-in…" Opacity="0.8" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DataTemplate>
+
+    <!-- UX §9 step 3: counts ticking up -->
+    <DataTemplate DataType="{x:Type pages:SyncProgressPageViewModel}">
+        <Grid>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="480">
+                <TextBlock Text="{Binding Headline}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Detail}" Opacity="0.7" TextWrapping="Wrap" Margin="0,6,0,20" />
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                                <ui:SymbolIcon Symbol="CheckmarkCircle24" Foreground="#4CC38A" Visibility="{Binding IsDone, Converter={StaticResource BoolToVisibility}}" />
+                                <ui:SymbolIcon Symbol="ErrorCircle24" Foreground="#F04E4E" Visibility="{Binding IsFailed, Converter={StaticResource BoolToVisibility}}" />
+                                <Ellipse Width="6" Height="6" Fill="#8A8A8A" Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{Binding CountText}" VerticalAlignment="Center" FontFamily="{StaticResource YlMono}" Opacity="0.8" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
         <StackPanel Margin="24">
             <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />

@@ -13,20 +13,26 @@ using YeomanLabs.AdminConsole.Core.Sync;
 namespace YeomanLabs.AdminConsole.App.ViewModels;
 
 /// <summary>
-/// Root of the UI (UX §2 shell): title bar state, nav rail, content region, status bar, and the non-modal error bar.
-/// One instance per process; page VMs are transient and created through DI when navigated to.
+/// Root of the UI (UX §2 shell): title bar state, nav rail, content region, status bar, the non-modal error bar, and the
+/// first-run flow (UX §9). One instance per process; page VMs are transient and created through DI when navigated to.
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
     private readonly IServiceProvider _services;
+    private readonly IAuthService _auth;
     private readonly TenantContext _tenant;
+    private readonly TenantContextLoader _tenantLoader;
     private readonly ILogger<ShellViewModel> _logger;
     private ISyncStatus? _sync;
+    private SignInPageViewModel? _signInPage;
+    private bool _scopesExplained;
 
-    public ShellViewModel(IServiceProvider services, TenantContext tenant, ILogger<ShellViewModel> logger)
+    public ShellViewModel(IServiceProvider services, IAuthService auth, TenantContext tenant, TenantContextLoader tenantLoader, ILogger<ShellViewModel> logger)
     {
         _services = services;
+        _auth = auth;
         _tenant = tenant;
+        _tenantLoader = tenantLoader;
         _logger = logger;
 
         NavItems =
@@ -41,7 +47,6 @@ public sealed partial class ShellViewModel : ObservableObject
         SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(PlaceholderPageViewModel));
 
         _tenant.Changed += (_, _) => RunOnUi(RefreshTenantHeader);
-        Navigate(NavItems[0]);
     }
 
     // ---- title bar ---------------------------------------------------------------------------------------------
@@ -66,6 +71,10 @@ public sealed partial class ShellViewModel : ObservableObject
     public IReadOnlyList<NavItem> NavItems { get; }
     public NavItem SettingsItem { get; }
 
+    /// <summary>False during the first-run flow: the rail is hidden and shortcuts are inert until the tenant is ready.</summary>
+    [ObservableProperty]
+    private bool _isSessionReady;
+
     [ObservableProperty]
     private NavItem? _selectedNav;
 
@@ -75,10 +84,11 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     private void Navigate(NavItem item)
     {
+        if (!IsSessionReady) return;
         foreach (var n in NavItems) n.IsSelected = ReferenceEquals(n, item);
         SettingsItem.IsSelected = ReferenceEquals(SettingsItem, item);
         SelectedNav = item;
-        CurrentPage = CreatePage(item);
+        SetPage(CreatePage(item));
         _logger.LogDebug("Navigated to {Nav}", item.Id);
     }
 
@@ -108,6 +118,112 @@ public sealed partial class ShellViewModel : ObservableObject
         return page;
     }
 
+    private void SetPage(object page)
+    {
+        (CurrentPage as IDisposable)?.Dispose();
+        CurrentPage = page;
+    }
+
+    // ---- first-run flow (UX §9) --------------------------------------------------------------------------------
+
+    /// <summary>Called once after the window is shown. Silent sign-in when the cache has an account; otherwise the sign-in page.</summary>
+    public async Task StartAsync()
+    {
+        _signInPage = new SignInPageViewModel(BeginInteractiveSignInAsync);
+        SetPage(_signInPage);
+        try
+        {
+            await _auth.GetTokenAsync(Scopes.Read, CancellationToken.None);
+            _logger.LogInformation("Silent sign-in succeeded");
+            await CompleteSignInAsync();
+        }
+        catch (SignInRequiredException)
+        {
+            _logger.LogInformation("No cached account; showing sign-in page");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Startup sign-in failed");
+            _signInPage.ShowFailure(ex);
+            SetPage(_signInPage);
+        }
+    }
+
+    /// <summary>Sign-in button: explain the read scopes first (once per process), then prompt.</summary>
+    private Task BeginInteractiveSignInAsync()
+    {
+        _signInPage!.ClearError();
+        if (!_scopesExplained)
+        {
+            SetPage(new ScopesPageViewModel(InteractiveSignInAsync, () => SetPage(_signInPage!)));
+            return Task.CompletedTask;
+        }
+
+        return InteractiveSignInAsync();
+    }
+
+    private async Task InteractiveSignInAsync()
+    {
+        _scopesExplained = true;
+        var scopesPage = CurrentPage as ScopesPageViewModel;
+        if (scopesPage is not null) scopesPage.IsBusy = true;
+        _signInPage!.IsBusy = true;
+        try
+        {
+            await _auth.EnsureSignedInAsync(Scopes.Read, CancellationToken.None);
+            await CompleteSignInAsync();
+        }
+        catch (SignInException ex)
+        {
+            _signInPage.ShowFailure(ex);
+            SetPage(_signInPage);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Interactive sign-in failed");
+            _signInPage.ShowFailure(ex);
+            SetPage(_signInPage);
+        }
+        finally
+        {
+            _signInPage.IsBusy = false;
+            if (scopesPage is not null) scopesPage.IsBusy = false;
+        }
+    }
+
+    /// <summary>Loads the tenant, attaches the per-tenant services, then either lands on Home or shows the progress page.</summary>
+    private async Task CompleteSignInAsync()
+    {
+        _signInPage!.BusyText = "Loading your tenant…";
+        _signInPage.IsBusy = true;
+        try
+        {
+            await _tenantLoader.LoadAsync(CancellationToken.None);
+        }
+        finally
+        {
+            _signInPage.IsBusy = false;
+        }
+
+        AttachSession();
+        if (_sync!.IsInitialSyncComplete)
+        {
+            EnterHome();
+            return;
+        }
+
+        var progress = new SyncProgressPageViewModel(_sync);
+        progress.UsersReady += (_, _) => RunOnUi(EnterHome);
+        SetPage(progress);
+    }
+
+    private void EnterHome()
+    {
+        if (IsSessionReady) return;
+        IsSessionReady = true;
+        Navigate(NavItems[0]);
+    }
+
     // ---- status bar (UX §2: cache age · last delta · errors · progress) ------------------------------------------
 
     [ObservableProperty]
@@ -125,14 +241,18 @@ public sealed partial class ShellViewModel : ObservableObject
 
     public bool IsProgressVisible => ProgressFraction >= 0;
 
-    /// <summary>Called once after sign-in (M3.3) when the per-tenant services exist. Wires the sync pill and status bar.</summary>
-    public void AttachSession()
+    /// <summary>Wires the sync pill and status bar once the per-tenant services exist.</summary>
+    private void AttachSession()
     {
         RefreshTenantHeader();
+        if (_sync is not null) return;
         _sync = _services.GetRequiredService<ISyncStatus>();
         _sync.ProgressChanged += (_, p) => RunOnUi(() => OnSyncProgress(p));
+        _sync.CycleCompleted += (_, _) => RunOnUi(OnCycleCompleted);
         SyncState = SyncPillState.Syncing;
         SyncStatusText = "Preparing…";
+        var last = _services.GetRequiredService<CacheDb>().GetAllSyncState().Select(s => s.LastSync).Max();
+        CacheAgeText = $"Cache {Age(last, DateTimeOffset.UtcNow)}";
     }
 
     private void RefreshTenantHeader()
@@ -165,14 +285,17 @@ public sealed partial class ShellViewModel : ObservableObject
 
         ProgressText = string.Empty;
         ProgressFraction = -1;
-        if (_sync is { IsRunning: false })
-        {
-            SyncState = _sync.LastError is null ? SyncPillState.Ok : SyncPillState.Error;
-            SyncStatusText = _sync.LastError is null ? "Synced" : "Sync errors";
-            var now = DateTimeOffset.UtcNow;
-            CacheAgeText = $"Cache {Age(_sync.LastCycleCompleted, now)}";
-            LastDeltaText = $"Last delta {Age(_sync.LastCycleCompleted, now)}";
-        }
+    }
+
+    /// <summary>Fires after every whole cycle, with IsRunning already false — the only reliable moment to settle the pill.</summary>
+    private void OnCycleCompleted()
+    {
+        if (_sync is null) return;
+        SyncState = _sync.LastError is null ? SyncPillState.Ok : SyncPillState.Error;
+        SyncStatusText = _sync.LastError is null ? "Synced" : "Sync errors";
+        var now = DateTimeOffset.UtcNow;
+        CacheAgeText = $"Cache {Age(_sync.LastCycleCompleted, now)}";
+        LastDeltaText = $"Last delta {Age(_sync.LastCycleCompleted, now)}";
     }
 
     private static string Label(CacheEntity e) => e switch

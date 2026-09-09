@@ -55,6 +55,12 @@ public sealed class AuthService : IAuthService
                     : builder.WithAccount(PublicClientApplication.OperatingSystemAccount);
                 result = await builder.ExecuteAsync(ct).ConfigureAwait(false);
             }
+            catch (MsalException msal)
+            {
+                var mapped = Map(msal);
+                _logger.LogWarning("Interactive sign-in failed: {Kind} ({ErrorCode})", mapped.Kind, mapped.ErrorCode);
+                throw mapped;
+            }
             finally
             {
                 _interactiveLock.Release();
@@ -62,6 +68,33 @@ public sealed class AuthService : IAuthService
         }
 
         return SetAccount(result.Account);
+    }
+
+    /// <summary>MSAL → the UX §9 failure states. Kept here so the App never depends on MSAL error codes.</summary>
+    private static SignInException Map(MsalException ex)
+    {
+        var code = ex.ErrorCode ?? string.Empty;
+        var text = ex.Message ?? string.Empty;
+
+        if (ex is MsalClientException && (code.Contains("cancel", StringComparison.OrdinalIgnoreCase) || code == "user_canceled" || code == "authentication_canceled"))
+        {
+            return new SignInException(SignInFailureKind.Cancelled, "Sign-in was cancelled.", code, text, ex);
+        }
+
+        // Conditional Access blocks arrive as AADSTS5xxxx (53000–53011 device/location/compliance) on a service exception.
+        if (text.Contains("AADSTS530", StringComparison.OrdinalIgnoreCase) || text.Contains("AADSTS5300", StringComparison.OrdinalIgnoreCase) ||
+            (ex is MsalUiRequiredException ui && ui.Classification == UiRequiredExceptionClassification.AdditionalAction))
+        {
+            return new SignInException(SignInFailureKind.ConditionalAccess, text, code, text, ex);
+        }
+
+        if (code == "access_denied" || text.Contains("AADSTS65004", StringComparison.OrdinalIgnoreCase) ||
+            (ex is MsalUiRequiredException ui2 && ui2.Classification == UiRequiredExceptionClassification.ConsentRequired))
+        {
+            return new SignInException(SignInFailureKind.ConsentDeclined, "Consent was declined. The app cannot work without read access to your tenant.", code, text, ex);
+        }
+
+        return new SignInException(SignInFailureKind.Other, $"Sign-in failed ({code}).", code, text, ex);
     }
 
     public async Task<string> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken ct, bool forceRefresh = false)

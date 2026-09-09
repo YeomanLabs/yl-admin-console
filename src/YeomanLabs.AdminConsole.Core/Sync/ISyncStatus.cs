@@ -7,6 +7,9 @@ public interface ISyncStatus
 {
     event EventHandler<SyncProgress>? ProgressChanged;
 
+    /// <summary>Raised after a whole cycle finished (all entities, success or not) and <see cref="IsRunning"/> is already false.</summary>
+    event EventHandler? CycleCompleted;
+
     /// <summary>True once users, groups and Entra devices all have a delta link (the palette can drop "results may be incomplete").</summary>
     bool IsInitialSyncComplete { get; }
 

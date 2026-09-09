@@ -8,17 +8,10 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <!-- Order matters: Theme (palette + converters) must precede the templates that reference it. -->
+                <ResourceDictionary Source="Views/Theme.xaml" />
                 <ResourceDictionary Source="Views/PageTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
-
-            <!-- UX §1 palette: navy window base, coral accent for primary actions, focus rings and the active nav item only. -->
-            <Color x:Key="YlNavyColor">#041635</Color>
-            <Color x:Key="YlCoralColor">#FF6950</Color>
-            <SolidColorBrush x:Key="YlNavy" Color="{StaticResource YlNavyColor}" />
-            <SolidColorBrush x:Key="YlCoral" Color="{StaticResource YlCoralColor}" />
-            <SolidColorBrush x:Key="YlCoralDim" Color="#B3FF6950" />
-            <FontFamily x:Key="YlMono">Cascadia Mono, Consolas</FontFamily>
-            <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
         </ResourceDictionary>
     </Application.Resources>
 </Application>

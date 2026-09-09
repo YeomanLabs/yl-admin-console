@@ -227,10 +227,12 @@ public sealed class GraphClient
         var request = new HttpRequestMessage(method, uri);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.TryAddWithoutValidation("client-request-id", Guid.NewGuid().ToString());
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        // The /$count segment answers text/plain and 415s on an application/json-only Accept.
+        var pathAndQuery = uri.PathAndQuery;
+        var isCountSegment = uri.AbsolutePath.EndsWith("/$count", StringComparison.OrdinalIgnoreCase);
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(isCountSegment ? "text/plain" : "application/json"));
 
         // Doc 04: ConsistencyLevel is required for $count (query option or the /$count segment) and $search.
-        var pathAndQuery = uri.PathAndQuery;
         if (pathAndQuery.Contains("$count", StringComparison.OrdinalIgnoreCase) || pathAndQuery.Contains("$search", StringComparison.OrdinalIgnoreCase))
         {
             request.Headers.TryAddWithoutValidation("ConsistencyLevel", "eventual");

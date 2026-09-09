@@ -218,6 +218,19 @@ public sealed class GraphClientTests
         _handler.Requests[1].Headers.Should().NotContainKey("ConsistencyLevel");
         _handler.Requests[0].Headers.Should().ContainKey("client-request-id");
         _handler.Requests[0].Headers["User-Agent"].Should().StartWith("YeomanLabs-AdminConsole/");
+        _handler.Requests[0].Headers["Accept"].Should().Be("application/json");
+    }
+
+    [Fact]
+    public async Task Send_CountSegment_AcceptsTextPlainAndParsesTheNumber()
+    {
+        _handler.Enqueue(HttpStatusCode.OK, "4812");
+
+        using var doc = await CreateClient().SendAsync(HttpMethod.Get, "users/$count", null, CancellationToken.None);
+
+        doc!.RootElement.GetInt32().Should().Be(4812);
+        _handler.Requests[0].Headers["Accept"].Should().Be("text/plain", "Graph answers /$count as text/plain and 415s on application/json");
+        _handler.Requests[0].Headers.Should().ContainKey("ConsistencyLevel");
     }
 
     [Fact]

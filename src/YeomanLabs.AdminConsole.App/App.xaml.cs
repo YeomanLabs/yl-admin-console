@@ -62,14 +62,18 @@ public sealed partial class App : Application
         await _host.StartAsync();
         _logger.LogInformation("Admin Console {Version} starting", typeof(App).Assembly.GetName().Version);
 
-        // CLAUDE.md: apply the theme before the window is shown.
+        // CLAUDE.md: apply the theme before the window is shown. UX §1: coral is the accent for primary actions and focus.
         ApplicationThemeManager.Apply(ApplicationTheme.Dark, Wpf.Ui.Controls.WindowBackdropType.None, false);
+        ApplicationAccentColorManager.Apply(System.Windows.Media.Color.FromRgb(0xFF, 0x69, 0x50), ApplicationTheme.Dark, false);
 
         var window = _host.Services.GetRequiredService<MainWindow>();
         var handles = _host.Services.GetRequiredService<WindowHandleProvider>();
         window.SourceInitialized += (_, _) => handles.Handle = new WindowInteropHelper(window).Handle;
         MainWindow = window;
         window.Show();
+
+        // First-run flow (UX §9): silent sign-in if possible, otherwise the sign-in page. Runs after the HWND exists (WAM needs it).
+        await _host.Services.GetRequiredService<ShellViewModel>().StartAsync();
     }
 
     protected override async void OnExit(ExitEventArgs e)

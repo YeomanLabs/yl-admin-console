@@ -36,6 +36,8 @@ public sealed class DeltaSyncService : ISyncStatus
 
     public event EventHandler<SyncProgress>? ProgressChanged;
 
+    public event EventHandler? CycleCompleted;
+
     public bool IsInitialSyncComplete => DeltaEntities.All(e => _db.GetSyncState(e)?.DeltaLink is not null);
     public bool IsRunning { get; private set; }
     public DateTimeOffset? LastCycleCompleted { get; private set; }
@@ -108,6 +110,8 @@ public sealed class DeltaSyncService : ISyncStatus
             IsRunning = false;
             _cycleLock.Release();
         }
+
+        CycleCompleted?.Invoke(this, EventArgs.Empty);
     }
 
     // ---- delta entities --------------------------------------------------------------------------------------------
