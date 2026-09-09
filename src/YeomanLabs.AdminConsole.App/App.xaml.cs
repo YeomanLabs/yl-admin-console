@@ -186,6 +186,7 @@ public sealed partial class App : Application
         services.AddTransient<GroupDetailViewModel>();
         services.AddTransient<SettingsPageViewModel>();
         services.AddTransient<TemplatesPageViewModel>();
+        services.AddTransient<ActivityPageViewModel>();
     }
 
     private void HookGlobalExceptionHandlers()
