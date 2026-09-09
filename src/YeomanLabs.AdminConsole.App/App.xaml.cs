@@ -151,6 +151,7 @@ public sealed partial class App : Application
                 sp.GetRequiredService<ActionLog>(),
                 sp.GetRequiredService<TenantContext>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
+        services.AddSingleton<UserProvisioningService>();
         services.AddSingleton(sp => new TemplateService(
             TemplateService.DefaultDirectory,
             sp.GetRequiredService<GraphClient>(),

@@ -118,6 +118,27 @@ public sealed class TemplateServiceTests : IDisposable
         error.Should().Be(expected);
     }
 
+    [Fact]
+    public void Load_TurnsJsonValuesIntoPlainOnes_SoAttributeReadsWorkOffDisk()
+    {
+        // Deserializing object? gives JsonElement, so every "value as string" read saw null on a loaded template while
+        // an in-memory one worked. The M7 gate hit this as "a usage location is needed" on a template that had one.
+        _sut.Save(Template());
+
+        var loaded = _sut.Load().Single();
+
+        loaded.Attributes["usageLocation"].Should().BeOfType<string>().And.Be("US");
+    }
+
+    [Fact]
+    public void TryParse_AlsoTurnsJsonValuesIntoPlainOnes()
+    {
+        var parsed = TemplateService.TryParse("""{"name":"X","attributes":{"usageLocation":"GB","businessPhones":["+44 20 7946 0000"]}}""", out _);
+
+        parsed!.Attributes["usageLocation"].Should().Be("GB");
+        parsed.Attributes["businessPhones"].Should().BeAssignableTo<IEnumerable<string?>>();
+    }
+
     // ---- snapshot ---------------------------------------------------------------------------------------------------
 
     private const string SubscribedSkus = """
@@ -209,6 +230,23 @@ public sealed class TemplateServiceTests : IDisposable
         template.ExcludedOnSnapshot.Should().Contain(n => n.StartsWith("All-Staff") && n.Contains("Dynamic"));
         template.ExcludedOnSnapshot.Should().Contain(n => n.StartsWith("Finance") && n.Contains("on-prem"));
         template.ExcludedOnSnapshot.Should().Contain(n => n.StartsWith("Admins") && n.Contains("Privileged Role Administrator"));
+    }
+
+    [Fact]
+    public async Task Snapshot_LeavesOutDirectoryRoles_WhichMemberOfReturnsAlongsideGroups()
+    {
+        // A directoryRole parses as a group perfectly happily, and adding a member to one answers 404. The M7 gate hit
+        // exactly this: two of six "groups" in the template were the admin's directory roles.
+        EnqueueSnapshot(SourceUser, """{"licenseAssignmentStates":[]}""", """
+            {"value":[
+              {"@odata.type":"#microsoft.graph.group","id":"g-ok","displayName":"Sales-Team","securityEnabled":true,"groupTypes":[]},
+              {"@odata.type":"#microsoft.graph.directoryRole","id":"r-1","displayName":"Global Administrator"}]}
+            """, null);
+
+        var template = await _sut.SnapshotAsync("Sales", "u-1", CancellationToken.None);
+
+        template.Groups.Should().ContainSingle().Which.Id.Should().Be("g-ok");
+        template.ExcludedOnSnapshot.Should().BeEmpty("a role is not a group that was skipped; it was never a group");
     }
 
     [Fact]

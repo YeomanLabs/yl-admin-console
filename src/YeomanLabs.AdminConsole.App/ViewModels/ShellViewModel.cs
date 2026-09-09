@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Wpf.Ui.Controls;
 using YeomanLabs.AdminConsole.App.Services;
+using YeomanLabs.AdminConsole.App.ViewModels.Dialogs;
 using YeomanLabs.AdminConsole.App.ViewModels.Pages;
 using YeomanLabs.AdminConsole.App.ViewModels.Palette;
 using YeomanLabs.AdminConsole.Core.Auth;
@@ -15,6 +16,7 @@ using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
 using YeomanLabs.AdminConsole.Core.Groups;
 using YeomanLabs.AdminConsole.Core.Sync;
+using YeomanLabs.AdminConsole.Core.Templates;
 
 namespace YeomanLabs.AdminConsole.App.ViewModels;
 
@@ -374,7 +376,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 _ = SyncNowAsync();
                 break;
             case PaletteActions.NewUser:
-                NewUser();
+                _ = NewUserAsync();
                 break;
             case PaletteActions.Offboard:
                 Offboard();
@@ -407,9 +409,32 @@ public sealed partial class ShellViewModel : ObservableObject
         ShowStatusMessage("Choose a user, then press Ctrl+Shift+O on their page.");
     }
 
-    /// <summary>Ctrl+N (M7).</summary>
+    /// <summary>Ctrl+N and the palette's "New user from template" (doc 07 §flow).</summary>
     [RelayCommand]
-    private void NewUser() => ShowStatusMessage("New user from template arrives in M7.");
+    private async Task NewUserAsync()
+    {
+        if (!IsSessionReady) return;
+
+        var dialog = new CreateUserDialogViewModel(
+            _services.GetRequiredService<TemplateService>(),
+            _services.GetRequiredService<UserProvisioningService>(),
+            _services.GetRequiredService<CacheDb>(),
+            _tenant,
+            _services.GetRequiredService<PermissionChecker>(),
+            _services.GetRequiredService<ConsentService>(),
+            _logger)
+        {
+            PickPerson = OpenPersonPicker,
+            PickGroup = onPicked => OpenGroupPicker(group =>
+            {
+                onPicked(group);
+                return Task.CompletedTask;
+            }),
+            OpenUser = (id, title) => OpenObjectFromPage(ObjectType.User, id, title),
+        };
+
+        await _services.GetRequiredService<DialogService>().ShowAsync(dialog);
+    }
 
     /// <summary>F5: re-read the current object from Graph. Pages opt in via <see cref="IRefreshable"/> (M4).</summary>
     [RelayCommand]

@@ -5,6 +5,7 @@
              xmlns:b="clr-namespace:YeomanLabs.AdminConsole.App.Behaviors"
              xmlns:dlg="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Dialogs"
              xmlns:svc="clr-namespace:YeomanLabs.AdminConsole.App.Services"
+             xmlns:tpl="clr-namespace:YeomanLabs.AdminConsole.Core.Templates;assembly=YeomanLabs.AdminConsole.Core"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
@@ -247,6 +248,251 @@
                                    Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </Grid>
+            </StackPanel>
+        </DataTemplate>
+        <!-- Create from template (doc 07 §flow): pick, fill, run, then the password once. -->
+        <DataTemplate DataType="{x:Type dlg:CreateUserDialogViewModel}">
+            <StackPanel>
+                <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,4,0,8"
+                            IsOpen="{Binding HasTemplateError, Mode=OneWay}" Message="{Binding TemplateError}" />
+                <ui:InfoBar Severity="Informational" IsClosable="False" Margin="0,0,0,8"
+                            IsOpen="{Binding IsHybridTenant, Mode=OneWay}" Message="{Binding HybridNote}" />
+
+                <!-- 1. Pick a template -->
+                <StackPanel Visibility="{Binding IsPickingTemplate, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="No templates yet. Open Templates from the nav rail and snapshot one from a user who already has the role."
+                               TextWrapping="Wrap" Opacity="0.75" Margin="0,4,0,0"
+                               Visibility="{Binding HasNoTemplates, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding Templates}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type tpl:UserTemplate}">
+                                <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalContentAlignment="Stretch"
+                                        FocusVisualStyle="{x:Null}" AutomationProperties.Name="{Binding Name}"
+                                        Command="{Binding DataContext.ChooseTemplateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl, AncestorLevel=2}}"
+                                        CommandParameter="{Binding}">
+                                    <Border Padding="12,10" Margin="0,0,0,6" CornerRadius="4"
+                                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding CreatedFrom.Upn, StringFormat=from {0}}" FontSize="11" Opacity="0.6"
+                                                       Visibility="{Binding CreatedFrom, Converter={StaticResource NullToCollapsed}}" />
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                <TextBlock Text="{Binding Licenses.Count, StringFormat={}{0} licence(s)}" FontSize="11" Opacity="0.5" />
+                                                <TextBlock Text=" · " FontSize="11" Opacity="0.4" />
+                                                <TextBlock Text="{Binding Groups.Count, StringFormat={}{0} group(s)}" FontSize="11" Opacity="0.5" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <!-- 2. The form -->
+                <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto"
+                              Visibility="{Binding IsForm, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Margin="0,0,8,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="First name" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                                <ui:TextBox Text="{Binding FirstName, UpdateSourceTrigger=PropertyChanged}"
+                                            b:FocusBehavior.FocusWhen="True" AutomationProperties.Name="First name" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="Last name" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                                <ui:TextBox Text="{Binding LastName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Last name" />
+                            </StackPanel>
+                        </Grid>
+
+                        <TextBlock Text="Display name" FontSize="11" Opacity="0.6" Margin="0,10,0,0" />
+                        <ui:TextBox Text="{Binding DisplayName, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Display name" />
+
+                        <TextBlock Text="Sign-in name" FontSize="11" Opacity="0.6" Margin="0,10,0,0" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox Text="{Binding UpnLocal, UpdateSourceTrigger=PropertyChanged}"
+                                        FontFamily="{StaticResource YlMono}" AutomationProperties.Name="Sign-in name" />
+                            <TextBlock Grid.Column="1" Text="@" VerticalAlignment="Center" Margin="6,0" Opacity="0.6"
+                                       FontFamily="{StaticResource YlMono}" />
+                            <ComboBox Grid.Column="2" MinWidth="180" ItemsSource="{Binding Domains}" SelectedItem="{Binding Domain}"
+                                      AutomationProperties.Name="Domain" />
+                        </Grid>
+                        <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                            <ui:ProgressRing IsIndeterminate="True" Width="12" Height="12" Margin="0,0,6,0"
+                                             Visibility="{Binding IsCheckingUpn, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{Binding UpnMessage}" FontSize="11" TextWrapping="Wrap"
+                                       Visibility="{Binding HasUpnMessage, Converter={StaticResource BoolToVisibility}}">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Opacity" Value="0.7" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding UpnIsBad}" Value="True">
+                                                <Setter Property="Foreground" Value="{StaticResource YlDanger}" />
+                                                <Setter Property="Opacity" Value="1" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </StackPanel>
+
+                        <TextBlock Text="Manager" FontSize="11" Opacity="0.6" Margin="0,10,0,0" />
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding ManagerLabel}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                            <ui:Button Content="Choose…" Padding="8,2" Command="{Binding ChooseManagerCommand}" AutomationProperties.Name="Choose a manager" />
+                            <ui:Button Content="Clear" Padding="8,2" Margin="6,0,0,0" Command="{Binding ClearManagerCommand}" AutomationProperties.Name="Clear the manager" />
+                        </StackPanel>
+
+                        <ItemsControl ItemsSource="{Binding Fields}" Margin="0,10,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type dlg:CreateFieldRow}">
+                                    <StackPanel Margin="0,0,0,8">
+                                        <TextBlock Text="{Binding Label}" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                                        <ui:TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                    AutomationProperties.Name="{Binding Label}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="Licences" FontSize="13" FontWeight="SemiBold" Margin="0,16,0,6" />
+                        <ItemsControl ItemsSource="{Binding Licenses}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type dlg:CreateLicenseRow}">
+                                    <Grid Margin="0,2,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding HasSeats}"
+                                                  ToolTip="{Binding BlockedReason}" ToolTipService.ShowOnDisabled="True"
+                                                  AutomationProperties.Name="{Binding Name}">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" />
+                                                <TextBlock Text="{Binding BlockedReason}" FontSize="11" Foreground="{StaticResource YlDanger}"
+                                                           Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
+                                            </StackPanel>
+                                        </CheckBox>
+                                        <TextBlock Grid.Column="1" Text="{Binding SeatsText}" FontSize="11" Opacity="0.55" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Groups" FontSize="13" FontWeight="SemiBold" Margin="0,16,0,6" />
+                            <ui:Button Content="Add to group…" Padding="10,2" Margin="12,16,0,6" Command="{Binding AddGroupCommand}"
+                                       AutomationProperties.Name="Add to group" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Groups}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type dlg:CreateGroupRow}">
+                                    <Border Margin="0,0,6,6" Padding="8,3" CornerRadius="12"
+                                            Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" />
+                                            <Button Background="Transparent" BorderThickness="0" Padding="4,0" Margin="4,0,0,0" Cursor="Hand"
+                                                    FocusVisualStyle="{x:Null}" Command="{Binding RemoveCommand}"
+                                                    AutomationProperties.Name="Remove from this group">
+                                                <ui:SymbolIcon Symbol="Dismiss24" FontSize="10" Opacity="0.7" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 3. Running -->
+                <StackPanel Orientation="Horizontal" Margin="0,12,0,0"
+                            Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" Margin="0,0,10,0" />
+                    <TextBlock Text="Creating the account…" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- 4. Result -->
+                <StackPanel Visibility="{Binding IsResult, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl ItemsSource="{Binding Result.Steps}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type tpl:CreateStepResult}">
+                                <Grid Margin="0,3,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="150" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12" VerticalAlignment="Top" />
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Message}" FontSize="12" TextWrapping="Wrap" Opacity="0.85" />
+                                        <Expander Header="Details" FontSize="11" Margin="0,3,0,0"
+                                                  Visibility="{Binding Details, Converter={StaticResource NullToCollapsed}}">
+                                            <TextBox Text="{Binding Details, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="120"
+                                                     FontFamily="{StaticResource YlMono}" FontSize="11" VerticalScrollBarVisibility="Auto"
+                                                     Background="Transparent" BorderThickness="0" />
+                                        </Expander>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Text="{Binding ResultSummary}" FontWeight="SemiBold" Margin="0,12,0,0" />
+
+                    <StackPanel Margin="0,10,0,0" Visibility="{Binding HasResultPassword, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Temporary password — shown only here, and stored nowhere" FontSize="11" Opacity="0.6" Margin="0,0,0,3" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:TextBox Text="{Binding Result.Password, Mode=OneWay}" IsReadOnly="True" FontSize="16"
+                                        FontFamily="{StaticResource YlMono}" AutomationProperties.Name="Temporary password" />
+                            <ui:Button Grid.Column="1" Content="Copy" Margin="6,0,0,0" Command="{Binding CopyPasswordCommand}"
+                                       AutomationProperties.Name="Copy the password" />
+                        </Grid>
+                        <TextBlock Text="Copied to the clipboard" FontSize="11" Opacity="0.6" Margin="0,4,0,0"
+                                   Visibility="{Binding IsPasswordCopied, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Text="{Binding SendHint}" FontSize="11" Opacity="0.6" Margin="0,4,0,0" TextWrapping="Wrap" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Text="{Binding PreviewText}" FontSize="12" Opacity="0.85" TextWrapping="Wrap" Margin="0,12,0,0"
+                           Visibility="{Binding IsForm, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding StatusText}" FontSize="12" Opacity="0.75" TextWrapping="Wrap" Margin="0,6,0,0"
+                           Visibility="{Binding StatusText, Converter={StaticResource NullToCollapsed}}" />
+
+                <!-- This dialog draws its own footer: "Create" must not close it. -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                    <ui:Button Content="Cancel" Margin="0,0,8,0" Command="{Binding CloseCommand}"
+                               Visibility="{Binding IsResult, Converter={StaticResource InverseBoolToVisibility}}" />
+                    <ui:Button Content="Create user" Appearance="Primary" Command="{Binding CreateCommand}" IsEnabled="{Binding CanCreate}"
+                               Visibility="{Binding IsForm, Converter={StaticResource BoolToVisibility}}"
+                               AutomationProperties.Name="Create the user" />
+                    <ui:Button Content="Create another" Margin="0,0,8,0" Command="{Binding CreateAnotherCommand}"
+                               Visibility="{Binding IsResult, Converter={StaticResource BoolToVisibility}}"
+                               AutomationProperties.Name="Create another user" />
+                    <ui:Button Content="Open user" Margin="0,0,8,0" Command="{Binding OpenCreatedUserCommand}"
+                               Visibility="{Binding HasResultPassword, Converter={StaticResource BoolToVisibility}}"
+                               AutomationProperties.Name="Open the new user" />
+                    <ui:Button Content="Close" Appearance="Primary" Command="{Binding CloseCommand}"
+                               Visibility="{Binding IsResult, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
             </StackPanel>
         </DataTemplate>
     </UserControl.Resources>

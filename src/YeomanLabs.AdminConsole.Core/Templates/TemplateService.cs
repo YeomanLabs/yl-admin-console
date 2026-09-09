@@ -57,7 +57,7 @@ public sealed class TemplateService
                         continue;
                     }
 
-                    templates.Add(template with { FileName = Path.GetFileName(path) });
+                    templates.Add(Normalise(template) with { FileName = Path.GetFileName(path) });
                 }
                 catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
                 {
@@ -120,7 +120,7 @@ public sealed class TemplateService
             }
 
             error = null;
-            return template;
+            return Normalise(template);
         }
         catch (JsonException ex)
         {
@@ -128,6 +128,34 @@ public sealed class TemplateService
             return null;
         }
     }
+
+    /// <summary>
+    /// Deserializing <c>object?</c> values gives <see cref="JsonElement"/>, not strings, so every reader that did
+    /// "value as string" saw null on a template loaded from disk while an in-memory one worked. Converting once here
+    /// means the rest of the app only ever sees plain CLR values.
+    /// </summary>
+    private static UserTemplate Normalise(UserTemplate template)
+    {
+        if (template.Attributes.Count == 0) return template;
+
+        var attributes = new Dictionary<string, object?>(template.Attributes.Count, StringComparer.Ordinal);
+        foreach (var (key, value) in template.Attributes)
+        {
+            attributes[key] = value is JsonElement element ? FromJsonValue(element) : value;
+        }
+
+        return template with { Attributes = attributes };
+    }
+
+    private static object? FromJsonValue(JsonElement e) => e.ValueKind switch
+    {
+        JsonValueKind.String => e.GetString(),
+        JsonValueKind.True => true,
+        JsonValueKind.False => false,
+        JsonValueKind.Number => e.TryGetInt64(out var l) ? l : e.GetDouble(),
+        JsonValueKind.Array => e.EnumerateArray().Select(i => i.ValueKind == JsonValueKind.String ? i.GetString() : i.GetRawText()).ToArray(),
+        _ => null,
+    };
 
     // ---- snapshot (doc 07 §Snapshot rules) --------------------------------------------------------------------------
 
@@ -207,7 +235,13 @@ public sealed class TemplateService
     private async Task<(IReadOnlyList<TemplateGroup> Groups, IReadOnlyList<string> Notes)> SnapshotGroupsAsync(string userId, CancellationToken ct)
     {
         var page = await _graph.GetPageAsync($"users/{userId}/memberOf?$select={GraphSelects.MemberOf}&$top=999", ct).ConfigureAwait(false);
-        var groups = page.Items.Select(DirectoryGroup.FromJson).ToList();
+
+        // memberOf is heterogeneous: it returns directoryRole objects alongside groups, and a role parses as a group
+        // perfectly happily. Adding a member to one answers 404, which is exactly what the M7 gate hit.
+        var groups = page.Items
+            .Where(e => e.GetString("@odata.type")?.Contains("group", StringComparison.OrdinalIgnoreCase) != false)
+            .Select(DirectoryGroup.FromJson)
+            .ToList();
 
         var keep = new List<TemplateGroup>();
         var notes = new List<string>();
