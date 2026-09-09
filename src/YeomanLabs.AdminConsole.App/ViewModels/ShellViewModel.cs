@@ -277,21 +277,32 @@ public sealed partial class ShellViewModel : ObservableObject
         }
 
         _services.GetRequiredService<CacheDb>().TouchRecent(hit.Id, hit.ObjectType.ToString().ToLowerInvariant());
-        object page;
-        if (hit.ObjectType == ObjectType.User)
-        {
-            var user = _services.GetRequiredService<UserDetailViewModel>();
-            user.Start(hit.Id);
-            page = user;
-        }
-        else
-        {
-            page = new ObjectPageViewModel(hit);
-        }
-
+        var page = CreateObjectPage(hit.ObjectType, hit.Id, hit);
         if (choice.NewTab) OpenTab(page);
         else OpenPage(page);
         _logger.LogInformation("Opened {Type} {Id} from the palette{NewTab}", hit.ObjectType, hit.Id, choice.NewTab ? " in a new tab" : string.Empty);
+    }
+
+    /// <summary>Object pages by type. Links inside pages (device cards, manager, members) come through here too.</summary>
+    private object CreateObjectPage(ObjectType type, string id, SearchHit? hit = null)
+    {
+        switch (type)
+        {
+            case ObjectType.User:
+                var user = _services.GetRequiredService<UserDetailViewModel>();
+                user.OpenObject = OpenObjectFromPage;
+                user.Start(id);
+                return user;
+            default:
+                hit ??= new SearchHit { ObjectType = type, Id = id, Primary = id, Score = 0 };
+                return new ObjectPageViewModel(hit);
+        }
+    }
+
+    private void OpenObjectFromPage(ObjectType type, string id, string title)
+    {
+        _services.GetRequiredService<CacheDb>().TouchRecent(id, type.ToString().ToLowerInvariant());
+        OpenPage(CreateObjectPage(type, id, new SearchHit { ObjectType = type, Id = id, Primary = title, Score = 0 }));
     }
 
     private void RunAction(string id)

@@ -16,4 +16,7 @@
 
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     <conv:NullToCollapsedConverter x:Key="NullToCollapsed" />
+    <conv:NullToBoolConverter x:Key="NullToBool" />
+    <conv:CountToVisibilityConverter x:Key="ZeroToVisible" />
+    <conv:CountToVisibilityConverter x:Key="NonZeroToVisible" WhenNonZero="True" />
 </ResourceDictionary>

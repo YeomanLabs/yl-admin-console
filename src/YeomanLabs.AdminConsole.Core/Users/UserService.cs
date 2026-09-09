@@ -88,6 +88,48 @@ public sealed class UserService
         return detail;
     }
 
+    /// <summary>
+    /// Doc 04: last 20 audit events targeting the user, loaded lazily on the Activity tab (2–5 s on big tenants).
+    /// Needs AuditLog.Read.All; a 403 is returned as a failed section, not thrown.
+    /// </summary>
+    public async Task<SectionResult<IReadOnlyList<AuditEvent>>> GetAuditEventsAsync(string userId, CancellationToken ct)
+    {
+        var url = $"auditLogs/directoryAudits?$filter=targetResources/any(t:t/id eq '{userId}')&$top=20&$orderby=activityDateTime desc";
+        try
+        {
+            var page = await _graph.GetPageAsync(url, ct).ConfigureAwait(false);
+            return SectionResult<IReadOnlyList<AuditEvent>>.Ok(page.Items.Select(AuditEvent.FromJson).ToList());
+        }
+        catch (GraphException ex)
+        {
+            _logger.LogWarning("Audit events for {UserId}: HTTP {Status} {Code}", userId, ex.StatusCode, ex.ErrorCode);
+            return SectionResult<IReadOnlyList<AuditEvent>>.Failed(ex);
+        }
+    }
+
+    /// <summary>Live compliance/encryption/check-in for the user's cached Intune devices, one <c>$batch</c>. Missing devices (404) are simply absent.</summary>
+    public async Task<IReadOnlyDictionary<string, ManagedDeviceState>> GetDeviceStatesAsync(IReadOnlyList<string> managedDeviceIds, CancellationToken ct)
+    {
+        var result = new Dictionary<string, ManagedDeviceState>(StringComparer.OrdinalIgnoreCase);
+        if (managedDeviceIds.Count == 0) return result;
+
+        var requests = managedDeviceIds.Select(id => BatchRequest.Get(id, $"/deviceManagement/managedDevices/{id}?$select={ManagedDeviceState.Select}")).ToList();
+        var responses = await _graph.BatchAsync(requests, ct).ConfigureAwait(false);
+        foreach (var (id, response) in responses)
+        {
+            if (response.IsSuccess && response.Body is { } body)
+            {
+                result[id] = ManagedDeviceState.FromJson(body);
+            }
+            else
+            {
+                _logger.LogDebug("Device state {DeviceId}: HTTP {Status}", id, response.Status);
+            }
+        }
+
+        return result;
+    }
+
     private async Task<(SectionResult<DirectoryUser> User, bool SignInUnavailable)> ReadUserAsync(string id, BatchResponse response, CancellationToken ct)
     {
         if (response.IsSuccess && response.Body is { } body)
