@@ -183,8 +183,17 @@ public sealed class TemplateService
         }
 
         var states = list.EnumerateArray().Select(LicenseAssignmentState.FromJson).ToList();
+
+        // Doc 07 keeps the part number next to the id. Without it the file is a list of GUIDs, which is exactly the
+        // unreadable template the human-editable format exists to avoid.
+        var partNumbers = await ReadSkuPartNumbersAsync(ct).ConfigureAwait(false);
         var direct = states.Where(s => !s.IsGroupAssigned)
-            .Select(s => new TemplateLicense { SkuId = s.SkuId, DisabledPlans = s.DisabledPlans })
+            .Select(s => new TemplateLicense
+            {
+                SkuId = s.SkuId,
+                SkuPartNumber = partNumbers.GetValueOrDefault(s.SkuId),
+                DisabledPlans = s.DisabledPlans,
+            })
             .ToList();
 
         var inherited = states.Count(s => s.IsGroupAssigned);
@@ -216,6 +225,28 @@ public sealed class TemplateService
         }
 
         return (keep, notes);
+    }
+
+    /// <summary>SKU id to part number, read live so a template written today names the SKUs this tenant actually has.</summary>
+    private async Task<IReadOnlyDictionary<string, string>> ReadSkuPartNumbersAsync(CancellationToken ct)
+    {
+        try
+        {
+            var page = await _graph.GetPageAsync("subscribedSkus?$select=skuId,skuPartNumber", ct).ConfigureAwait(false);
+            var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var sku in page.Items)
+            {
+                if (sku.GetString("skuId") is { } id && sku.GetString("skuPartNumber") is { } part) map[id] = part;
+            }
+
+            return map;
+        }
+        catch (GraphException ex)
+        {
+            // A template with bare ids still works; it is only less pleasant to read.
+            _logger.LogWarning("Could not read subscribed SKUs for the template: {Code}", ex.ErrorCode);
+            return new Dictionary<string, string>();
+        }
     }
 
     private async Task<PersonRef?> ReadManagerAsync(string userId, CancellationToken ct)

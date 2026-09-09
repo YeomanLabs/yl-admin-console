@@ -1,7 +1,8 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
-                    xmlns:pages="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Pages">
+                    xmlns:pages="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Pages"
+                    xmlns:tpl="clr-namespace:YeomanLabs.AdminConsole.Core.Templates;assembly=YeomanLabs.AdminConsole.Core">
     <!-- Doc 03: navigation is ContentControl + one DataTemplate per page ViewModel type. -->
 
     <DataTemplate DataType="{x:Type pages:HomePageViewModel}">
@@ -158,5 +159,97 @@
             <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
             <TextBlock Text="{Binding ArrivesIn}" Opacity="0.6" Margin="0,8,0,0" />
         </StackPanel>
+    </DataTemplate>
+
+    <!-- Templates (M7.2): saved templates on the left, the file itself on the right. -->
+    <DataTemplate DataType="{x:Type pages:TemplatesPageViewModel}">
+        <!-- Bottom margin leaves the toast stack (UX §10, bottom-right) somewhere to sit that is not on top of Save. -->
+        <Grid Margin="24,16,24,56">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="Templates" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <ui:Button Content="New from user…" Icon="{ui:SymbolIcon PersonAdd24}" Margin="16,0,0,0"
+                           Command="{Binding NewFromUserCommand}" AutomationProperties.Name="New template from user" />
+                <ui:Button Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="8,0,0,0"
+                           Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
+                           AutomationProperties.Name="Delete template" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
+                <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,0,0,8"
+                            IsOpen="{Binding HasLoadError, Mode=OneWay}" Message="{Binding LoadError}" />
+                <ui:InfoBar Severity="Informational" IsClosable="False" Margin="0,0,0,8"
+                            IsOpen="{Binding IsHybridTenant, Mode=OneWay}" Message="{Binding HybridNote}" />
+            </StackPanel>
+
+            <Border Grid.Row="2" Grid.Column="0" Margin="0,0,12,0" CornerRadius="6" Padding="4"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <Grid>
+                    <TextBlock Text="No templates yet. Snapshot one from a user who already has the role."
+                               TextWrapping="Wrap" Opacity="0.6" FontSize="12" Margin="10" VerticalAlignment="Top"
+                               Visibility="{Binding TemplatesList.Count, Converter={StaticResource ZeroToVisible}}" />
+                    <ListBox ItemsSource="{Binding TemplatesList}" SelectedItem="{Binding Selected}"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             AutomationProperties.Name="Templates"
+                             Visibility="{Binding HasTemplates, Converter={StaticResource BoolToVisibility}}">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="8,6" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type tpl:UserTemplate}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding CreatedFrom.Upn}" FontSize="11" Opacity="0.6"
+                                               FontFamily="{StaticResource YlMono}" TextTrimming="CharacterEllipsis"
+                                               Visibility="{Binding CreatedFrom, Converter={StaticResource NullToCollapsed}}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Text="{Binding Licenses.Count, StringFormat={}{0} licence(s)}" FontSize="11" Opacity="0.5" />
+                                        <TextBlock Text=" · " FontSize="11" Opacity="0.4" />
+                                        <TextBlock Text="{Binding Groups.Count, StringFormat={}{0} group(s)}" FontSize="11" Opacity="0.5" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="2" Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBox Grid.Row="0" Text="{Binding Json, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                         FontFamily="{StaticResource YlMono}" FontSize="12" Padding="10"
+                         IsEnabled="{Binding HasSelection}"
+                         AutomationProperties.Name="Template JSON" />
+
+                <StackPanel Grid.Row="1" Margin="0,10,0,0">
+                    <TextBlock Text="{Binding ValidationError}" Foreground="{StaticResource YlDanger}" FontSize="12" TextWrapping="Wrap"
+                               Visibility="{Binding HasValidationError, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                        <ui:Button Content="Revert" Margin="0,0,8,0" Command="{Binding RevertCommand}" IsEnabled="{Binding HasSelection}" />
+                        <ui:Button Content="Save" Appearance="Primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
     </DataTemplate>
 </ResourceDictionary>

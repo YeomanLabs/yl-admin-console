@@ -46,7 +46,7 @@ public sealed class TemplateServiceTests : IDisposable
 
         var loaded = _sut.Load().Should().ContainSingle().Subject;
         loaded.Name.Should().Be("Sales Rep — Madison");
-        loaded.Attributes["jobTitle"].ToString().Should().Be("Sales Representative");
+        loaded.Attributes["jobTitle"]!.ToString().Should().Be("Sales Representative");
         loaded.Licenses.Single().SkuPartNumber.Should().Be("SPE_E3");
         loaded.Groups.Single().DisplayName.Should().Be("Sales-Team");
         loaded.SchemaVersion.Should().Be(UserTemplate.CurrentSchemaVersion);
@@ -120,10 +120,15 @@ public sealed class TemplateServiceTests : IDisposable
 
     // ---- snapshot ---------------------------------------------------------------------------------------------------
 
+    private const string SubscribedSkus = """
+        {"value":[{"skuId":"sku-direct","skuPartNumber":"SPE_E3"},{"skuId":"sku-group","skuPartNumber":"VISIOCLIENT"}]}
+        """;
+
     private void EnqueueSnapshot(string userJson, string licenseStatesJson, string memberOfJson, string? managerJson)
     {
         _handler.Enqueue(HttpStatusCode.OK, userJson)
                 .Enqueue(HttpStatusCode.OK, licenseStatesJson)
+                .Enqueue(HttpStatusCode.OK, SubscribedSkus)
                 .Enqueue(HttpStatusCode.OK, memberOfJson);
         if (managerJson is null) _handler.Enqueue(HttpStatusCode.NotFound, """{"error":{"code":"Request_ResourceNotFound","message":"not found"}}""");
         else _handler.Enqueue(HttpStatusCode.OK, managerJson);
@@ -166,8 +171,24 @@ public sealed class TemplateServiceTests : IDisposable
         var template = await _sut.SnapshotAsync("Sales", "u-1", CancellationToken.None);
 
         template.Licenses.Should().ContainSingle().Which.SkuId.Should().Be("sku-direct");
+        template.Licenses.Single().SkuPartNumber.Should().Be("SPE_E3", "doc 07 keeps the part number so the file is not a list of GUIDs");
         template.Licenses.Single().DisabledPlans.Should().Equal(["plan-1"]);
         template.ExcludedOnSnapshot.Should().ContainSingle().Which.Should().Contain("1 group-assigned licence");
+    }
+
+    [Fact]
+    public async Task Snapshot_ASkuLookupThatFails_StillProducesATemplate_JustWithBareIds()
+    {
+        _handler.Enqueue(HttpStatusCode.OK, SourceUser)
+                .Enqueue(HttpStatusCode.OK, """{"licenseAssignmentStates":[{"skuId":"sku-direct","assignedByGroup":null,"state":"Active"}]}""")
+                .Enqueue(HttpStatusCode.Forbidden, """{"error":{"code":"Authorization_RequestDenied","message":"no"}}""")
+                .Enqueue(HttpStatusCode.OK, """{"value":[]}""")
+                .Enqueue(HttpStatusCode.NotFound, """{"error":{"code":"Request_ResourceNotFound","message":"not found"}}""");
+
+        var template = await _sut.SnapshotAsync("Sales", "u-1", CancellationToken.None);
+
+        template.Licenses.Single().SkuId.Should().Be("sku-direct");
+        template.Licenses.Single().SkuPartNumber.Should().BeNull("a bare id is less pleasant to read, not a failure");
     }
 
     [Fact]

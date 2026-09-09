@@ -25,6 +25,7 @@ using YeomanLabs.AdminConsole.Core.Search;
 using YeomanLabs.AdminConsole.Core.Sync;
 using YeomanLabs.AdminConsole.Core.Offboarding;
 using YeomanLabs.AdminConsole.Core.Offboarding.Steps;
+using YeomanLabs.AdminConsole.Core.Templates;
 using YeomanLabs.AdminConsole.Core.Users;
 
 namespace YeomanLabs.AdminConsole.App;
@@ -150,6 +151,10 @@ public sealed partial class App : Application
                 sp.GetRequiredService<ActionLog>(),
                 sp.GetRequiredService<TenantContext>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
+        services.AddSingleton(sp => new TemplateService(
+            TemplateService.DefaultDirectory,
+            sp.GetRequiredService<GraphClient>(),
+            sp.GetRequiredService<ILogger<TemplateService>>()));
         services.AddSingleton(sp => new OffboardingProfileStore(
             OffboardingProfileStore.DefaultDirectory,
             sp.GetRequiredService<ILogger<OffboardingProfileStore>>()));
@@ -170,6 +175,7 @@ public sealed partial class App : Application
         services.AddTransient<DeviceDetailViewModel>();
         services.AddTransient<GroupDetailViewModel>();
         services.AddTransient<SettingsPageViewModel>();
+        services.AddTransient<TemplatesPageViewModel>();
     }
 
     private void HookGlobalExceptionHandlers()

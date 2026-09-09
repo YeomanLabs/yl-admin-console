@@ -95,6 +95,21 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
         </DataTemplate>
+        <!-- One line of text: a template name, a profile name. -->
+        <DataTemplate DataType="{x:Type dlg:TextPromptDialogViewModel}">
+            <StackPanel Margin="0,4,0,0">
+                <TextBlock Text="{Binding Prompt}" FontSize="12" Opacity="0.8" TextWrapping="Wrap" Margin="0,0,0,6" />
+                <ui:TextBox Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="{Binding Placeholder}"
+                            b:FocusBehavior.FocusWhen="True"
+                            AutomationProperties.Name="{Binding Prompt}">
+                    <ui:TextBox.InputBindings>
+                        <KeyBinding Key="Return" Command="{Binding ConfirmCommand}" />
+                    </ui:TextBox.InputBindings>
+                </ui:TextBox>
+            </StackPanel>
+        </DataTemplate>
+
         <!-- Offboard (UX §8): one dialog, three phases. The checklist becomes the live log becomes the summary. -->
         <DataTemplate DataType="{x:Type dlg:OffboardStepRow}">
             <Border Padding="8,6" Margin="0,2,0,0" CornerRadius="4"

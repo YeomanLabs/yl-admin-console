@@ -50,7 +50,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new NavItem("users", "Users", SymbolRegular.People24, 2, typeof(PlaceholderPageViewModel)),
             new NavItem("groups", "Groups", SymbolRegular.PeopleTeam24, 3, typeof(PlaceholderPageViewModel)),
             new NavItem("devices", "Devices", SymbolRegular.Laptop24, 4, typeof(PlaceholderPageViewModel)),
-            new NavItem("templates", "Templates", SymbolRegular.DocumentBulletList24, 5, typeof(PlaceholderPageViewModel)),
+            new NavItem("templates", "Templates", SymbolRegular.DocumentBulletList24, 5, typeof(TemplatesPageViewModel)),
             new NavItem("activity", "Activity log", SymbolRegular.History24, 6, typeof(PlaceholderPageViewModel)),
         ];
         SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(SettingsPageViewModel));
@@ -119,13 +119,13 @@ public sealed partial class ShellViewModel : ObservableObject
     private object CreatePage(NavItem item)
     {
         var page = _services.GetRequiredService(item.PageViewModelType);
+        if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
         if (page is PlaceholderPageViewModel placeholder)
         {
             placeholder.Title = item.Title;
             placeholder.ArrivesIn = item.Id switch
             {
                 "users" or "groups" or "devices" => "Object lists arrive with User 360 (M4).",
-                "templates" => "User templates arrive in M7.",
                 "activity" => "The activity log page arrives in M8.",
                 "settings" => "Settings arrive in M5/M8.",
                 _ => string.Empty,
