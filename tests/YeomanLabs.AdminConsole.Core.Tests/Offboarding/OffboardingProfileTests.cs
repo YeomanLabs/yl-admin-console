@@ -134,7 +134,7 @@ public sealed class OffboardingProfileTests : IDisposable
     [Theory]
     [InlineData("Standard leaver", "standard-leaver")]
     [InlineData("  Contractor / Temp  ", "contractor-temp")]
-    [InlineData("!!!", "profile")]
+    [InlineData("!!!", "untitled")]
     [InlineData("Årsavslutning", "årsavslutning")]
     public void Slug_MakesAFileNameThatNeedsNoEscaping(string name, string expected)
     {

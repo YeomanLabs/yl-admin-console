@@ -1,5 +1,4 @@
 ﻿using System.Text.Json;
-using System.Text.Encodings.Web;
 using Microsoft.Extensions.Logging;
 
 namespace YeomanLabs.AdminConsole.Core.Offboarding;
@@ -11,16 +10,6 @@ namespace YeomanLabs.AdminConsole.Core.Offboarding;
 /// </summary>
 public sealed class OffboardingProfileStore
 {
-    /// <summary>
-    /// These files are meant to be opened and edited by hand, so they are indented and camelCase, and non-ASCII
-    /// characters in a profile name stay readable rather than becoming escape sequences.
-    /// </summary>
-    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
-    {
-        WriteIndented = true,
-        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
-    };
-
     private readonly string _directory;
     private readonly ILogger<OffboardingProfileStore> _logger;
 
@@ -48,7 +37,7 @@ public sealed class OffboardingProfileStore
                 try
                 {
                     var json = File.ReadAllText(path);
-                    var profile = JsonSerializer.Deserialize<OffboardingProfile>(json, Json);
+                    var profile = JsonSerializer.Deserialize<OffboardingProfile>(json, JsonFiles.Options);
                     if (profile is null || string.IsNullOrWhiteSpace(profile.Name))
                     {
                         errors.Add($"{Path.GetFileName(path)} — no profile name");
@@ -75,7 +64,7 @@ public sealed class OffboardingProfileStore
         Directory.CreateDirectory(_directory);
         var fileName = profile.FileName ?? $"{Slug(profile.Name)}.json";
         var path = Path.Combine(_directory, fileName);
-        File.WriteAllText(path, JsonSerializer.Serialize(profile, Json));
+        File.WriteAllText(path, JsonSerializer.Serialize(profile, JsonFiles.Options));
         _logger.LogInformation("Saved the offboarding profile {Name} to {File}", profile.Name, fileName);
         return profile with { FileName = fileName };
     }
@@ -100,18 +89,6 @@ public sealed class OffboardingProfileStore
         _ => ex.Message,
     };
 
-    /// <summary>
-    /// A file name from a display name: lower case, words joined by hyphens. Letters and digits survive, including
-    /// non-ASCII ones, because a profile called "Årsavslutning" should still be findable on disk by its name.
-    /// </summary>
-    public static string Slug(string name)
-    {
-        var chars = name.Trim().ToLowerInvariant()
-            .Select(c => char.IsLetterOrDigit(c) ? c : '-')
-            .ToArray();
-        var slug = new string(chars);
-        while (slug.Contains("--", StringComparison.Ordinal)) slug = slug.Replace("--", "-", StringComparison.Ordinal);
-        slug = slug.Trim('-');
-        return slug.Length == 0 ? "profile" : slug;
-    }
+    /// <summary>A file name from a display name; shared with user templates, which name their files the same way.</summary>
+    public static string Slug(string name) => JsonFiles.Slug(name);
 }
