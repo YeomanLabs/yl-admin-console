@@ -154,7 +154,7 @@
                 <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding LogsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Cache" Style="{StaticResource FactLabel}" />
                 <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CachePath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
-                <TextBlock Text="Action log" Style="{StaticResource FactLabel}" />
+                <TextBlock Text="Activity log" Style="{StaticResource FactLabel}" />
                 <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActionsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Cache size" Style="{StaticResource FactLabel}" />
                 <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CacheSizeText}" FontSize="12" />

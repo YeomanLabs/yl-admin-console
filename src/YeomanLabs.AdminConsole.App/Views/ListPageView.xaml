@@ -97,7 +97,7 @@
                                AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding EmptyTitle}" />
                     <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding EmptyHint}" FontSize="12" Margin="0,6,0,0"
                                HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
-                    <ui:Button Content="Clear the filters" Margin="0,12,0,0" HorizontalAlignment="Center"
+                    <ui:Button Content="Clear all filters" Margin="0,12,0,0" HorizontalAlignment="Center"
                                Command="{Binding ClearFiltersCommand}"
                                Visibility="{Binding HasActiveFilters, Converter={StaticResource BoolToVisibility}}" />
                 </StackPanel>

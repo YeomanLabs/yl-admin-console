@@ -596,7 +596,7 @@
                             Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"
                             Icon="{ui:SymbolIcon Search24}" AutomationProperties.Name="Filter the activity log" />
                 <ui:Button Grid.Column="4" Content="Clear" Margin="0,0,8,0" Command="{Binding ClearFiltersCommand}"
-                           AutomationProperties.Name="Clear the filters" />
+                           AutomationProperties.Name="Clear all filters" />
                 <ui:Button Grid.Column="5" Content="Copy as markdown" Command="{Binding CopyAsMarkdownCommand}" IsEnabled="{Binding HasRows}"
                            AutomationProperties.Name="Copy the log as markdown" />
             </Grid>

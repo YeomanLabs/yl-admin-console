@@ -42,7 +42,7 @@ public static class Capabilities
     public static readonly Capability AssignLicense = new()
     {
         Id = "license.assign",
-        Title = "Assign and remove licenses",
+        Title = "Assign and remove licences",
         Scopes = [Scopes.UserReadWriteAll],
         RoleTemplateIds = [DirectoryRoleRef.LicenseAdministrator, DirectoryRoleRef.UserAdministrator],
         RoleHint = "License Administrator",

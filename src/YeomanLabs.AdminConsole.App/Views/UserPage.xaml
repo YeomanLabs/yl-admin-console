@@ -438,7 +438,7 @@
                                             <Setter.Value>
                                                 <DataTemplate>
                                                     <StackPanel>
-                                                        <TextBlock Text="Licenses" Style="{StaticResource SectionTitle}" />
+                                                        <TextBlock Text="Licences" Style="{StaticResource SectionTitle}" />
                                                         <ItemsControl ItemsSource="{Binding Licenses}" ItemTemplate="{StaticResource LicenseRowTemplate}" />
                                                         <TextBlock Text="No licences assigned. A new starter cannot use Microsoft 365 until one is." Style="{StaticResource Caption}"
                                                                    TextWrapping="Wrap" Visibility="{Binding Licenses.Count, Converter={StaticResource ZeroToVisible}}" />
