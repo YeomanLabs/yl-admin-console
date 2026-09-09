@@ -293,6 +293,11 @@ public sealed partial class ShellViewModel : ObservableObject
                 user.OpenObject = OpenObjectFromPage;
                 user.Start(id);
                 return user;
+            case ObjectType.Device:
+                var device = _services.GetRequiredService<DeviceDetailViewModel>();
+                device.OpenObject = OpenObjectFromPage;
+                device.Start(id);
+                return device;
             default:
                 hit ??= new SearchHit { ObjectType = type, Id = id, Primary = id, Score = 0 };
                 return new ObjectPageViewModel(hit);
