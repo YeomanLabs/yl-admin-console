@@ -19,6 +19,7 @@ using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Devices;
 using YeomanLabs.AdminConsole.Core.Graph;
+using YeomanLabs.AdminConsole.Core.Licensing;
 using YeomanLabs.AdminConsole.Core.Groups;
 using YeomanLabs.AdminConsole.Core.Search;
 using YeomanLabs.AdminConsole.Core.Sync;
@@ -132,6 +133,7 @@ public sealed partial class App : Application
         services.AddSingleton<UserService>();
         services.AddSingleton<DeviceService>();
         services.AddSingleton<GroupService>();
+        services.AddSingleton<LicenseService>();
         services.AddSingleton<PermissionChecker>();
         services.AddSingleton<ConsentService>();
         services.AddHostedService<SyncHostedService>();

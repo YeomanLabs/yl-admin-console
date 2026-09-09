@@ -69,12 +69,44 @@ public sealed partial class CacheDb
         return list;
     }
 
+    /// <summary>
+    /// SKUs from the projected columns (doc 05: lists read the projection, detail views read <c>raw</c>). Building these
+    /// from <c>raw</c> instead would make the list depend on Graph having returned every selected property.
+    /// </summary>
     public IReadOnlyList<LicenseSku> GetSkus()
     {
         using var conn = OpenConnection();
         using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT raw FROM skus ORDER BY part_number;";
-        return ReadAll(cmd, LicenseSku.FromJson);
+        cmd.CommandText = "SELECT sku_id, part_number, friendly_name, enabled, consumed, raw FROM skus ORDER BY part_number;";
+        using var r = cmd.ExecuteReader();
+        var list = new List<LicenseSku>();
+        while (r.Read())
+        {
+            var raw = r.GetString(5);
+            string? capability = null;
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                capability = doc.RootElement.GetString("capabilityStatus");
+            }
+            catch (JsonException)
+            {
+                // A malformed raw payload must not hide the SKU from the licence list.
+            }
+
+            list.Add(new LicenseSku
+            {
+                SkuId = r.GetString(0),
+                SkuPartNumber = r.GetString(1),
+                FriendlyName = r.IsDBNull(2) ? null : r.GetString(2),
+                Enabled = r.GetInt32(3),
+                Consumed = r.GetInt32(4),
+                CapabilityStatus = capability,
+                Raw = raw,
+            });
+        }
+
+        return list;
     }
 
     public Organization? GetOrganization()

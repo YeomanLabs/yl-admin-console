@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.App.Services;
 using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
+using YeomanLabs.AdminConsole.Core.Licensing;
 using YeomanLabs.AdminConsole.Core.Graph;
 using YeomanLabs.AdminConsole.Core.Models;
 using YeomanLabs.AdminConsole.Core.Users;
@@ -29,18 +30,20 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private readonly TenantContext _tenant;
     private readonly PermissionChecker _permissions;
     private readonly ConsentService _consent;
+    private readonly LicenseService _licenseService;
     private readonly ToastService _toasts;
     private readonly ILogger<UserDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, ToastService toasts, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, ToastService toasts, ILogger<UserDetailViewModel> logger)
     {
         _users = users;
         _db = db;
         _tenant = tenant;
         _permissions = permissions;
         _consent = consent;
+        _licenseService = licenses;
         _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
         _logger = logger;
@@ -378,9 +381,10 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
             }
         }
 
+        var licenseBlocked = GreyRule.Reason(_permissions, Capabilities.AssignLicense, null);
         Licenses = skus
             .Where(s => s.IsEnabled || assigned.Contains(s.SkuId))
-            .Select(s => new LicenseRow(s, assigned.Contains(s.SkuId), states.GetValueOrDefault(s.SkuId)))
+            .Select(s => new LicenseRow(s, assigned.Contains(s.SkuId), states.GetValueOrDefault(s.SkuId), licenseBlocked, ToggleLicenseAsync))
             .OrderByDescending(r => r.IsAssigned).ThenBy(r => r.Name)
             .ToList();
 
@@ -411,6 +415,56 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
             AuthMethods = [];
             AuthMethodsError = e2.IsForbidden ? "Needs the 'UserAuthenticationMethod.Read.All' permission" : $"Could not read authentication methods ({e2.ErrorCode})";
         }
+    }
+
+    /// <summary>
+    /// Checkbox toggle on the Access tab (UX §4 tab 2): consent on first write, assign or remove, undo toast.
+    /// Returning a failed outcome makes the row put its checkbox back.
+    /// </summary>
+    private async Task<WriteOutcome> ToggleLicenseAsync(LicenseRow row, bool assign)
+    {
+        var permission = _permissions.Check(Capabilities.AssignLicense);
+        if (permission.NeedsConsent)
+        {
+            try
+            {
+                permission = await _consent.EnsureAsync(Capabilities.AssignLicense, CancellationToken.None);
+            }
+            catch (SignInException)
+            {
+                return new WriteOutcome { Success = false, Summary = "Not changed", FriendlyError = "Write permission was not granted." };
+            }
+
+            if (!permission.CanRun) return new WriteOutcome { Success = false, Summary = "Not changed", FriendlyError = permission.Reason };
+        }
+
+        var outcome = assign
+            ? await _licenseService.AssignAsync(Id, row.SkuId, CancellationToken.None)
+            : await _licenseService.RemoveAsync(Id, row.SkuId, CancellationToken.None);
+
+        if (outcome.Success)
+        {
+            RefreshFromCache();
+            _toasts.Show(outcome.Summary, outcome.CanUndo ? "Undo" : null, outcome.CanUndo ? () => UndoLicenseAsync(outcome, row, assign) : null);
+        }
+        else
+        {
+            _toasts.Show(outcome.FriendlyError ?? outcome.Summary);
+        }
+
+        return outcome;
+    }
+
+    private async Task UndoLicenseAsync(WriteOutcome outcome, LicenseRow row, bool wasAssign)
+    {
+        var back = await outcome.Undo!(CancellationToken.None);
+        if (back.Success)
+        {
+            row.Set(!wasAssign);
+            RefreshFromCache();
+        }
+
+        _toasts.Show(back.Success ? back.Summary : back.FriendlyError ?? "Undo failed");
     }
 
     // ---- Devices tab (UX §4 tab 3) ---------------------------------------------------------------------------------

@@ -199,6 +199,7 @@ public sealed class UserServiceWriteTests : IDisposable
     [InlineData("Request_ResourceNotFound", "gone", "That object no longer exists. The cache will update on next sync.")]
     [InlineData("Request_BadRequest", "usageLocation is required", "Set a usage location before assigning a license.")]
     [InlineData("Request_BadRequest", "There are no available licenses", "No seats left for this licence.")]
+    [InlineData("Request_BadRequest", "Subscription with SKU 3ab6abff-666f-4424-bfb7-f0bc274ec7bc does not have any available licenses.", "No seats left for this licence.")]
     [InlineData("Request_BadRequest", "Unable to update the specified properties for on-premises mastered Directory Sync objects", "This property is mastered in on-prem AD and can't be changed here.")]
     public void ErrorText_MapsTheUxSection7Cases(string code, string message, string expected)
     {

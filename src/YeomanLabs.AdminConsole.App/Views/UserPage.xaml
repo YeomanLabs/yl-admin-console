@@ -168,8 +168,9 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <CheckBox IsChecked="{Binding IsAssigned, Mode=OneWay}" IsEnabled="False" VerticalAlignment="Center" ToolTipService.ShowOnDisabled="True"
-                      ToolTip="{Binding DataContext.LicenseEditReason, RelativeSource={RelativeSource AncestorType=TabControl}}" />
+            <CheckBox IsChecked="{Binding IsAssigned, Mode=TwoWay}" IsEnabled="{Binding IsToggleable}" VerticalAlignment="Center"
+                      ToolTipService.ShowOnDisabled="True" ToolTip="{Binding BlockedReason}"
+                      AutomationProperties.Name="{Binding Name}" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                 <TextBlock Text="{Binding PartNumber}" FontFamily="{StaticResource YlMono}" FontSize="11" Opacity="0.45" Margin="8,0,0,0" VerticalAlignment="Center" />
@@ -178,6 +179,10 @@
                 </Border>
                 <TextBlock Text="{Binding ErrorText}" Foreground="{StaticResource YlDanger}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
                            Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="8,0,0,0" VerticalAlignment="Center"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding BlockedReason}" Style="{StaticResource Caption}" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
             <TextBlock Grid.Column="2" Text="{Binding SeatsText}" FontSize="12" Opacity="0.6" VerticalAlignment="Center" Margin="12,0,0,0" />
         </Grid>

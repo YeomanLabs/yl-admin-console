@@ -37,7 +37,9 @@ public static class GraphErrorText
                     return "Set a usage location before assigning a license.";
                 }
 
-                if (message.Contains("no available licenses", StringComparison.OrdinalIgnoreCase) || message.Contains("CountViolation", StringComparison.OrdinalIgnoreCase))
+                // Graph words this at least two ways: "There are no available licenses" and
+                // "Subscription with SKU ... does not have any available licenses." Match the part they share.
+                if (message.Contains("available licenses", StringComparison.OrdinalIgnoreCase) || message.Contains("CountViolation", StringComparison.OrdinalIgnoreCase))
                 {
                     return "No seats left for this licence.";
                 }
