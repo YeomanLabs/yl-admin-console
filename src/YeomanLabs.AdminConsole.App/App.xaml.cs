@@ -19,6 +19,7 @@ using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Devices;
 using YeomanLabs.AdminConsole.Core.Graph;
+using YeomanLabs.AdminConsole.Core.Groups;
 using YeomanLabs.AdminConsole.Core.Search;
 using YeomanLabs.AdminConsole.Core.Sync;
 using YeomanLabs.AdminConsole.Core.Users;
@@ -130,6 +131,7 @@ public sealed partial class App : Application
         services.AddSingleton(sp => new SearchService(sp.GetRequiredService<CacheDb>(), PaletteActions.All));
         services.AddSingleton<UserService>();
         services.AddSingleton<DeviceService>();
+        services.AddSingleton<GroupService>();
         services.AddHostedService<SyncHostedService>();
 
         services.AddSingleton<ToastService>();
@@ -142,6 +144,7 @@ public sealed partial class App : Application
         services.AddTransient<PlaceholderPageViewModel>();
         services.AddTransient<UserDetailViewModel>();
         services.AddTransient<DeviceDetailViewModel>();
+        services.AddTransient<GroupDetailViewModel>();
     }
 
     private void HookGlobalExceptionHandlers()

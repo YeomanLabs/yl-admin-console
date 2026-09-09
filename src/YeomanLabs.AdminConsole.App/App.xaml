@@ -13,6 +13,7 @@
                 <ResourceDictionary Source="Views/PageTemplates.xaml" />
                 <ResourceDictionary Source="Views/UserPage.xaml" />
                 <ResourceDictionary Source="Views/DevicePage.xaml" />
+                <ResourceDictionary Source="Views/GroupPage.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

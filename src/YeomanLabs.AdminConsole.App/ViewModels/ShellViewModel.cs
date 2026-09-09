@@ -298,6 +298,11 @@ public sealed partial class ShellViewModel : ObservableObject
                 device.OpenObject = OpenObjectFromPage;
                 device.Start(id);
                 return device;
+            case ObjectType.Group:
+                var group = _services.GetRequiredService<GroupDetailViewModel>();
+                group.OpenObject = OpenObjectFromPage;
+                group.Start(id);
+                return group;
             default:
                 hit ??= new SearchHit { ObjectType = type, Id = id, Primary = id, Score = 0 };
                 return new ObjectPageViewModel(hit);
