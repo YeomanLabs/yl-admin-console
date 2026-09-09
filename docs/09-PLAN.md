@@ -20,7 +20,7 @@ Legend: 🧪 has a unit test requirement · 🖥 requires launching the app agai
 - **Gate:** tests green; a throwaway console harness (not committed) signs in and prints `TenantContext`.
 
 ## M2 — Core: cache, sync, search
-- [ ] 2.1 `Cache/CacheDb`: open/migrate from embedded `0001_init.sql` (doc 05, including FTS triggers), typed upsert methods per table, transaction helper, `Clear(entity)`.
+- [x] 2.1 `Cache/CacheDb`: open/migrate from embedded `0001_init.sql` (doc 05, including FTS triggers), typed upsert methods per table, transaction helper, `Clear(entity)`. — done: `CacheDb` (WAL, embedded `0001_init.sql` w/ FTS5 external-content triggers, `user_version` migrations, keeper connection for `:memory:`), `CacheWriter` (prepared ON CONFLICT upserts per table, group members, sync_state, recent), `Clear` rebuilds FTS; plain model records added (parsing in 2.2); 11 tests, 33/33 green, 0 warnings
 - [ ] 2.2 🧪 `Models/*` records with `FromJson`, badge booleans, hybrid read-only property set (`DirectoryUser.IsReadOnly(propertyName)`). Tests from captured sample JSON in `tests/Fixtures/`.
 - [ ] 2.3 🧪 `Sync/DeltaSyncService`: initial walk + delta tick for users, groups (with `members@delta`), Entra devices; full refresh for managed devices and SKUs; `sync_state` bookkeeping; 410 → rebuild; progress events. Tests: fake handler serving a 2-page initial walk then a delta with one update, one removal, one member add/remove → assert cache rows.
 - [ ] 2.4 🧪 `Search/SearchService` per doc 03 + UX §3 ranking and prefixes. Test: seed 5,000 synthetic users/2,000 devices/1,000 groups in `:memory:`, assert p95 query time < 100 ms and ranking cases (prefix beats substring; recent boost).

@@ -7,6 +7,9 @@
     <RootNamespace>YeomanLabs.AdminConsole.Core</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Cache\Migrations\*.sql" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.Identity.Client" Version="4.66.1" />
     <PackageReference Include="Microsoft.Identity.Client.Broker" Version="4.66.1" />
     <PackageReference Include="Microsoft.Identity.Client.Extensions.Msal" Version="4.66.1" />
