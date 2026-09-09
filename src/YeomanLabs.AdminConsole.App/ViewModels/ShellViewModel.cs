@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -34,7 +34,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private bool _scopesExplained;
     private int _statusMessageVersion;
 
-    public ShellViewModel(IServiceProvider services, IAuthService auth, TenantContext tenant, TenantContextLoader tenantLoader, ToastService toasts, ILogger<ShellViewModel> logger)
+    public ShellViewModel(IServiceProvider services, IAuthService auth, TenantContext tenant, TenantContextLoader tenantLoader, ToastService toasts, DialogService dialogs, ILogger<ShellViewModel> logger)
     {
         _services = services;
         _auth = auth;
@@ -42,6 +42,7 @@ public sealed partial class ShellViewModel : ObservableObject
         _tenantLoader = tenantLoader;
         _logger = logger;
         Toasts = toasts.Items;
+        Dialogs = dialogs;
 
         NavItems =
         [
@@ -60,6 +61,9 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>UX §10 toasts, owned by <see cref="ToastService"/>; the window binds the bottom-right stack to this.</summary>
     public ObservableCollection<ToastItem> Toasts { get; }
+
+    /// <summary>The one modal dialog the window can show (confirms, the password reset flow). Null content means none.</summary>
+    public DialogService Dialogs { get; }
 
     // ---- title bar ---------------------------------------------------------------------------------------------
 

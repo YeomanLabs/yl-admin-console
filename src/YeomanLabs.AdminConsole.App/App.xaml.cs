@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Interop;
@@ -139,6 +139,8 @@ public sealed partial class App : Application
         services.AddHostedService<SyncHostedService>();
 
         services.AddSingleton<ToastService>();
+        services.AddSingleton<DialogService>();
+        services.AddSingleton<IDialogService>(sp => sp.GetRequiredService<DialogService>());
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<MainWindow>();
         services.AddTransient<PaletteViewModel>();

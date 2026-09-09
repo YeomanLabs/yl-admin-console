@@ -1,0 +1,145 @@
+﻿<UserControl x:Class="YeomanLabs.AdminConsole.App.Views.DialogOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:b="clr-namespace:YeomanLabs.AdminConsole.App.Behaviors"
+             xmlns:dlg="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Dialogs"
+             xmlns:svc="clr-namespace:YeomanLabs.AdminConsole.App.Services"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=svc:DialogService}">
+    <!-- One modal at a time (UX §2): chrome comes from the base view-model, the middle is per-dialog. -->
+    <UserControl.Resources>
+        <!-- Confirm: optional "type the name" gate for the irreversible ones. -->
+        <DataTemplate DataType="{x:Type dlg:ConfirmDialogViewModel}">
+            <StackPanel Visibility="{Binding NeedsTyping, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="{Binding TypedPrompt}" FontSize="12" Opacity="0.75" Margin="0,4,0,4" />
+                <ui:TextBox Text="{Binding TypedValue, UpdateSourceTrigger=PropertyChanged}"
+                            FontFamily="{StaticResource YlMono}"
+                            b:FocusBehavior.FocusWhen="{Binding NeedsTyping}"
+                            AutomationProperties.Name="Type the name to confirm" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Reset password (UX §4 header): generate or type, plus the force-change checkbox. -->
+        <DataTemplate DataType="{x:Type dlg:PasswordResetDialogViewModel}">
+            <StackPanel>
+                <RadioButton Content="Generate a password" IsChecked="{Binding IsGenerated}" Margin="0,4,0,0" />
+                <Grid Margin="24,4,0,0" Visibility="{Binding IsGenerated, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Text="{Binding Generated, Mode=OneWay}" IsReadOnly="True" FontFamily="{StaticResource YlMono}"
+                                AutomationProperties.Name="Generated password" />
+                    <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon ArrowClockwise24}" Appearance="Transparent" Margin="6,0,0,0"
+                               Command="{Binding RegenerateCommand}" ToolTip="Generate another" AutomationProperties.Name="Generate another" />
+                </Grid>
+
+                <RadioButton Content="Type a password" IsChecked="{Binding IsTyped}" Margin="0,10,0,0" />
+                <StackPanel Margin="24,4,0,0" Visibility="{Binding IsTyped, Converter={StaticResource BoolToVisibility}}">
+                    <ui:TextBox Text="{Binding Typed, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource YlMono}"
+                                b:FocusBehavior.FocusWhen="{Binding IsTyped}"
+                                PlaceholderText="The password is visible on screen"
+                                AutomationProperties.Name="New password" />
+                    <TextBlock Text="{Binding TypedError}" FontSize="11" Foreground="{StaticResource YlDanger}" Margin="0,4,0,0" TextWrapping="Wrap"
+                               Visibility="{Binding TypedError, Converter={StaticResource NullToCollapsed}}" />
+                </StackPanel>
+
+                <CheckBox Content="Require a change at next sign-in" IsChecked="{Binding ForceChangeNextSignIn}" Margin="0,12,0,0" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Show-once (UX §4): the password exists nowhere else, so say so plainly. -->
+        <DataTemplate DataType="{x:Type dlg:PasswordRevealDialogViewModel}">
+            <StackPanel>
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Text="{Binding Password, Mode=OneWay}" IsReadOnly="True" FontSize="16" FontFamily="{StaticResource YlMono}"
+                                b:FocusBehavior.FocusWhen="True" AutomationProperties.Name="New password" />
+                    <ui:Button Grid.Column="1" Content="Copy" Margin="6,0,0,0" Command="{Binding CopyCommand}" AutomationProperties.Name="Copy password" />
+                </Grid>
+                <TextBlock Text="Copied to the clipboard" FontSize="11" Opacity="0.6" Margin="0,4,0,0"
+                           Visibility="{Binding IsCopied, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding ForceChangeText}" FontSize="12" Opacity="0.75" Margin="0,10,0,0" TextWrapping="Wrap" />
+            </StackPanel>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Backdrop: clicking it cancels, like Esc. -->
+        <Border Background="#8C000000">
+            <Border.InputBindings>
+                <MouseBinding MouseAction="LeftClick" Command="{Binding Current.CancelCommand}" />
+            </Border.InputBindings>
+        </Border>
+
+        <Border Width="520" MaxHeight="620" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="20,18"
+                Background="{DynamicResource ApplicationBackgroundBrush}"
+                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+            <Border.InputBindings>
+                <KeyBinding Key="Escape" Command="{Binding Current.CancelCommand}" />
+            </Border.InputBindings>
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="28" ShadowDepth="6" Opacity="0.55" />
+            </Border.Effect>
+
+            <Grid DataContext="{Binding Current}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Message}" Margin="0,8,0,0" TextWrapping="Wrap" Opacity="0.85"
+                               Visibility="{Binding HasMessage, Converter={StaticResource BoolToVisibility}}" />
+                </StackPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,10,0,0">
+                    <StackPanel>
+                        <ItemsControl ItemsSource="{Binding Bullets}" Margin="0,0,0,6"
+                                      Visibility="{Binding HasBullets, Converter={StaticResource BoolToVisibility}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,3,0,0">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="18" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="·" Opacity="0.6" HorizontalAlignment="Center" />
+                                        <TextBlock Grid.Column="1" Text="{Binding}" TextWrapping="Wrap" Opacity="0.85" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <ContentControl Content="{Binding}" Focusable="False" />
+                    </StackPanel>
+                </ScrollViewer>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+                    <ui:Button Content="{Binding CancelText}" Margin="0,0,8,0" Command="{Binding CancelCommand}"
+                               Visibility="{Binding ShowCancel, Converter={StaticResource BoolToVisibility}}" />
+                    <ui:Button Content="{Binding ConfirmText}" Command="{Binding ConfirmCommand}" IsEnabled="{Binding CanConfirm}">
+                        <ui:Button.Style>
+                            <Style TargetType="ui:Button" BasedOn="{StaticResource {x:Type ui:Button}}">
+                                <Setter Property="Appearance" Value="Primary" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsDestructive}" Value="True">
+                                        <Setter Property="Appearance" Value="Danger" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ui:Button.Style>
+                    </ui:Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

@@ -12,7 +12,10 @@ public static class GreyRule
     {
         var result = checker.Check(capability);
         if (result.NeedsConsent) return result.Reason;
-        return notBuiltYet ?? result.Reason;
+
+        // A role warning is advisory, not a block: PermissionResult.CanRun is true and roles cannot be enumerated with
+        // certainty, so let the admin try and let Graph give the real answer (UX §7 maps the 403).
+        return notBuiltYet;
     }
 
     /// <summary>The first blocking reason across several capabilities, or the fallback.</summary>

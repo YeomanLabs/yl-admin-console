@@ -1,10 +1,11 @@
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using YeomanLabs.AdminConsole.App.Services;
+using YeomanLabs.AdminConsole.App.ViewModels.Dialogs;
 using YeomanLabs.AdminConsole.Core.Auth;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Groups;
@@ -34,11 +35,12 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private readonly LicenseService _licenseService;
     private readonly GroupService _groupService;
     private readonly ToastService _toasts;
+    private readonly IDialogService _dialogs;
     private readonly ILogger<UserDetailViewModel> _logger;
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, ILogger<UserDetailViewModel> logger)
     {
         _users = users;
         _db = db;
@@ -49,6 +51,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         _groupService = groups;
         _tenant.Changed += (_, _) => RecomputeReasons();
         _toasts = toasts;
+        _dialogs = dialogs;
         _logger = logger;
     }
 
@@ -66,6 +69,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     [NotifyPropertyChangedFor(nameof(HasUser))]
     [NotifyPropertyChangedFor(nameof(Initials))]
     [NotifyPropertyChangedFor(nameof(IsSynced))]
+    [NotifyPropertyChangedFor(nameof(CanRunActions))]
     private DirectoryUser? _user;
 
     public bool HasUser => User is not null;
@@ -94,27 +98,25 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
     /// <summary>UX §6: consent first, then "not built yet". Recomputed whenever the granted scopes change.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanRunActions))]
     private string? _actionsDisabledReason;
 
-    [ObservableProperty]
-    private string? _identityEditReason;
-
-    [ObservableProperty]
-    private string? _licenseEditReason;
-
-    [ObservableProperty]
-    private string? _groupEditReason;
+    /// <summary>Enables Reset password and Revoke sessions in the header.</summary>
+    public bool CanRunActions => HasUser && ActionsDisabledReason is null;
 
     [ObservableProperty]
     private string? _authDeleteReason;
 
+    /// <summary>Offboarding is the one header action still unbuilt (M6); the others became live in M5.5.</summary>
+    [ObservableProperty]
+    private string? _offboardDisabledReason;
+
     private void RecomputeReasons()
     {
-        ActionsDisabledReason = GreyRule.Reason(_permissions, [Capabilities.ResetPassword, Capabilities.RevokeSessions], "Reset password and Revoke sessions arrive in M5; Offboard in M6");
-        IdentityEditReason = GreyRule.Reason(_permissions, Capabilities.EditUser, "Editing fields arrives in M5.2");
-        LicenseEditReason = GreyRule.Reason(_permissions, Capabilities.AssignLicense, "License toggles arrive in M5.3");
-        GroupEditReason = GreyRule.Reason(_permissions, Capabilities.ChangeGroupMembership, "Adding and removing groups arrives in M5.4");
-        AuthDeleteReason = GreyRule.Reason(_permissions, Capabilities.DeleteAuthMethod, "Deleting methods arrives in M5.5");
+        ActionsDisabledReason = GreyRule.Reason(_permissions, [Capabilities.ResetPassword, Capabilities.RevokeSessions], null);
+        OffboardDisabledReason = "Offboarding arrives in M6";
+        AuthDeleteReason = GreyRule.Reason(_permissions, Capabilities.DeleteAuthMethod, null);
+        foreach (var row in AuthMethods) row.BlockedReason = AuthDeleteReason;
     }
 
     // ---- header ---------------------------------------------------------------------------------------------------
@@ -361,7 +363,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private IReadOnlyList<DirectoryRoleRef> _roles = [];
 
     [ObservableProperty]
-    private IReadOnlyList<AuthMethod> _authMethods = [];
+    private IReadOnlyList<AuthMethodRow> _authMethods = [];
 
     [ObservableProperty]
     private string? _authMethodsError;
@@ -411,9 +413,12 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
         if (Live?.AuthMethods.IsSuccess == true)
         {
-            AuthMethods = Live.AuthMethods.Value!.OrderBy(m => m.Kind == AuthMethodKind.Password).ThenBy(m => m.KindLabel).ToList();
+            AuthMethods = Live.AuthMethods.Value!
+                .OrderBy(m => m.Kind == AuthMethodKind.Password).ThenBy(m => m.KindLabel)
+                .Select(m => new AuthMethodRow(m, AuthDeleteReason, DeleteAuthMethodAsync))
+                .ToList();
             AuthMethodsError = null;
-            var last = AuthMethods.Where(m => m.Kind != AuthMethodKind.Password).Select(m => m.CreatedDateTime).Max();
+            var last = Live.AuthMethods.Value!.Where(m => m.Kind != AuthMethodKind.Password).Select(m => m.CreatedDateTime).Max();
             LastMfaRegistrationText = last is null ? null : $"Last MFA registration {TimeText.Both(last)}";
         }
         else if (Live?.AuthMethods.Error is { } e2)
@@ -537,6 +542,90 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
         if (!permission.CanRun) _toasts.Show(permission.Reason ?? "Not permitted.");
         return permission.CanRun;
+    }
+
+    // ---- Security actions (UX §4 header, doc 04) --------------------------------------------------------------------
+
+    private string UserLabel => User?.DisplayName ?? User?.UserPrincipalName ?? Id;
+
+    /// <summary>
+    /// Delete-X on a registered method (UX §4 tab 2). Irreversible — the admin cannot re-register it for the user — so
+    /// it confirms first and offers no undo. A full re-hydrate follows so the MFA badge matches the list.
+    /// </summary>
+    private async Task DeleteAuthMethodAsync(AuthMethodRow row)
+    {
+        var confirmed = await _dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = $"Remove {row.KindLabel}?",
+            Message = $"{UserLabel} will no longer be able to sign in with this method. Only they can register it again.",
+            Bullets = [row.Detail is null ? $"{row.KindLabel} · {row.DisplayName}" : $"{row.KindLabel} · {row.DisplayName} · {row.Detail}"],
+            ConfirmLabel = "Remove method",
+            Destructive = true,
+        });
+
+        if (!confirmed) return;
+        if (!await EnsureAsync(Capabilities.DeleteAuthMethod)) return;
+
+        var outcome = await _users.DeleteAuthMethodAsync(Id, row.Method, CancellationToken.None);
+        _toasts.Show(outcome.Success ? outcome.Summary : outcome.FriendlyError ?? outcome.Summary);
+        if (outcome.Success) await RefreshAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Revoke sessions (UX §4 header). Irreversible and immediate. Revoking your own sessions ends this app's token
+    /// too, so that case says so in the confirm rather than surprising the admin with a sign-in prompt.
+    /// </summary>
+    [RelayCommand]
+    private async Task RevokeSessionsAsync()
+    {
+        var isSelf = string.Equals(User?.UserPrincipalName, _tenant.SignedInUpn, StringComparison.OrdinalIgnoreCase);
+        var confirmed = await _dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = "Revoke all sessions?",
+            Message = $"Every refresh token and browser session for {UserLabel} stops working. They will have to sign in again everywhere.",
+            Bullets = isSelf
+                ? ["This is your own account — you will be signed out of this app as well."]
+                : [],
+            ConfirmLabel = "Revoke sessions",
+            Destructive = true,
+        });
+
+        if (!confirmed) return;
+        if (!await EnsureAsync(Capabilities.RevokeSessions)) return;
+
+        var outcome = await _users.RevokeSessionsAsync(Id, CancellationToken.None);
+        _toasts.Show(outcome.Success ? outcome.Summary : outcome.FriendlyError ?? outcome.Summary);
+    }
+
+    /// <summary>
+    /// Reset password (UX §4 header). Generated passwords are shown once, after the reset has succeeded; a typed one
+    /// the admin already knows. Neither reaches a log, a toast, or the cache.
+    /// </summary>
+    [RelayCommand]
+    private async Task ResetPasswordAsync()
+    {
+        var dialog = new PasswordResetDialogViewModel(UserLabel);
+        if (!await _dialogs.ShowAsync(dialog)) return;
+        if (!await EnsureAsync(Capabilities.ResetPassword)) return;
+
+        var wasGenerated = dialog.IsGenerated;
+        var forceChange = dialog.ForceChangeNextSignIn;
+        var result = await _users.ResetPasswordAsync(Id, dialog.Password, forceChange, CancellationToken.None);
+        if (!result.Outcome.Success)
+        {
+            _toasts.Show(result.Outcome.FriendlyError ?? result.Outcome.Summary);
+            return;
+        }
+
+        if (wasGenerated && result.Password is { } password)
+        {
+            await _dialogs.ShowAsync(new PasswordRevealDialogViewModel(UserLabel, password, forceChange)
+            {
+                Message = "This is the only time it is shown. Nothing here is written to the cache or the activity log.",
+            });
+        }
+
+        _toasts.Show(result.Outcome.Summary);
     }
 
     // ---- Devices tab (UX §4 tab 3) ---------------------------------------------------------------------------------

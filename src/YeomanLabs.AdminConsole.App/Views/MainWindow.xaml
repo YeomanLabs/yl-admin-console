@@ -1,4 +1,4 @@
-<ui:FluentWindow x:Class="YeomanLabs.AdminConsole.App.Views.MainWindow"
+﻿<ui:FluentWindow x:Class="YeomanLabs.AdminConsole.App.Views.MainWindow"
                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -98,6 +98,8 @@
         <KeyBinding Modifiers="Alt" Key="D4" Command="{Binding NavigateOrdinalCommand}" CommandParameter="4" />
         <KeyBinding Modifiers="Alt" Key="D5" Command="{Binding NavigateOrdinalCommand}" CommandParameter="5" />
         <KeyBinding Modifiers="Alt" Key="D6" Command="{Binding NavigateOrdinalCommand}" CommandParameter="6" />
+        <!-- Esc closes a modal wherever focus is; the palette handles its own Esc on the search box first. -->
+        <KeyBinding Key="Escape" Command="{Binding Dialogs.Current.CancelCommand}" />
     </ui:FluentWindow.InputBindings>
 
     <Grid Background="{StaticResource YlNavy}">
@@ -261,5 +263,9 @@
         <!-- Command palette overlay (UX §3): last child so it paints above the content and status bar. -->
         <views:PaletteOverlay Grid.Row="1" Grid.RowSpan="3" DataContext="{Binding Palette}"
                               Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
+
+        <!-- Modal dialogs (UX §2): above everything, including the palette, because a confirm must be answered. -->
+        <views:DialogOverlay Grid.Row="1" Grid.RowSpan="3" DataContext="{Binding Dialogs}"
+                             Visibility="{Binding IsOpen, Converter={StaticResource BoolToVisibility}, FallbackValue=Collapsed}" />
     </Grid>
 </ui:FluentWindow>
