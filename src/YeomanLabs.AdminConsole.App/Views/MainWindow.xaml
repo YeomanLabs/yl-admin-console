@@ -12,20 +12,108 @@
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
                  WindowBackdropType="None"
-                 WindowCornerPreference="Round"
-                 Background="{StaticResource YlNavy}">
-    <!-- UX §1: Mica/acrylic off (performance, RDP). Layout per UX §2; M3.2 fills the rail, content and status bar. -->
-    <Grid>
+                 WindowCornerPreference="Round">
+    <!-- UX §1: Mica/acrylic off. UX §2 layout: title bar / nav rail + content / status bar. -->
+    <ui:FluentWindow.Resources>
+        <!-- Nav rail button: 48 px square, coral indicator on the active item (UX §1: coral only for accent/active). -->
+        <Style x:Key="NavRailButton" TargetType="Button">
+            <Setter Property="Width" Value="48" />
+            <Setter Property="Height" Value="48" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Grid Background="{TemplateBinding Background}">
+                            <Border x:Name="Indicator" Width="3" Height="20" HorizontalAlignment="Left" CornerRadius="1.5"
+                                    Background="{StaticResource YlCoral}" Visibility="Collapsed" />
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate x:Key="NavRailItem" DataType="{x:Type vm:NavItem}">
+            <Button Style="{StaticResource NavRailButton}" ToolTip="{Binding ToolTip}"
+                    AutomationProperties.Name="{Binding Title}"
+                    Command="{Binding DataContext.NavigateCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                    CommandParameter="{Binding}">
+                <ui:SymbolIcon Symbol="{Binding Symbol}" FontSize="20" />
+            </Button>
+        </DataTemplate>
+
+        <!-- Sync status pill -->
+        <Style x:Key="SyncDot" TargetType="Ellipse">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Fill" Value="#8A8A8A" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SyncState}" Value="Syncing">
+                    <Setter Property="Fill" Value="{StaticResource YlCoral}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SyncState}" Value="Ok">
+                    <Setter Property="Fill" Value="#4CC38A" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SyncState}" Value="Error">
+                    <Setter Property="Fill" Value="#F04E4E" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </ui:FluentWindow.Resources>
+
+    <Grid Background="{StaticResource YlNavy}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <ui:TitleBar Grid.Row="0" Title="Admin Console" ShowMaximize="True" ShowMinimize="True" />
+        <!-- Title bar: app name · tenant · sync pill · account (UX §2) -->
+        <ui:TitleBar Grid.Row="0" Title="Admin Console" ShowMaximize="True" ShowMinimize="True">
+            <ui:TitleBar.Header>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,12,0">
+                    <TextBlock Text="{Binding TenantName}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"
+                               Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+
+                    <Border CornerRadius="10" Padding="8,2" VerticalAlignment="Center" Margin="0,0,12,0"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            AutomationProperties.Name="Sync status">
+                        <StackPanel Orientation="Horizontal">
+                            <Ellipse Style="{StaticResource SyncDot}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding SyncStatusText}" FontSize="12" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border CornerRadius="12" Width="24" Height="24" VerticalAlignment="Center"
+                            Background="{StaticResource YlCoral}" ToolTip="{Binding AccountName}"
+                            AutomationProperties.Name="Signed-in account">
+                        <TextBlock Text="{Binding AccountInitials}" FontSize="11" FontWeight="SemiBold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#041635" />
+                    </Border>
+                </StackPanel>
+            </ui:TitleBar.Header>
+        </ui:TitleBar>
 
         <!-- Non-modal error bar targeted by the global exception handler (never crash silently). -->
-        <ui:InfoBar Grid.Row="1" Margin="12,4,12,0"
+        <ui:InfoBar Grid.Row="1" Margin="60,4,12,4"
                     Severity="Error"
                     IsOpen="{Binding HasError, Mode=OneWay}"
                     IsClosable="False"
@@ -45,7 +133,37 @@
             </ui:InfoBar.Content>
         </ui:InfoBar>
 
-        <!-- M3.2 replaces this with the nav rail + content region + status bar. -->
-        <TextBlock Grid.Row="2" Margin="24" Text="Host is up. Shell arrives in M3.2." Opacity="0.6" />
+        <!-- Nav rail + content -->
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="48" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <DockPanel Grid.Column="0" Background="#0A1F45">
+                <ContentControl DockPanel.Dock="Bottom" Content="{Binding SettingsItem}" ContentTemplate="{StaticResource NavRailItem}" Margin="0,0,0,4" />
+                <ItemsControl ItemsSource="{Binding NavItems}" ItemTemplate="{StaticResource NavRailItem}" Margin="0,4,0,0" />
+            </DockPanel>
+
+            <Border Grid.Column="1" Background="{DynamicResource ApplicationBackgroundBrush}" CornerRadius="8,0,0,0" Margin="0,0,0,0">
+                <ContentControl Content="{Binding CurrentPage}" Focusable="False" />
+            </Border>
+        </Grid>
+
+        <!-- Status bar: cache age · last delta · errors · progress (UX §2) -->
+        <Border Grid.Row="3" Height="24" Background="#0A1F45" Padding="12,0">
+            <DockPanel VerticalAlignment="Center">
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsProgressVisible, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="{Binding ProgressText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ProgressBar Width="120" Height="6" Minimum="0" Maximum="1" Value="{Binding ProgressFraction, Mode=OneWay}"
+                                 Foreground="{StaticResource YlCoral}" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="{Binding CacheAgeText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" />
+                    <TextBlock Text=" · " FontSize="12" Opacity="0.5" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding LastDeltaText}" FontSize="12" Opacity="0.8" VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
     </Grid>
 </ui:FluentWindow>

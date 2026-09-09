@@ -8,6 +8,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemesDictionary Theme="Dark" />
                 <ui:ControlsDictionary />
+                <ResourceDictionary Source="Views/PageTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
 
             <!-- UX §1 palette: navy window base, coral accent for primary actions, focus rings and the active nav item only. -->

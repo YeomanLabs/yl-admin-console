@@ -1,0 +1,22 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:pages="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Pages">
+    <!-- Doc 03: navigation is ContentControl + one DataTemplate per page ViewModel type. -->
+
+    <DataTemplate DataType="{x:Type pages:HomePageViewModel}">
+        <Grid>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="720">
+                <ui:SymbolIcon Symbol="Search24" FontSize="40" Opacity="0.5" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding Hint}" FontSize="16" Opacity="0.75" Margin="0,12,0,0" HorizontalAlignment="Center" TextAlignment="Center" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
+        <StackPanel Margin="24">
+            <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding ArrivesIn}" Opacity="0.6" Margin="0,8,0,0" />
+        </StackPanel>
+    </DataTemplate>
+</ResourceDictionary>
