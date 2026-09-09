@@ -1,0 +1,65 @@
+{
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/devices/delta?$skiptoken=y1Nm3BF1IGXoDRmmdnMltJpxSuTtWS8ElKH5YeZHU2rBHV1aCovIBNrUa8viUYn4HwauNO9oLlB891_MeKLPVSAYtAAGP22EzFXnLIYo9AI9Wr-fDf8OqloxWkjb5uhFDUa4rhmuowtn5z7yyyxXzUWM1dai9oqGrjQu8BFSewYq5Qc6SWi4-bBbDPzA3-pY_PqHtKKbHpPo-aYKMAUdIR7SliZDdDWKi0PBMc6hi0vxnYcsWWTCr3iOP-PtmJ-nNLUXhLSnq3_x6Gfd29GTJr52QlWGlbreQ4EnuwrbWv_7UZrgcmGsFZ5uJD3fh1LVXTu3Rsq5dOCGjzJgpYJs9Fl1idLnU8PKs2x_f2MJupxPlGezmpFaopG3Sfb_VVYngTplIFyoIvZF_9g4dCrWyUgFDvqYfJOgq4kbzPQQGcSonNtkGMhPPZXQPkg-Ib9x6LvvetJcYj0Vpl5UOcQED5wzPANhDWrt1PKeu4ac7_Zyx92EBUDt0QlBLHZLAbuRLgN9rQwHnxeedxBM57zwn3T9lTIIA-7JrOHNQ6Hbbwc8jiv9qA-56ad7AUkH5sTE6JhbQXUzZQJ-FKdPwZTEeXx8TtaqlQ4Fta8z56ZFV0S7iiHfhralhAZJn9rJ0TDwmUna4m0GkLsykXBsYtFGr6mlHrHa2Mo90eEr62zrUkf4GQxla1tv4Ui_oJosT1jPb1seU9vml7P1iQhkXcTRpxxS88kp3nSLs2_NeWz0Fy6HjfYdbDp9ORbtWyGu20GjXmDMQ4zsDLOOCxn1b-RX1kNYqy7_Xa5Dyo-KGCffKL3jG1wOyB8S54xwjQmQlsvT5roeoycsZ0U1P98HoGJ0tTzwnvS_hchRzRzU0in4pX5xBFeLTqxFrDl-TB8CmSuag9pD_qlI4eakI9h_9B4yvN5-Wzvc6jUypNS1j2-fXwAvpfF7ASTRKjakD2wXEr5CUTdFG9ZUnm4vACjK4gNySAn1iC0fHqV2SM4zhShlbBKv8HqU_r3B_IAvdac_6kNkrd1D3dW3G9HojxxS1L7siths9J2EYewQcm4-dTyGanGz7zrj75DhXyPIaqd6btXUbkvaqHevnf21y_dKjLfrBaazB_jlFh36VVtI3QxHt3nBKlZfO1nLtToCOYXZFBISBS76hHWpTe7OJtpdilyeNp2n30YVnYIQdD8eB1LWaBUVKk0JGeGpFG9rDBFow0slQ9Ntw6AvFFqVZACE6XZiekpxbEX9hBDqY_W8uBkr0CFWhhmw5uJk8vukQZGZlNNb_gaLlnSoLwfRMS_efx81HtryKgHCJ-N3zrfIVcMZxPh7yNfdGBcmaPq6S6ez-pK1rtbyVDxg_G5Rn82rr2FwOVw7_z8TnQnwSNYyMV-n2P8GpMDROBrOaogbNFrUw31U1fblUCCUmqpf8aJJekv6okGbztKK1EXI_AYKqtBpLD730SRIfnuct8FoENaxPGJOJXiJIJoBYMaj0U_TbOl6G37X3-sFrYYkI49rVGwC-SzGDNAfdEb-Il0VMIyP0O4hXWjSGw45mdf-gQpEfphUBqriyooOF5yYX9Otngu7YBiaZJ5g1i9F4IXyFyG0zHIdofPw7Dd2L4yflFZeSjFwkQ66zwWjxI_KRCzNNuSi5m7Hi03aBw8U-Zo9p4xKfsZycoJYtG5Iu3PV9M0clbvNqJMVByaoN61GdMDTxN6VyETW1LBbALoM5ed2c52Wx21jnDV8D5ktzlRTci-9AjWpX8jbH8P2Ksku8W7gSlzedkIa8YpxUASQelkTYincHofR4oGH6WPJvDT7jrPUR83EfGZrG1L2IK3SvAdzMjj46CQOiLAYPEOKJrRp0M79tz8G067czhAW1_O8pUenIvcGgeI_5SSzQekmnB7aY3xx9sRkNQ4MLuRCR0O7J1SmAdhiSrDdSCatoQHGxpiR1IzvAU9XkC7xh2FGOmaWWEgyX92MDkypC5WsQz5-vAgGlxNNI6jI4Tx3Z5_3W9_bhylxp-PShe8zb2uXIR5bgO4NYmALVnVX7-ktWUaDO6KtOg_-Ff8Xu9BH76v_yOzKE00QuLBCXHsXJKxmZ_vCzS4Oc2brf3xH_4c21vgAIlS8K9yafP7IPf3FZkZSnmLkxDJG4hNvaq9qddr8oM1cBHhFUWp7wnM0118RYZMOpEh0ezVI.P9CeohEISRgMw-kGx6AGoWf-cYWFmvJnqX_we9-1siA",
+  "value": [
+    {
+      "deviceId": "753dfd60-25c0-4fba-b2b1-34c00efef50e",
+      "displayName": "DESKTOP-TEST01",
+      "operatingSystem": "Unknown",
+      "operatingSystemVersion": "Unknown",
+      "trustType": "AzureAd",
+      "accountEnabled": false,
+      "approximateLastSignInDateTime": "2026-08-15T10:20:51Z",
+      "registrationDateTime": "2026-08-15T03:20:51Z",
+      "profileType": "RegisteredDevice",
+      "id": "94584f7b-ce32-4850-b0a5-d6efad558658"
+    },
+    {
+      "deviceId": "04fad3e8-2ce9-430b-b829-61900a3a96c1",
+      "displayName": "DESKTOP-TEST02",
+      "operatingSystem": "Windows",
+      "operatingSystemVersion": "10.0.26200.9168",
+      "trustType": "AzureAd",
+      "isCompliant": true,
+      "isManaged": true,
+      "accountEnabled": true,
+      "approximateLastSignInDateTime": "2026-09-02T09:24:57Z",
+      "registrationDateTime": "2026-08-15T01:24:34Z",
+      "manufacturer": "Gigabyte Technology Co., Ltd.",
+      "model": "B650 UD AX-Y1",
+      "enrollmentType": "AzureDomainJoined",
+      "managementType": "MDM",
+      "profileType": "RegisteredDevice",
+      "id": "28661532-0350-4624-9d45-42368a7c0b7f"
+    },
+    {
+      "deviceId": "7ff3770e-eb40-4539-885c-34513d73f29b",
+      "displayName": "DESKTOP-TEST03",
+      "operatingSystem": "Windows",
+      "operatingSystemVersion": "10.0.26200.9168",
+      "trustType": "AzureAd",
+      "isCompliant": true,
+      "isManaged": true,
+      "accountEnabled": true,
+      "approximateLastSignInDateTime": "2026-09-07T22:24:13Z",
+      "registrationDateTime": "2026-08-29T09:47:11Z",
+      "manufacturer": "LENOVO",
+      "model": "21Q60027US",
+      "enrollmentType": "AzureDomainJoined",
+      "managementType": "MDM",
+      "profileType": "RegisteredDevice",
+      "id": "a736e3cf-460b-46a4-b041-2e5ad12207a0"
+    },
+    {
+      "deviceId": "cb959d98-b403-4d13-9186-4f6a91e4d08d",
+      "displayName": "DESKTOP-TEST04",
+      "operatingSystem": "iOS",
+      "operatingSystemVersion": "27.0",
+      "trustType": "Workplace",
+      "accountEnabled": true,
+      "approximateLastSignInDateTime": "2026-09-08T16:47:56Z",
+      "registrationDateTime": "2026-09-08T09:47:56Z",
+      "profileType": "RegisteredDevice",
+      "id": "fc8d5a1c-0cc7-4f6e-a485-0f9c7573c402"
+    }
+  ]
+}

@@ -38,7 +38,7 @@ public static class GraphSelects
     public const string ManagedDevice =
         "id,deviceName,userId,userPrincipalName,userDisplayName,azureADDeviceId,serialNumber,manufacturer,model," +
         "operatingSystem,osVersion,complianceState,isEncrypted,lastSyncDateTime,enrolledDateTime,managementAgent," +
-        "ownerType,deviceEnrollmentType,autopilotEnrolled,joinType,managedDeviceOwnerType,totalStorageSpaceInBytes," +
+        "deviceEnrollmentType,enrollmentProfileName,azureADRegistered,managedDeviceOwnerType,totalStorageSpaceInBytes," +
         "freeStorageSpaceInBytes,physicalMemoryInBytes,wiFiMacAddress,ethernetMacAddress,emailAddress,deviceCategoryDisplayName";
 
     public const string Organization =

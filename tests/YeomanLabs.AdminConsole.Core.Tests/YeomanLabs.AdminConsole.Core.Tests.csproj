@@ -17,4 +17,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\YeomanLabs.AdminConsole.Core\YeomanLabs.AdminConsole.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Scrubbed Graph JSON captured from the dev tenant (docs/10 tip). Copied beside the test binaries. -->
+    <None Include="..\Fixtures\**\*.json" LinkBase="Fixtures" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

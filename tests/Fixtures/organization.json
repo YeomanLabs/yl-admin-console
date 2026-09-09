@@ -1,0 +1,462 @@
+{
+  "value": [
+    {
+      "id": "c570b99a-c52d-47f4-997e-59c3b3205cf6",
+      "displayName": "YeomanLabs Consulting",
+      "onPremisesSyncEnabled": null,
+      "onPremisesLastSyncDateTime": null,
+      "countryLetterCode": "US",
+      "verifiedDomains": [
+        {
+          "capabilities": "Email, OfficeCommunicationsOnline",
+          "isDefault": true,
+          "isInitial": true,
+          "name": "yeomanlab.onmicrosoft.com",
+          "type": "Managed"
+        },
+        {
+          "capabilities": "None",
+          "isDefault": false,
+          "isInitial": false,
+          "name": "yeoman.engineer",
+          "type": "Managed"
+        },
+        {
+          "capabilities": "None",
+          "isDefault": false,
+          "isInitial": false,
+          "name": "yeomanlabs.co",
+          "type": "Managed"
+        }
+      ],
+      "assignedPlans": [
+        {
+          "assignedDateTime": "2026-09-07T00:22:50Z",
+          "capabilityStatus": "Enabled",
+          "service": "AADPremiumService",
+          "servicePlanId": "eec0eb4f-6444-4f95-aba0-50c24d67f998"
+        },
+        {
+          "assignedDateTime": "2026-09-05T07:28:25Z",
+          "capabilityStatus": "Deleted",
+          "service": "SCO",
+          "servicePlanId": "882e1d05-acd1-4ccb-8708-6ee03664b117"
+        },
+        {
+          "assignedDateTime": "2026-08-05T14:25:02Z",
+          "capabilityStatus": "Enabled",
+          "service": "OfficeForms",
+          "servicePlanId": "159f4cd6-e380-449f-a816-af1a9ef76344"
+        },
+        {
+          "assignedDateTime": "2026-08-05T14:25:02Z",
+          "capabilityStatus": "Enabled",
+          "service": "MicrosoftCommunicationsOnline",
+          "servicePlanId": "afc06cb0-b4f4-4473-8286-d644f70d8faf"
+        },
+        {
+          "assignedDateTime": "2026-08-05T14:25:02Z",
+          "capabilityStatus": "Enabled",
+          "service": "SharePoint",
+          "servicePlanId": "4495894f-534f-41ca-9d3b-0ebf1220a423"
+        },
+        {
+          "assignedDateTime": "2026-08-05T14:25:02Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "4a82b400-a79f-41a4-b4e2-e94f5787b113"
+        },
+        {
+          "assignedDateTime": "2026-07-30T15:09:58Z",
+          "capabilityStatus": "Enabled",
+          "service": "CRM",
+          "servicePlanId": "17ab22cd-a0b3-4536-910a-cb6eb12696c0"
+        },
+        {
+          "assignedDateTime": "2026-07-30T15:09:58Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "113feb6c-3fe4-4440-bddc-54d774bf0318"
+        },
+        {
+          "assignedDateTime": "2026-07-30T15:09:58Z",
+          "capabilityStatus": "Enabled",
+          "service": "ProcessSimple",
+          "servicePlanId": "50e68c76-46c6-4674-81f9-75456511b170"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "Microsoft-eCDN",
+          "servicePlanId": "85704d55-2e73-47ee-93b4-4b8ea14db92b"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "CRM",
+          "servicePlanId": "95b76021-6a53-4741-ab8b-1d1f3d66a95a"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "SCO",
+          "servicePlanId": "c1ec4a95-1f05-45b3-a911-aa3fa01094f5"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "Bing",
+          "servicePlanId": "94065c59-bc8e-4e8b-89e5-5138d471eaff"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "Windows",
+          "servicePlanId": "21b439ba-a0ca-424f-a6cc-52f954a5b111"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "OnlineService",
+          "servicePlanId": "1fe6227d-3e01-46d0-9510-0acad4ff6e94"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "CRM",
+          "servicePlanId": "4ff01e01-1ba7-4d71-8cf8-ce96c3bbcf14"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "MicrosoftStream",
+          "servicePlanId": "9e700747-8b1d-45e5-ab8d-ef187ceec156"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "Deskless",
+          "servicePlanId": "8c7d2df8-86f0-4902-b2ed-a0458298f3b3"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "RMSOnline",
+          "servicePlanId": "6c57d4b6-3b23-47a5-9bc9-69f17b4947b3"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "TeamspaceAPI",
+          "servicePlanId": "57ff2da0-773e-42df-b2af-ffb7a2317929"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "MixedRealityCollaborationServices",
+          "servicePlanId": "3efbd4ed-8958-4824-8389-1321f8730af8"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "WindowsDefenderATP",
+          "servicePlanId": "292cc034-7b7c-4950-aaf5-943befd3f1d4"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "AADPremiumService",
+          "servicePlanId": "41781fb2-bc02-4b7c-bd55-b576c07bb09d"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "MicrosoftCommunicationsOnline",
+          "servicePlanId": "0feaeb32-d00e-4d66-bd5a-43b5b83db82c"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "SharePoint",
+          "servicePlanId": "a1ace008-72f3-4ea0-8dac-33b3a23a2472"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "SharePoint",
+          "servicePlanId": "5dbe027f-2339-4123-9542-606e4d348a72"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "Sway",
+          "servicePlanId": "a23b959c-7ce8-4e57-9140-b90eb88a9e97"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "TeamspaceAPI",
+          "servicePlanId": "29c62f1c-8ffc-4304-9cb9-398a6aa1852b"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "f20fedf3-f3c3-43c3-8267-2bfdd51c0939"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "MicrosoftPrint",
+          "servicePlanId": "795f6fe0-cc4d-4773-b050-5dde4dc704c9"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "MultiFactorService",
+          "servicePlanId": "8a256a2b-b617-496d-b51b-e76466e88db0"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "199a5c09-e0ca-4e37-8f7c-b05d533e1ea2"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "ProjectWorkManagement",
+          "servicePlanId": "b737dad2-2f6c-4c65-90e3-ca563267e8b9"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "MicrosoftKaizala",
+          "servicePlanId": "aebd3021-9f8f-4bf8-bbe3-0ed2f4f047a1"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "33c4f319-9bdd-48d6-9c4d-410b750a4a5a"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "MixedRealityCollaborationServices",
+          "servicePlanId": "f0ff6ac6-297d-49cd-be34-6dfef97f0c28"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "OfficeForms",
+          "servicePlanId": "2789c901-c14e-48ab-a76a-be334d9d793a"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "Adallom",
+          "servicePlanId": "932ad362-64a8-4783-9106-97849a1a30b9"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "To-Do",
+          "servicePlanId": "c87f142c-d1e9-4363-8630-aaea9c4d9ae5"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "WhiteboardServices",
+          "servicePlanId": "94a54592-cd8b-425e-87c6-97868b000b91"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "M365LabelAnalytics",
+          "servicePlanId": "2b815d45-56e4-4e3a-b65c-66cb9175b560"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "WindowsUpdateforBusinessCloudExtensions",
+          "servicePlanId": "7bf960f6-2cd9-443a-8046-5dbff9558365"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "ProjectProgramsAndPortfolios",
+          "servicePlanId": "31b4e2fc-4cd6-4e7d-9c1b-41407303bd66"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "a6520331-d7d4-4276-95f5-15c0933bc757"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "SCO",
+          "servicePlanId": "a4c6cf29-1168-4076-ba5c-e8fe0e62b17e"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "RMSOnline",
+          "servicePlanId": "bea4c11e-220a-4e6d-8eb8-8ea15d019f90"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "WevEngine",
+          "servicePlanId": "0403bb98-9d17-4f94-b53e-eca56a7698a6"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "MixedRealityCollaborationServices",
+          "servicePlanId": "dcf9d2f4-772e-4434-b757-77a453cfbc02"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "SharePoint",
+          "servicePlanId": "db4d623d-b514-490b-b7ef-8885eee514de"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "SCO",
+          "servicePlanId": "d9923fe3-a2de-4d29-a5be-e3e83bb786be"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "M365Multi-TenantManagementFE",
+          "servicePlanId": "d55411c9-cfff-40a9-87c7-240f14df7da5"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "Modern-Workplace-Core-ITaas",
+          "servicePlanId": "9a6eeb79-0b4b-4bf0-9808-39d99a2cd5a3"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "MixedRealityCollaborationServices",
+          "servicePlanId": "acbca54f-c771-423b-a476-6d7a98cbbcec"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "YammerEnterprise",
+          "servicePlanId": "7547a3fe-08ee-4ccb-b430-5077c5041653"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "WevEngine",
+          "servicePlanId": "b088306e-925b-44ab-baa0-63291c629a91"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "SharePoint",
+          "servicePlanId": "e95bec33-7c88-4a70-8e19-b10bd9d0c014"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "ProcessSimple",
+          "servicePlanId": "76846ad7-7776-4c40-a281-a386362dd1b9"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "efb87545-963c-4e0d-99df-69c6916d9eb0"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "LearningAppServiceInTeams",
+          "servicePlanId": "b76fb638-6ba6-402a-b9f9-83d28acb3d86"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "M365Multi-TenantManagement",
+          "servicePlanId": "6f23d6a9-adbf-481c-8538-b4c095654487"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "YammerEnterprise",
+          "servicePlanId": "a82fbf69-b4d7-49f4-83a6-915b2cf354f4"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "MicrosoftOffice",
+          "servicePlanId": "43de0ff5-c92c-492b-9116-175376d08c38"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "Chapter5FluidApp",
+          "servicePlanId": "c4b8c31a-fb44-4c65-9837-a21f55fcabda"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "SCO",
+          "servicePlanId": "2a4baa0e-5e99-4c38-b1f2-6864960f1bd1"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "ccibotsprod",
+          "servicePlanId": "041fe683-03e4-45b6-b1af-c0cdc516daee"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "PowerAppsService",
+          "servicePlanId": "c68f8d98-5534-41c8-bf36-22fa496fa792"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "SCO",
+          "servicePlanId": "a6e407da-7411-4397-8a2e-d9b52780849e"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "Bing",
+          "servicePlanId": "0d0c0d31-fae7-41f2-b909-eaf4d7f26dba"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:28Z",
+          "capabilityStatus": "Enabled",
+          "service": "exchange",
+          "servicePlanId": "5136a095-5cf0-4aff-bec3-e84448b38ea5"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "VivaSkills",
+          "servicePlanId": "13b6da2c-0d84-450e-9f69-a33e221387ca"
+        },
+        {
+          "assignedDateTime": "2026-07-15T09:48:27Z",
+          "capabilityStatus": "Enabled",
+          "service": "SCO",
+          "servicePlanId": "3eeb8536-fecf-41bf-a3f8-d6f17a9f3efc"
+        }
+      ]
+    }
+  ]
+}

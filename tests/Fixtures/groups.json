@@ -1,0 +1,103 @@
+{
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/groups?$select=id%2cdisplayName%2cdescription%2cmail%2cmailEnabled%2cmailNickname%2csecurityEnabled%2cgroupTypes%2cmembershipRule%2cmembershipRuleProcessingState%2conPremisesSyncEnabled%2cvisibility%2ccreatedDateTime%2cisAssignableToRole\u0026$top=6\u0026$skiptoken=RFNwdAIAAQAAACpHcm91cF83OTcyOGM0NS03YmVlLTQ5MWEtYmZhMC04MmQyMmVkOGJmNWIqR3JvdXBfNzk3MjhjNDUtN2JlZS00OTFhLWJmYTAtODJkMjJlZDhiZjViAAAAAAAAAAAAAAA",
+  "value": [
+    {
+      "id": "22541b24-c217-4f5f-b3eb-51637e745207",
+      "displayName": "Contact Form Senders",
+      "description": "Scope for the yeomanlabs.co contact form access policy. Contains only info@yeomanlabs.co.",
+      "mail": "group1@contoso.com",
+      "mailEnabled": true,
+      "mailNickname": "contact-form-senders",
+      "securityEnabled": true,
+      "groupTypes": [],
+      "membershipRule": null,
+      "membershipRuleProcessingState": null,
+      "onPremisesSyncEnabled": null,
+      "visibility": null,
+      "createdDateTime": "2026-09-06T01:32:22Z",
+      "isAssignableToRole": null
+    },
+    {
+      "id": "26f67bd3-2262-455e-8d44-506530da59cd",
+      "displayName": "Intune App 1Password ",
+      "description": null,
+      "mail": null,
+      "mailEnabled": false,
+      "mailNickname": "a5cc08e4-1",
+      "securityEnabled": true,
+      "groupTypes": [],
+      "membershipRule": null,
+      "membershipRuleProcessingState": null,
+      "onPremisesSyncEnabled": null,
+      "visibility": null,
+      "createdDateTime": "2026-08-15T10:26:17Z",
+      "isAssignableToRole": null
+    },
+    {
+      "id": "3b0cc749-b86e-41cb-a9da-ec8e67f9506f",
+      "displayName": "Autopilot",
+      "description": null,
+      "mail": null,
+      "mailEnabled": false,
+      "mailNickname": "3a45adf1-5",
+      "securityEnabled": true,
+      "groupTypes": [],
+      "membershipRule": null,
+      "membershipRuleProcessingState": null,
+      "onPremisesSyncEnabled": null,
+      "visibility": null,
+      "createdDateTime": "2026-08-15T11:20:57Z",
+      "isAssignableToRole": null
+    },
+    {
+      "id": "3b3096fa-f53b-45d0-a628-5b7c6360e877",
+      "displayName": "Intune AP LIC",
+      "description": "This is the Golden Image Group for LIC",
+      "mail": null,
+      "mailEnabled": false,
+      "mailNickname": "916339c6-a",
+      "securityEnabled": true,
+      "groupTypes": [
+        "DynamicMembership"
+      ],
+      "membershipRule": "(device.devicePhysicalIds -any (_ -eq \u0022[OrderID]:LIC\u0022))",
+      "membershipRuleProcessingState": "On",
+      "onPremisesSyncEnabled": null,
+      "visibility": null,
+      "createdDateTime": "2026-08-15T10:01:46Z",
+      "isAssignableToRole": null
+    },
+    {
+      "id": "5b31ab6f-93a4-4853-b05a-54df23381d3f",
+      "displayName": "Intune Andrew Autopilot",
+      "description": null,
+      "mail": null,
+      "mailEnabled": false,
+      "mailNickname": "60eb4d6d-9",
+      "securityEnabled": true,
+      "groupTypes": [],
+      "membershipRule": null,
+      "membershipRuleProcessingState": null,
+      "onPremisesSyncEnabled": null,
+      "visibility": null,
+      "createdDateTime": "2026-08-29T14:49:14Z",
+      "isAssignableToRole": null
+    },
+    {
+      "id": "79728c45-7bee-491a-bfa0-82d22ed8bf5b",
+      "displayName": "License Assign Teams",
+      "description": null,
+      "mail": null,
+      "mailEnabled": false,
+      "mailNickname": "40116cf2-4",
+      "securityEnabled": true,
+      "groupTypes": [],
+      "membershipRule": null,
+      "membershipRuleProcessingState": null,
+      "onPremisesSyncEnabled": null,
+      "visibility": null,
+      "createdDateTime": "2026-08-05T14:27:03Z",
+      "isAssignableToRole": null
+    }
+  ]
+}

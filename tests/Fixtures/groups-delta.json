@@ -1,0 +1,294 @@
+{
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/groups/delta?$skiptoken=19CpQF7KOt5rDZqt4LfGNNQHHp2RUE0gsNfGfNVVghjEkCJqCu1d_C90TN97V1CblnjbtTmcevF928sr9FUcp8Xq-PZw4qNgFUAqstO8C3j9_Z8rhRBzjsjzJL6sDrRj8uf_udSuMUqTE97sCAT6kJaIRPxapNT-AOtGTkU9rLUjgm5KPv8ypi_mHMTa_AuSjm9As2qUnTTs04KuEddY6jwneIumKmtRE3OuiboXt5XD6pv28NcutaiTJ0PsaB4Lut4hD9mz23LFmkfMjc8JZu4qbEWH9NHnIqdYS8vRzjTHLbfDgdB85TXxhgeN0GrO1k2AOmQ0VEUJvPmj9t64UMyuW_tbTRKsfNG35mKKCshfZPPBBJd7xhbFfbet_erP49SBzBHarC_Y3z2AEMkQq0jaX1hQJ82icPzWzjSD3xCa2GA8Mfe4PXJaVxT1PnSw9omQC1dC8aj0UfWTGXkaG91nrDcF09AG_sjAoz2--RCusAZ_p2d3slA9jtx6UUOpxwZULcUDIA3VaRn7u9y1fQMPNIGd6R_e_IzFDWF8LWpkn2UyJBQMFy-VpZG9KFv4hEyN72xw2rCcDXyQ8XRnDcVzqahdSGsxybquzn5g4E5eHcOv7-zeZoX1-0HzG2ziRRDukESB_qqcAKASXU--PVNhSG7R-QD-gE_Kysy1MFpbSu2UtMge_eIuFSSoAZ_RV-8MHvvhbpd9OYHIji6Vc9ZuYG2IZC_L1AxmrTCVOie2S7xKjADTUcLzqynhCPOgS1_sgsm6pWyqwNcIwRMMyphRPemgnIHgI4-VE8svC1RSvSsbQSgUM9tq6ArJzjdum6zclTppQuOMbVlVE3VbzIcQlyEoGYrQpAc8QR4-XjDMLbTUiAaN74yTmmRN8OydQtS_1PqsnYGL9Q-14Nfl7QCI1QkM6paW8fvJ4d19POw5lAuyoR1hBJLFrGpAOPVyuAdGknvfLYp5OeTFbRXiDpSBJpHssDuV5_OOJYC-0YwhfWizd6sU6um46SI_WZRdCyU0ZweE0uX0KdTqlA9Rv5fM9DzfWYYi-hyzGHuqrccnNTl9sTkQC1EVCjVnv_EcKUhXe4v5wBvgwyqwUTdsUCv_li20pVPOtadW0myV4_ZYZq5f_HlYhuqSEp8_rOgf0gwArcKGYciamCtbxr4Xb8cmybuII8ZyJV8kPsjlHkIJJzuMC2ZTXKZ4VP4txx9-LqbK-UK4RyEzRRw88TKl1FGh7hpDROuWhPB2CLuHYL_9nAwzffgeBt8eI1iqw22DLTacGwOGvp6JHL06tP61wmB_rl0XBFWne-qRIv3iDItu5BVXiacz4p52_U2TJFaWlOVC8_HX7jHZCvkIDyJaEhw4KPHpa0-ine-fjLvXK01EZizlyokIYxACcUWMJ3ott8D0EkSTzcqriz6VALJ9wRuqb5h4yyr7qSdTi14RV0jM5jxtY5jw8APn7WBK7DokR3iKFnfaeBv-afmL9RQxCEpyZWfwebG4zWlCNoI6zMw1_JhZLRhc6QekG54I7U8SA8bDHQUH9sHl3x_WO0w6fikJKqSU5lMaI4AR3SPJ8E0OF3dsRMOCwHs09R7NIoIWWMiPZyVTc6GYur2UTvg4Kt1T-NlW4gDFqOBDl_wboU7mc11YdUSgoPOiljI8EFzL_LIPAqiQBvWSDXN2YL_TWYEVwUbv7BAqvHPB3woSPGfHJMkWuW48w7Osz-MKw3tEPKpFqDm6WjyNkFxSjLhIZbUcBRajTxqzN_qOmUpdSlL3mmBT5EZpNQ8xJuW8kQgCA3eGY-nhDLlCC4F40KxltTmc5CqSBS5WYOBqqI5XoLOuqbIa9wsKu9tDgKuheXOmFhfr-DPgrRgal2PVMr11Y1OCEUyfXLgoAAyuZYitp3vrmHU1pccsHIy7aVs5keVjGcH_m81t9Xnj806QkTURymeiRuDXwJ0BqHWn8pqjZGEfikWRAHWeFf8prSZQPkU0SMmkTqcvUcoyY5mRSnD-e8xKNZQM4ClRhSdpSHO_h5xq98PaMV31nZXWTovPzQPkCIpKPmhFuRRL2wj-iBhafO62IANIv_-uK9ZUH7GB3XbIPTOWhChAviYdhpc7GV5zY9uXWiGYlYi7XXx30dFaaQ.ltsV2lmXvd0xZDLIQC-PN8KUz86eiQPUhQYNTXapUKE",
+  "value": [
+    {
+      "displayName": "Group for Answers in Viva Engage \u2013 DO NOT DELETE 1521574039191552",
+      "description": "Group that stores content and metadata for Answers in Viva Engage in network 1521574039191552. Deleting this this group will disrupt Answers in Viva Engage.",
+      "mail": "group1@contoso.com",
+      "mailEnabled": true,
+      "mailNickname": "groupforanswersinvivaengagedonotdelete1521574039191552289",
+      "securityEnabled": false,
+      "groupTypes": [
+        "Unified"
+      ],
+      "visibility": "Public",
+      "createdDateTime": "2026-07-15T09:59:15Z",
+      "id": "8f11f160-c04a-471f-8a79-849f5ecb58fc"
+    },
+    {
+      "displayName": "All Company",
+      "description": "This is the default group for everyone in the network",
+      "mail": "group2@contoso.com",
+      "mailEnabled": true,
+      "mailNickname": "allcompany",
+      "securityEnabled": false,
+      "groupTypes": [
+        "Unified"
+      ],
+      "visibility": "Public",
+      "createdDateTime": "2026-07-15T09:54:22Z",
+      "id": "ec8905c7-9705-43b5-9d92-0c3b08abd32f",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "89ace047-55e5-41f7-b475-fc520e399854"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "6820449e-747f-455a-8485-452f2b776ee3"
+        }
+      ]
+    },
+    {
+      "displayName": "License Assign Teams",
+      "mailEnabled": false,
+      "mailNickname": "40116cf2-4",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-08-05T14:27:03Z",
+      "id": "79728c45-7bee-491a-bfa0-82d22ed8bf5b",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "a83dd413-8b1c-474c-ad6d-bbfa9f4968b6",
+          "@removed": {
+            "reason": "deleted"
+          }
+        }
+      ]
+    },
+    {
+      "displayName": "Intune AP device",
+      "mailEnabled": false,
+      "mailNickname": "c097d73d-6",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-08-15T09:31:10Z",
+      "id": "ab34b909-ec5a-4529-acd5-79e718788609",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.device",
+          "id": "28661532-0350-4624-9d45-42368a7c0b7f"
+        }
+      ]
+    },
+    {
+      "displayName": "Intune AP LIC",
+      "description": "This is the Golden Image Group for LIC",
+      "mailEnabled": false,
+      "mailNickname": "916339c6-a",
+      "securityEnabled": true,
+      "groupTypes": [
+        "DynamicMembership"
+      ],
+      "membershipRule": "(device.devicePhysicalIds -any (_ -eq \u0022[OrderID]:LIC\u0022))",
+      "membershipRuleProcessingState": "On",
+      "visibility": null,
+      "createdDateTime": "2026-08-15T10:01:46Z",
+      "id": "3b3096fa-f53b-45d0-a628-5b7c6360e877"
+    },
+    {
+      "displayName": "Intune App 1Password ",
+      "mailEnabled": false,
+      "mailNickname": "a5cc08e4-1",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-08-15T10:26:17Z",
+      "id": "26f67bd3-2262-455e-8d44-506530da59cd",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "a83dd413-8b1c-474c-ad6d-bbfa9f4968b6",
+          "@removed": {
+            "reason": "deleted"
+          }
+        }
+      ]
+    },
+    {
+      "displayName": "License-E3-Assign",
+      "mailEnabled": false,
+      "mailNickname": "c4fdf5ca-2",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-07-15T10:01:29Z",
+      "id": "fea6bdd2-762c-4d9e-b7ae-0a219a08b8aa",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "4f560376-e211-4eec-a0e9-f4119a3e4c39"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "6820449e-747f-455a-8485-452f2b776ee3"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "2094c9e7-4513-4feb-840b-2dc7ac8b40ad"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "89ace047-55e5-41f7-b475-fc520e399854"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "53b3edf8-d831-414b-8d1f-5eb45ce88930"
+        }
+      ]
+    },
+    {
+      "displayName": "Autopilot",
+      "mailEnabled": false,
+      "mailNickname": "3a45adf1-5",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-08-15T11:20:57Z",
+      "id": "3b0cc749-b86e-41cb-a9da-ec8e67f9506f",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.device",
+          "id": "94584f7b-ce32-4850-b0a5-d6efad558658"
+        }
+      ]
+    },
+    {
+      "displayName": "Intune Andrew Autopilot",
+      "mailEnabled": false,
+      "mailNickname": "60eb4d6d-9",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-08-29T14:49:14Z",
+      "id": "5b31ab6f-93a4-4853-b05a-54df23381d3f",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "6820449e-747f-455a-8485-452f2b776ee3"
+        },
+        {
+          "@odata.type": "#microsoft.graph.device",
+          "id": "a736e3cf-460b-46a4-b041-2e5ad12207a0"
+        }
+      ]
+    },
+    {
+      "displayName": "Intune Automation Test",
+      "description": "This is a test from the exe",
+      "mailEnabled": false,
+      "mailNickname": "IntuneAutomationTest-6e8653",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-09-06T00:10:07Z",
+      "id": "f5bceb8b-836b-4eab-983b-ed52c0e0c620"
+    },
+    {
+      "displayName": "Contact Form Senders",
+      "description": "Scope for the yeomanlabs.co contact form access policy. Contains only info@yeomanlabs.co.",
+      "mail": "group11@contoso.com",
+      "mailEnabled": true,
+      "mailNickname": "contact-form-senders",
+      "securityEnabled": true,
+      "visibility": null,
+      "createdDateTime": "2026-09-06T01:32:22Z",
+      "id": "22541b24-c217-4f5f-b3eb-51637e745207",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "5a56c436-3530-4789-be7d-256d2719e09f"
+        }
+      ]
+    },
+    {
+      "displayName": "WLNZ-PIM-GAdmin",
+      "description": "Wellington NZ Pim group for Global Administrators",
+      "mailEnabled": false,
+      "mailNickname": "df9472d0-c",
+      "securityEnabled": true,
+      "visibility": "Private",
+      "createdDateTime": "2026-09-07T00:16:12Z",
+      "isAssignableToRole": true,
+      "id": "7eafd9e2-bffa-49fd-8690-d7f62e35ead6",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "4f560376-e211-4eec-a0e9-f4119a3e4c39",
+          "@removed": {
+            "reason": "deleted"
+          }
+        }
+      ]
+    },
+    {
+      "displayName": "Yeoman",
+      "description": "Yeoman",
+      "mail": "group13@contoso.com",
+      "mailEnabled": true,
+      "mailNickname": "Yeoman",
+      "securityEnabled": false,
+      "groupTypes": [
+        "Unified"
+      ],
+      "visibility": "Public",
+      "createdDateTime": "2026-07-15T09:54:10Z",
+      "id": "b481b4c3-d34a-4dfc-a8c7-eb56b86c2e60",
+      "members@delta": [
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "6d5513e5-f073-45b3-ab9a-2303f5d649f4"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "6820449e-747f-455a-8485-452f2b776ee3"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "8ea89dae-5028-4a0b-ab34-253a090483ad"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "107c9ba8-79d2-4277-84b2-de54d5e19024"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "6d58eca5-bed1-4ee1-85e7-d89534aa4025",
+          "@removed": {
+            "reason": "deleted"
+          }
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "b859df0f-44fc-4421-86c9-c707cc853c61"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "b519fe23-aaf3-416c-a427-981ae4795bfc",
+          "@removed": {
+            "reason": "deleted"
+          }
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "a83dd413-8b1c-474c-ad6d-bbfa9f4968b6",
+          "@removed": {
+            "reason": "deleted"
+          }
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "2094c9e7-4513-4feb-840b-2dc7ac8b40ad"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "89ace047-55e5-41f7-b475-fc520e399854"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "53b3edf8-d831-414b-8d1f-5eb45ce88930"
+        },
+        {
+          "@odata.type": "#microsoft.graph.user",
+          "id": "4f560376-e211-4eec-a0e9-f4119a3e4c39"
+        }
+      ]
+    }
+  ]
+}
