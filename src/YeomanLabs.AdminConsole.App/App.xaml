@@ -11,6 +11,7 @@
                 <!-- Order matters: Theme (palette + converters) must precede the templates that reference it. -->
                 <ResourceDictionary Source="Views/Theme.xaml" />
                 <ResourceDictionary Source="Views/PageTemplates.xaml" />
+                <ResourceDictionary Source="Views/UserPage.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

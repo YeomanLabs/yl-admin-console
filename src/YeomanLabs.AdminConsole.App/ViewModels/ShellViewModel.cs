@@ -33,13 +33,14 @@ public sealed partial class ShellViewModel : ObservableObject
     private bool _scopesExplained;
     private int _statusMessageVersion;
 
-    public ShellViewModel(IServiceProvider services, IAuthService auth, TenantContext tenant, TenantContextLoader tenantLoader, ILogger<ShellViewModel> logger)
+    public ShellViewModel(IServiceProvider services, IAuthService auth, TenantContext tenant, TenantContextLoader tenantLoader, ToastService toasts, ILogger<ShellViewModel> logger)
     {
         _services = services;
         _auth = auth;
         _tenant = tenant;
         _tenantLoader = tenantLoader;
         _logger = logger;
+        Toasts = toasts.Items;
 
         NavItems =
         [
@@ -55,6 +56,9 @@ public sealed partial class ShellViewModel : ObservableObject
         Tabs.CollectionChanged += OnTabsChanged;
         _tenant.Changed += (_, _) => RunOnUi(RefreshTenantHeader);
     }
+
+    /// <summary>UX §10 toasts, owned by <see cref="ToastService"/>; the window binds the bottom-right stack to this.</summary>
+    public ObservableCollection<ToastItem> Toasts { get; }
 
     // ---- title bar ---------------------------------------------------------------------------------------------
 

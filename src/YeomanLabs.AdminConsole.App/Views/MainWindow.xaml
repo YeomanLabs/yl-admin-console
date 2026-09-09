@@ -4,6 +4,7 @@
                  xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                  xmlns:vm="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels"
                  xmlns:views="clr-namespace:YeomanLabs.AdminConsole.App.Views"
+                 xmlns:b="clr-namespace:YeomanLabs.AdminConsole.App.Behaviors"
                  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  mc:Ignorable="d"
@@ -231,6 +232,31 @@
                 </StackPanel>
             </DockPanel>
         </Border>
+
+        <!-- Toasts (UX §10): bottom-right, up to 3, above the content, below the palette -->
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding Toasts}" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,12" IsHitTestVisible="True">
+            <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                    <Border CornerRadius="6" Padding="12,8" Margin="0,6,0,0" MinWidth="280" MaxWidth="420"
+                            Background="{DynamicResource ControlFillColorSecondaryBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                            b:HoverBehavior.Track="True" b:HoverBehavior.IsHovered="{Binding IsHovered, Mode=TwoWay}">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="16" ShadowDepth="2" Opacity="0.4" />
+                        </Border.Effect>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Background="Transparent" BorderThickness="0" Padding="4,0" Cursor="Hand" FocusVisualStyle="{x:Null}"
+                                    Command="{Binding DismissCommand}" ToolTip="Dismiss" AutomationProperties.Name="Dismiss notification">
+                                <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Opacity="0.7" />
+                            </Button>
+                            <ui:HyperlinkButton DockPanel.Dock="Right" Content="{Binding UndoLabel}" Command="{Binding UndoCommand}" Padding="8,0" VerticalAlignment="Center"
+                                                Visibility="{Binding HasUndo, Converter={StaticResource BoolToVisibility}}" />
+                            <TextBlock Text="{Binding Text}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
 
         <!-- Command palette overlay (UX §3): last child so it paints above the content and status bar. -->
         <views:PaletteOverlay Grid.Row="1" Grid.RowSpan="3" DataContext="{Binding Palette}"

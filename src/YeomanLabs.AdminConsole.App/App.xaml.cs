@@ -130,6 +130,7 @@ public sealed partial class App : Application
         services.AddSingleton<UserService>();
         services.AddHostedService<SyncHostedService>();
 
+        services.AddSingleton<ToastService>();
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<MainWindow>();
         services.AddTransient<PaletteViewModel>();
