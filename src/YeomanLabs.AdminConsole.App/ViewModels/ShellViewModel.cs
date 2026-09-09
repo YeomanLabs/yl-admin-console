@@ -49,9 +49,9 @@ public sealed partial class ShellViewModel : ObservableObject
         NavItems =
         [
             new NavItem("home", "Home", SymbolRegular.Home24, 1, typeof(HomePageViewModel)),
-            new NavItem("users", "Users", SymbolRegular.People24, 2, typeof(PlaceholderPageViewModel)),
-            new NavItem("groups", "Groups", SymbolRegular.PeopleTeam24, 3, typeof(PlaceholderPageViewModel)),
-            new NavItem("devices", "Devices", SymbolRegular.Laptop24, 4, typeof(PlaceholderPageViewModel)),
+            new NavItem("users", "Users", SymbolRegular.People24, 2, typeof(UsersPageViewModel)),
+            new NavItem("groups", "Groups", SymbolRegular.PeopleTeam24, 3, typeof(GroupsPageViewModel)),
+            new NavItem("devices", "Devices", SymbolRegular.Laptop24, 4, typeof(DevicesPageViewModel)),
             new NavItem("templates", "Templates", SymbolRegular.DocumentBulletList24, 5, typeof(TemplatesPageViewModel)),
             new NavItem("activity", "Activity log", SymbolRegular.History24, 6, typeof(ActivityPageViewModel)),
         ];
@@ -124,15 +124,31 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
         if (page is SettingsPageViewModel settings) settings.SignedOut = ReturnToSignIn;
         if (page is ActivityPageViewModel activity) activity.OpenObject = OpenObjectFromPage;
+
+        // The list pages (M9.2-9.4) open the object a row points at, and start their first read only once the shell
+        // has finished building them.
+        if (page is UsersPageViewModel users)
+        {
+            users.OpenRow = r => OpenObjectFromPage(ObjectType.User, r.Id, r.Primary);
+            users.Start();
+        }
+
+        if (page is GroupsPageViewModel groups)
+        {
+            groups.OpenRow = r => OpenObjectFromPage(ObjectType.Group, r.Id, r.Primary);
+            groups.Start();
+        }
+
+        if (page is DevicesPageViewModel devices)
+        {
+            devices.OpenRow = r => OpenObjectFromPage(ObjectType.Device, r.Id, r.Primary);
+            devices.Start();
+        }
+
         if (page is PlaceholderPageViewModel placeholder)
         {
             placeholder.Title = item.Title;
-            placeholder.ArrivesIn = item.Id switch
-            {
-                "users" or "groups" or "devices" => "Object lists arrive with User 360 (M4).",
-                "settings" => "Settings arrive in M5/M8.",
-                _ => string.Empty,
-            };
+            placeholder.ArrivesIn = string.Empty;
         }
 
         return page;

@@ -2,6 +2,7 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:pages="clr-namespace:YeomanLabs.AdminConsole.App.ViewModels.Pages"
+                    xmlns:views="clr-namespace:YeomanLabs.AdminConsole.App.Views"
                     xmlns:tpl="clr-namespace:YeomanLabs.AdminConsole.Core.Templates;assembly=YeomanLabs.AdminConsole.Core">
     <!-- Doc 03: navigation is ContentControl + one DataTemplate per page ViewModel type. -->
 
@@ -252,6 +253,181 @@
             </Grid>
         </Grid>
     </DataTemplate>
+
+    <!-- Users (M9.2). Row order: who they are, what they do, then the flags that decide what can be done to them. -->
+    <DataTemplate DataType="{x:Type pages:UsersPageViewModel}">
+        <views:ListPageView>
+            <views:ListPageView.RowsContent>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:UserRow}">
+                        <Button Style="{StaticResource ListRowButton}"
+                                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Primary}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="320" />
+                                    <ColumnDefinition Width="240" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Upn}" FontSize="11" Opacity="0.6" FontFamily="{StaticResource YlMono}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding JobTitle}" FontSize="12" Opacity="0.85" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Department}" FontSize="11" Opacity="0.55" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDanger}"
+                                            Visibility="{Binding Enabled, Converter={StaticResource InverseBoolToVisibility}}">
+                                        <TextBlock Text="Disabled" FontSize="10" Foreground="White" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding IsGuest, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="Guest" FontSize="10" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Licensed, Converter={StaticResource InverseBoolToVisibility}}">
+                                        <TextBlock Text="Unlicensed" FontSize="10" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Synced, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Mastered in on-prem AD — most attributes are read-only until Phase 2">
+                                        <TextBlock Text="From AD" FontSize="10" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </views:ListPageView.RowsContent>
+        </views:ListPageView>
+    </DataTemplate>
+
+    <!-- Devices (M9.3). Entra and Intune in one list; an Entra-only row shows the gap rather than hiding it. -->
+    <DataTemplate DataType="{x:Type pages:DevicesPageViewModel}">
+        <views:ListPageView>
+            <views:ListPageView.RowsContent>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:DeviceRow}">
+                        <Button Style="{StaticResource ListRowButton}"
+                                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Primary}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="320" />
+                                    <ColumnDefinition Width="260" />
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding SubtitleText}" FontSize="11" Opacity="0.6" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding OwnerText}" FontSize="12" Opacity="0.85" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding OsText}" FontSize="11" Opacity="0.55" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="2" Text="{Binding LastSeenText}" FontSize="11" Opacity="0.6"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" TextTrimming="CharacterEllipsis" />
+
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDanger}"
+                                            Visibility="{Binding IsNonCompliant, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="Not compliant" FontSize="10" Foreground="White" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding IsEntraOnly, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Registered in Entra but never enrolled in Intune — no compliance state and no remote actions">
+                                        <TextBlock Text="Not in Intune" FontSize="10" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding IsUnencrypted, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="Not encrypted" FontSize="10" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </views:ListPageView.RowsContent>
+        </views:ListPageView>
+    </DataTemplate>
+
+    <!-- Groups (M9.4). The badges are the ones that decide whether membership can be changed here at all. -->
+    <DataTemplate DataType="{x:Type pages:GroupsPageViewModel}">
+        <views:ListPageView>
+            <views:ListPageView.RowsContent>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:GroupRow}">
+                        <Button Style="{StaticResource ListRowButton}"
+                                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Primary}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="340" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Primary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Mail}" FontSize="11" Opacity="0.6" FontFamily="{StaticResource YlMono}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Visibility="{Binding Mail, Converter={StaticResource NullToCollapsed}}" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1" Text="{Binding Description}" FontSize="11" Opacity="0.6"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" TextTrimming="CharacterEllipsis" />
+
+                                <TextBlock Grid.Column="2" Text="{Binding MemberCountText}" FontSize="11" Opacity="0.7"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" />
+
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <Border Style="{StaticResource RowBadge}">
+                                        <TextBlock Text="{Binding KindText}" FontSize="10" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Dynamic, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Membership comes from a rule — members cannot be added or removed by hand">
+                                        <TextBlock Text="Dynamic" FontSize="10" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Synced, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Mastered in on-prem AD — membership is changed in AD until Phase 2">
+                                        <TextBlock Text="From AD" FontSize="10" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding RoleAssignable, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Can hold a directory role — changing it needs Privileged Role Administrator">
+                                        <TextBlock Text="Role-assignable" FontSize="10" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </views:ListPageView.RowsContent>
+        </views:ListPageView>
+    </DataTemplate>
+
 
     <!-- Activity log (M8.2): every write this admin made, filtered, and copyable as markdown. -->
     <DataTemplate DataType="{x:Type pages:ActivityPageViewModel}">

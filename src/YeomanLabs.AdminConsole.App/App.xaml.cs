@@ -181,6 +181,9 @@ public sealed partial class App : Application
         // Page ViewModels are transient (doc 03): a fresh instance per navigation.
         services.AddTransient<HomePageViewModel>();
         services.AddTransient<PlaceholderPageViewModel>();
+        services.AddTransient<UsersPageViewModel>();
+        services.AddTransient<GroupsPageViewModel>();
+        services.AddTransient<DevicesPageViewModel>();
         services.AddTransient<UserDetailViewModel>();
         services.AddTransient<DeviceDetailViewModel>();
         services.AddTransient<GroupDetailViewModel>();

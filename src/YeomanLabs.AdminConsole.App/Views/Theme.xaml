@@ -25,4 +25,57 @@
     <conv:InverseBoolConverter x:Key="InverseBool" />
     <conv:CountToVisibilityConverter x:Key="ZeroToVisible" />
     <conv:CountToVisibilityConverter x:Key="NonZeroToVisible" WhenNonZero="True" />
+    <!-- ================= List pages (M9.2-9.4) =================
+         Users, Groups and Devices differ only in the columns each row draws, so the chrome — heading, filter box,
+         chips, sort, count, empty state and paging — is written once here and each page supplies only its rows. -->
+
+    <Style x:Key="FilterChipStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+        <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="FontSize" Value="12" />
+        <Style.Triggers>
+            <!-- Nothing would match. Still clickable — the count is the information — but dimmed so the eye skips it. -->
+            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                <Setter Property="Opacity" Value="0.4" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- A row in any list: one clickable band, so the whole row is the target rather than a link inside it. -->
+    <Style x:Key="ListRowButton" TargetType="Button">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="4" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Stretch" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A small pill for a row flag: Disabled, Guest, Dynamic, Not compliant. -->
+    <Style x:Key="RowBadge" TargetType="Border">
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="5,1" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+
 </ResourceDictionary>

@@ -55,3 +55,19 @@ shows invented data is a README you cannot trust. The cost is that `offboard-pre
 names and registered authentication methods, and `activity-log.png` shows the M7 gate's test accounts. The repository
 has no remote, so nothing has left the machine — but if it is ever pushed anywhere public, those two images are what
 to look at first.
+
+## M9.2 — The list chrome is a UserControl, not a ControlTemplate
+
+The heading, filter box, chips, empty state and paging are shared by all three list pages, so they were first written
+once as a `ControlTemplate` applied to a `ContentControl`. It rendered perfectly and was invisible to a screen reader:
+WPF does not create automation peers for `TextBlock`s that are template children, so the page heading, the result
+count and the empty-state text were absent from the automation tree entirely — including the live region whose whole
+job is to announce that a filter changed the count. The interactive controls in the same template were exposed, which
+is what made it look fine until the tree was actually dumped.
+
+It is now `Views/ListPageView.xaml`, a UserControl whose children are ordinary visual children and are exposed like
+any other text. Each page passes its rows in through a `RowsContent` dependency property. Same sharing, same markup,
+and the automation tree goes from 0 to 3 headings and 3 live counts.
+
+The general lesson, worth keeping: rendering correctly is not evidence of being accessible, and the automation tree
+has to be dumped to know. M8.4 audited the pages that existed then; anything built since needs the same pass.
