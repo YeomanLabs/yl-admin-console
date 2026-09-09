@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -52,6 +52,12 @@ public sealed class ActionLog : IDisposable
     private readonly SqliteConnection _keeper;
     private readonly object _writeLock = new();
 
+    /// <summary>
+    /// The correlation id every row written on this logical flow inherits. AsyncLocal rather than a field because an
+    /// offboarding run and an ordinary edit can be in flight at once, and each must stamp only its own rows.
+    /// </summary>
+    private static readonly AsyncLocal<string?> Correlation = new();
+
     private ActionLog(string connectionString, ILogger<ActionLog> logger)
     {
         _connectionString = connectionString;
@@ -76,10 +82,29 @@ public sealed class ActionLog : IDisposable
         return new ActionLog(cs, logger ?? NullLogger<ActionLog>.Instance);
     }
 
+    /// <summary>
+    /// Groups every row written inside the scope under one id, so a multi-step run (offboarding, create-from-template)
+    /// reads as one thing on the Activity page. Steps call the ordinary services, which know nothing about runs.
+    /// </summary>
+    public static IDisposable BeginCorrelation(string correlationId)
+    {
+        var previous = Correlation.Value;
+        Correlation.Value = correlationId;
+        return new CorrelationScope(previous);
+    }
+
+    private sealed class CorrelationScope : IDisposable
+    {
+        private readonly string? _previous;
+        public CorrelationScope(string? previous) => _previous = previous;
+        public void Dispose() => Correlation.Value = _previous;
+    }
+
     /// <summary>Appends a row and returns its id. Secrets in the summary and inverse payload are redacted first.</summary>
     public long Record(ActionRecord a)
     {
         var ts = a.Timestamp == default ? DateTimeOffset.UtcNow : a.Timestamp;
+        var correlation = a.CorrelationId ?? Correlation.Value;
         lock (_writeLock)
         {
             using var conn = Open();
@@ -103,7 +128,7 @@ public sealed class ActionLog : IDisposable
             cmd.Parameters.AddWithValue("$rid", (object?)a.GraphRequestId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$iaction", (object?)a.InverseAction ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$ipayload", (object?)Redact(a.InversePayload) ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("$corr", (object?)a.CorrelationId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$corr", (object?)correlation ?? DBNull.Value);
             cmd.Parameters.AddWithValue("$undone", a.UndoneAt is null ? DBNull.Value : CacheDb.FormatDate(a.UndoneAt.Value));
             var id = (long)cmd.ExecuteScalar()!;
             _logger.LogInformation("Action {Action} on {TargetType} {TargetId}: {Outcome} (#{Id})", a.Action, a.TargetType, a.TargetId, a.Outcome, id);

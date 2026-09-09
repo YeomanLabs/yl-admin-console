@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Xunit;
 using YeomanLabs.AdminConsole.Core.Cache;
 using YeomanLabs.AdminConsole.Core.Models;
@@ -11,6 +11,63 @@ public sealed class ActionLogTests : IDisposable
     private readonly ActionLog _log = ActionLog.OpenInMemory();
 
     public void Dispose() => _log.Dispose();
+
+    private ActionRecord Row(string action = "user.patch", string? correlationId = null) => new()
+    {
+        Actor = "admin@contoso.com",
+        TenantId = "t1",
+        TargetType = ObjectType.User,
+        TargetId = "u1",
+        Action = action,
+        RequestSummary = "PATCH accountEnabled=false",
+        Outcome = ActionOutcome.Success,
+        CorrelationId = correlationId,
+    };
+
+    [Fact]
+    public void BeginCorrelation_StampsEveryRowWrittenInsideTheScope()
+    {
+        // M6: an offboarding run groups its rows this way, and the steps call the ordinary services, which know
+        // nothing about runs.
+        long inside1, inside2, outside;
+        using (ActionLog.BeginCorrelation("offboard-7"))
+        {
+            inside1 = _log.Record(Row("user.disable"));
+            inside2 = _log.Record(Row("license.remove"));
+        }
+
+        outside = _log.Record(Row("user.patch.jobTitle"));
+
+        _log.Get(inside1)!.CorrelationId.Should().Be("offboard-7");
+        _log.Get(inside2)!.CorrelationId.Should().Be("offboard-7");
+        _log.Get(outside)!.CorrelationId.Should().BeNull("the scope ended");
+    }
+
+    [Fact]
+    public void BeginCorrelation_DoesNotOverrideARowThatBroughtItsOwnId()
+    {
+        using var scope = ActionLog.BeginCorrelation("ambient");
+
+        var id = _log.Record(Row(correlationId: "explicit"));
+
+        _log.Get(id)!.CorrelationId.Should().Be("explicit");
+    }
+
+    [Fact]
+    public void BeginCorrelation_NestsAndRestoresThePreviousScope()
+    {
+        long outer1, inner, outer2;
+        using (ActionLog.BeginCorrelation("outer"))
+        {
+            outer1 = _log.Record(Row());
+            using (ActionLog.BeginCorrelation("inner")) inner = _log.Record(Row());
+            outer2 = _log.Record(Row());
+        }
+
+        _log.Get(outer1)!.CorrelationId.Should().Be("outer");
+        _log.Get(inner)!.CorrelationId.Should().Be("inner");
+        _log.Get(outer2)!.CorrelationId.Should().Be("outer");
+    }
 
     [Fact]
     public void Record_AssignsIds_AndGetRoundTripsEveryField()
