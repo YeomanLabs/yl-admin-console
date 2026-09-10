@@ -1,4 +1,4 @@
-﻿namespace AdminConsole.Core.OnPrem;
+namespace AdminConsole.Core.OnPrem;
 
 /// <summary>
 /// An Active Directory computer object (M12.1).
@@ -21,6 +21,9 @@ public sealed record OnPremComputer
     public string? OperatingSystem { get; init; }
     public string? OperatingSystemVersion { get; init; }
     public string? Description { get; init; }
+
+    /// <summary>ADUC's Location field: free text, and about the only other thing people edit on a computer.</summary>
+    public string? Location { get; init; }
     public required int UserAccountControl { get; init; }
     public DateTimeOffset? WhenCreated { get; init; }
     public DateTimeOffset? LastLogon { get; init; }

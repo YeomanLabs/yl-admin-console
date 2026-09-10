@@ -50,6 +50,7 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
         "mail", "title", "department", "company", "physicalDeliveryOfficeName", "employeeID", "description",
         "manager", "userAccountControl", "whenCreated", "lastLogonTimestamp", "pwdLastSet", "lockoutTime",
         "memberOf", "primaryGroupID", "mS-DS-ConsistencyGuid",
+        "telephoneNumber", "mobile", "streetAddress", "l", "st", "postalCode", "co", "accountExpires",
     ];
 
     private static readonly string[] GroupAttributes =
@@ -61,7 +62,7 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
     private static readonly string[] ComputerAttributes =
     [
         "objectGUID", "distinguishedName", "sAMAccountName", "name", "dNSHostName", "operatingSystem",
-        "operatingSystemVersion", "description", "userAccountControl", "whenCreated", "lastLogonTimestamp",
+        "operatingSystemVersion", "description", "location", "userAccountControl", "whenCreated", "lastLogonTimestamp",
     ];
 
     private static readonly string[] OuAttributes =
@@ -376,6 +377,107 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
         return forced.Success
             ? DirectoryOutcome.Ok("Set the password, and it must be changed at next sign-in")
             : outcome with { Summary = "Set the password, but could not require a change at next sign-in" };
+    }
+
+    public async Task<DirectoryOutcome> SetAccountOptionsAsync(Guid objectGuid, bool? passwordNeverExpires, bool? mustChangePasswordAtNextLogon, CancellationToken ct)
+    {
+        var entry = await ReadRawAsync(objectGuid, ["distinguishedName", "userAccountControl", "pwdLastSet", "displayName", "name"], ct).ConfigureAwait(false);
+        if (entry is null) return DirectoryOutcome.Failed("Set account options", DirectoryErrorText.NoSuchObject, null, "that user");
+
+        var label = LdapAttributes.String(entry, "displayName") ?? LdapAttributes.String(entry, "name") ?? "the account";
+        var request = new ModifyRequest(entry.DistinguishedName);
+        var changes = new List<string>();
+
+        if (passwordNeverExpires is { } never)
+        {
+            var current = LdapAttributes.Int(entry, "userAccountControl");
+            var wanted = AccountFlags.SetPasswordNeverExpires(current, never);
+            if (wanted != current)
+            {
+                request.Modifications.Add(ReplaceValue("userAccountControl", wanted.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                changes.Add(never ? "password never expires" : "password expires normally");
+            }
+        }
+
+        if (mustChangePasswordAtNextLogon is { } must)
+        {
+            var currentlyMust = LdapAttributes.String(entry, "pwdLastSet") == "0";
+            if (must != currentlyMust)
+            {
+                // 0 forces a change; -1 means "set it to now", which clears the requirement without the caller
+                // needing to know or fake a timestamp.
+                request.Modifications.Add(ReplaceValue("pwdLastSet", must ? "0" : "-1"));
+                changes.Add(must ? "must change password at next sign-in" : "no password change required");
+            }
+        }
+
+        if (changes.Count == 0) return DirectoryOutcome.NoOp($"{label} already has those options");
+        return await SendAsync(request, $"{label}: {string.Join(", ", changes)}", "that user", ct).ConfigureAwait(false);
+    }
+
+    public async Task<DirectoryOutcome> SetAccountExpiryAsync(Guid objectGuid, DateTimeOffset? expires, CancellationToken ct)
+    {
+        var entry = await ReadRawAsync(objectGuid, ["distinguishedName", "displayName", "name"], ct).ConfigureAwait(false);
+        if (entry is null) return DirectoryOutcome.Failed("Set account expiry", DirectoryErrorText.NoSuchObject, null, "that user");
+
+        var label = LdapAttributes.String(entry, "displayName") ?? LdapAttributes.String(entry, "name") ?? "the account";
+        // AD has two spellings of never, 0 and Int64.MaxValue. ADUC writes the second; either reads back as never.
+        var value = expires is { } when ? when.ToFileTime().ToString(System.Globalization.CultureInfo.InvariantCulture) : "0";
+        var request = new ModifyRequest(entry.DistinguishedName, DirectoryAttributeOperation.Replace, "accountExpires", value);
+        var summary = expires is { } w ? $"{label} expires {w:yyyy-MM-dd}" : $"{label} never expires";
+        return await SendAsync(request, summary, "that user", ct).ConfigureAwait(false);
+    }
+
+    public async Task<DirectoryOutcome> SetManagerAsync(Guid userGuid, Guid? managerGuid, CancellationToken ct)
+    {
+        var entry = await ReadRawAsync(userGuid, ["distinguishedName", "displayName", "name"], ct).ConfigureAwait(false);
+        if (entry is null) return DirectoryOutcome.Failed("Set manager", DirectoryErrorText.NoSuchObject, null, "that user");
+        var label = LdapAttributes.String(entry, "displayName") ?? LdapAttributes.String(entry, "name") ?? "the account";
+
+        if (managerGuid is null)
+        {
+            var clear = new ModifyRequest(entry.DistinguishedName);
+            clear.Modifications.Add(new DirectoryAttributeModification { Name = "manager", Operation = DirectoryAttributeOperation.Delete });
+            return await SendAsync(clear, $"Cleared the manager of {label}", "that user", ct, DirectoryErrorText.NoSuchAttribute).ConfigureAwait(false);
+        }
+
+        var manager = await ReadRawAsync(managerGuid.Value, ["distinguishedName", "displayName", "name"], ct).ConfigureAwait(false);
+        if (manager is null) return DirectoryOutcome.Failed("Set manager", DirectoryErrorText.NoSuchObject, null, "that manager");
+        if (manager.DistinguishedName.Equals(entry.DistinguishedName, StringComparison.OrdinalIgnoreCase))
+        {
+            return DirectoryOutcome.Refused("Set manager", $"{label} cannot be their own manager.");
+        }
+
+        var who = LdapAttributes.String(manager, "displayName") ?? LdapAttributes.String(manager, "name") ?? "the manager";
+        var request = new ModifyRequest(entry.DistinguishedName, DirectoryAttributeOperation.Replace, "manager", manager.DistinguishedName);
+        return await SendAsync(request, $"{who} is now the manager of {label}", "that user", ct).ConfigureAwait(false);
+    }
+
+    public async Task<DirectoryOutcome> ResetComputerAccountAsync(Guid computerGuid, CancellationToken ct)
+    {
+        var entry = await ReadRawAsync(computerGuid, ["distinguishedName", "name", "objectClass"], ct).ConfigureAwait(false);
+        if (entry is null) return DirectoryOutcome.Failed("Reset account", DirectoryErrorText.NoSuchObject, null, "that computer");
+        if (!LdapAttributes.Strings(entry, "objectClass").Contains("computer", StringComparer.OrdinalIgnoreCase))
+        {
+            return DirectoryOutcome.Refused("Reset account", "Only a computer account can be reset this way.");
+        }
+
+        // What ADUC's "Reset Account" does: the machine password becomes the computer name in lower case, which is
+        // the value a freshly joined machine expects. The existing secure channel stops working at once and comes
+        // back when the machine rejoins.
+        var name = LdapAttributes.String(entry, "name") ?? DistinguishedNames.LeafName(entry.DistinguishedName) ?? string.Empty;
+        var request = new ModifyRequest(entry.DistinguishedName);
+        var change = new DirectoryAttributeModification { Name = "unicodePwd", Operation = DirectoryAttributeOperation.Replace };
+        change.Add(LdapAttributes.EncodePassword(name.ToLowerInvariant()));
+        request.Modifications.Add(change);
+        return await SendAsync(request, $"Reset the account for {name}. It must rejoin the domain.", "that computer", ct).ConfigureAwait(false);
+    }
+
+    private static DirectoryAttributeModification ReplaceValue(string name, string value)
+    {
+        var m = new DirectoryAttributeModification { Name = name, Operation = DirectoryAttributeOperation.Replace };
+        m.Add(value);
+        return m;
     }
 
     public async Task<DirectoryOutcome> MoveAsync(Guid objectGuid, string targetOuDn, CancellationToken ct)
@@ -748,6 +850,17 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
         MemberOfDns = LdapAttributes.Strings(e, "memberOf"),
         PrimaryGroupId = LdapAttributes.Int(e, "primaryGroupID", 513),
         ConsistencyGuid = LdapAttributes.Bytes(e, "mS-DS-ConsistencyGuid"),
+        TelephoneNumber = LdapAttributes.String(e, "telephoneNumber"),
+        Mobile = LdapAttributes.String(e, "mobile"),
+        StreetAddress = LdapAttributes.String(e, "streetAddress"),
+        City = LdapAttributes.String(e, "l"),
+        State = LdapAttributes.String(e, "st"),
+        PostalCode = LdapAttributes.String(e, "postalCode"),
+        Country = LdapAttributes.String(e, "co"),
+        AccountExpires = LdapAttributes.FileTime(e, "accountExpires"),
+        // The raw value, not the parsed one: FileTime turns 0 into null, and null is also what "never set" looks
+        // like, so the flag has to be read before the parser gets to it.
+        MustChangePasswordAtNextLogon = LdapAttributes.String(e, "pwdLastSet") == "0",
     };
 
     private static OnPremGroup ReadGroup(SearchResultEntry e)
@@ -779,6 +892,7 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
         OperatingSystem = LdapAttributes.String(e, "operatingSystem"),
         OperatingSystemVersion = LdapAttributes.String(e, "operatingSystemVersion"),
         Description = LdapAttributes.String(e, "description"),
+        Location = LdapAttributes.String(e, "location"),
         UserAccountControl = LdapAttributes.Int(e, "userAccountControl"),
         WhenCreated = LdapAttributes.GeneralizedTime(e, "whenCreated"),
         LastLogon = LdapAttributes.FileTime(e, "lastLogonTimestamp"),

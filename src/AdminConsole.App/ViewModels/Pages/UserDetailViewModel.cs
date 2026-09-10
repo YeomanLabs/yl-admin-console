@@ -351,6 +351,12 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
                 : null;
 
             _writable = _onPrem is null ? null : await _directory.GetWritableAttributesAsync(_onPrem.ObjectGuid, ct);
+
+            if (_domainStatus.IsConnected && OrganisationalUnits.Count == 0)
+            {
+                var ous = await _directory.GetOrganisationalUnitsAsync(ct);
+                OrganisationalUnits = OuNode.Build(ous).SelectMany(r => r.Flatten()).ToList();
+            }
         }
         catch (OperationCanceledException)
         {
@@ -364,7 +370,85 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         }
 
         _onPremProbed = true;
+        MoveBlockedReason = _onPrem is not null ? null
+            : _domainStatus.IsConnected ? "This account's AD object was not found, so there is nothing to move."
+            : _domainStatus.Reason ?? "No domain controller is reachable from here.";
+        MoveToOuCommand.NotifyCanExecuteChanged();
         ApplyOnPremState();
+    }
+
+    // ---- moving the AD object (M12.10) -----------------------------------------------------------------------------
+
+    /// <summary>Every OU in the domain, loaded with the probe so the picker is populated before it is opened.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<OuNode> _organisationalUnits = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(MoveToOuCommand))]
+    private OuNode? _moveTarget;
+
+    /// <summary>Why the object cannot be moved from here, or null when it can. Never blank beside a dead control.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanShowMove))]
+    private string? _moveBlockedReason;
+
+    /// <summary>Hidden entirely for a cloud-only account: there is no AD object, so there is nothing to move.</summary>
+    public bool CanShowMove => User?.OnPremisesSyncEnabled == true;
+
+    private bool CanMoveToOu =>
+        _onPrem is not null &&
+        MoveTarget is not null &&
+        !string.Equals(MoveTarget.DistinguishedName, DistinguishedNames.Parent(_onPrem.DistinguishedName), StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Moves the AD object without leaving the page. The alternative was to send the admin to the Domain list to
+    /// find the same person again, which is the sort of round trip that makes people keep ADUC open beside this.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanMoveToOu))]
+    private async Task MoveToOuAsync()
+    {
+        if (_onPrem is not { } user || MoveTarget is not { } target) return;
+
+        var confirmed = await _dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = $"Move {UserLabel} to {target.Name}?",
+            Message = $"The AD object moves from {DistinguishedNames.Friendly(user.DistinguishedName)} to " +
+                      $"{DistinguishedNames.FriendlyPath(target.DistinguishedName)}.",
+            Bullets =
+            [
+                "The objectGUID does not change, so the link to this cloud account survives the move.",
+                "An OU usually carries policy, so what applies to this account may change.",
+            ],
+            ConfirmLabel = "Move",
+        });
+
+        if (!confirmed) return;
+
+        var outcome = await _directory.MoveAsync(user.ObjectGuid, target.DistinguishedName, CancellationToken.None);
+        if (!outcome.Success)
+        {
+            _toasts.Show(outcome.FriendlyError ?? outcome.Summary);
+            return;
+        }
+
+        _actions.Record(new ActionRecord
+        {
+            Actor = _tenant.SignedInUpn,
+            TenantId = _tenant.TenantId,
+            TargetType = ObjectType.User,
+            TargetId = user.ObjectGuid.ToString(),
+            TargetName = UserLabel,
+            Action = "onprem.user.move",
+            RequestSummary = $"{user.DistinguishedName} -> {target.DistinguishedName}",
+            Outcome = ActionOutcome.Success,
+            Message = outcome.Summary,
+        });
+
+        _toasts.Show(outcome.Summary);
+        MoveTarget = null;
+
+        // Re-probe so the sidebar's on-prem DN and the field states reflect where the object now lives.
+        await ProbeOnPremAsync(CancellationToken.None);
     }
 
     /// <summary>Puts every mastered field into the state the probe found, and captions the sheet to match.</summary>

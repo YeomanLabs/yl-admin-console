@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -7,22 +8,29 @@ using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Models;
 using AdminConsole.Core.OnPrem;
+using AdminConsole.Core.Writes;
 
 namespace AdminConsole.App.ViewModels.Pages;
 
 /// <summary>
-/// One Active Directory object, and the things that can be done to it (M12.6).
+/// One Active Directory object, and everything ADUC would let you do to it (M12.6, M12.11).
 /// </summary>
 /// <remarks>
 /// <para>
-/// One page for users, groups and computers rather than three, because in AD they are the same object with different
-/// attributes: all three live in an OU, all three can be moved and renamed and deleted, and two of the three have a
-/// <c>userAccountControl</c>. Splitting them would triple the code to say the same thing three times, and would make
-/// the differences — LAPS, group scope — harder to see rather than easier.
+/// For somebody who exists only in AD, this page is their <em>whole</em> page — there is no User 360 to fall back
+/// to. So it carries what ADUC's tabs carry: every attribute editable in place, the account options, expiry, the
+/// manager, group membership, and the password. A fact sheet with four buttons would send an admin back to ADUC for
+/// the fifth thing, and then they keep ADUC open beside this for good.
 /// </para>
 /// <para>
-/// Every action that a domain controller might refuse asks first where it can, and says what happened where it
-/// cannot. Nothing here is greyed without a sentence beside it.
+/// One page for users, groups and computers rather than three, because in AD they are the same object with different
+/// attributes: all three live in an OU, all three can be moved and renamed and deleted, and two of the three have a
+/// <c>userAccountControl</c>. The differences — LAPS, group scope, machine-account reset — are easier to see against
+/// a shared shape than as three separate pages that mostly repeat each other.
+/// </para>
+/// <para>
+/// Every action a domain controller might refuse asks first where it can, and says what happened where it cannot.
+/// Nothing here is greyed without a sentence beside it.
 /// </para>
 /// </remarks>
 public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewModel, IRefreshable
@@ -79,8 +87,31 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
 
     public bool IsPresent => MissingReason is null;
 
+    /// <summary>The read-only lines: sign-in name, timestamps, and the account flags in words.</summary>
     [ObservableProperty]
     private IReadOnlyList<FactRow> _facts = [];
+
+    /// <summary>
+    /// The editable attribute sheet (M12.11), in the same rows the User 360 identity tab uses. Each row's property
+    /// name is the LDAP attribute itself, because on this page there is no Graph name to translate from.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSections))]
+    private IReadOnlyList<EditableSection> _sections = [];
+
+    public bool HasSections => Sections.Count > 0;
+
+    public bool IsUser => Kind == OnPremKind.User;
+
+    public bool IsComputer => Kind == OnPremKind.Computer;
+
+    /// <summary>Users and computers have a membership list; a group's own memberships are on its facts instead.</summary>
+    public bool HasMembership => Kind != OnPremKind.Group;
+
+    /// <summary>The primary group is not in memberOf, and it is a different one for a machine than for a person.</summary>
+    public string NoMembershipText => Kind == OnPremKind.Computer
+        ? "Not a member of any group beyond Domain Computers."
+        : "Not a member of any group beyond Domain Users.";
 
     // ---- enable and disable --------------------------------------------------------------------------------------
 
@@ -126,6 +157,181 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
             ct => _directory.SetEnabledAsync(ObjectGuid, !turningOff, ct),
             turningOff ? "onprem.disable" : "onprem.enable");
     }
+
+    // ---- the account tab (M12.11) --------------------------------------------------------------------------------
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UnlockCommand))]
+    [NotifyPropertyChangedFor(nameof(LockoutText))]
+    private bool _isLockedOut;
+
+    public string LockoutText => IsLockedOut ? "Locked out — too many wrong passwords" : "Not locked out";
+
+    [RelayCommand(CanExecute = nameof(IsLockedOut))]
+    private Task UnlockAsync() => RunAsync(ct => _directory.UnlockAsync(ObjectGuid, ct), "onprem.unlock");
+
+    /// <summary>
+    /// Reset the password (ADUC's right-click action). Same dialog as the cloud reset: generate one that is shown
+    /// once after it succeeds, or type one. Nothing here reaches the log, a toast, or the cache.
+    /// </summary>
+    [RelayCommand]
+    private async Task ResetPasswordAsync()
+    {
+        var dialog = new PasswordResetDialogViewModel(Name)
+        {
+            Message = $"The current password for {Name} stops working straight away in Active Directory. This does not " +
+                      "touch any cloud account.",
+        };
+        if (!await _dialogs.ShowAsync(dialog)) return;
+
+        var wasGenerated = dialog.IsGenerated;
+        var forceChange = dialog.ForceChangeNextSignIn;
+        var password = dialog.Password;
+
+        var outcome = await _directory.SetPasswordAsync(ObjectGuid, password, forceChange, CancellationToken.None);
+        if (!outcome.Success)
+        {
+            _toasts.Show(outcome.FriendlyError ?? outcome.Summary);
+            Record("onprem.password.reset", outcome.Summary, outcome.FriendlyError, succeeded: false);
+            return;
+        }
+
+        Record("onprem.password.reset", $"Reset the AD password for {Name}",
+            forceChange ? "must change at next sign-in" : "no change required at next sign-in");
+
+        if (wasGenerated)
+        {
+            await _dialogs.ShowAsync(new PasswordRevealDialogViewModel(Name, password, forceChange)
+            {
+                Message = "This is the only time it is shown. Nothing here is written to the cache or the activity log.",
+            });
+        }
+
+        _toasts.Show(outcome.Summary);
+        await RefreshAsync(CancellationToken.None);
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PasswordExpiryLabel))]
+    private bool _passwordNeverExpires;
+
+    public string PasswordExpiryLabel => PasswordNeverExpires ? "Let the password expire" : "Set password to never expire";
+
+    [RelayCommand]
+    private Task TogglePasswordNeverExpiresAsync() =>
+        RunAsync(ct => _directory.SetAccountOptionsAsync(ObjectGuid, passwordNeverExpires: !PasswordNeverExpires, null, ct),
+            "onprem.account.options");
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MustChangeLabel))]
+    private bool _mustChangePassword;
+
+    public string MustChangeLabel => MustChangePassword ? "Clear the change-at-next-sign-in requirement" : "Require a password change at next sign-in";
+
+    [RelayCommand]
+    private Task ToggleMustChangeAsync() =>
+        RunAsync(ct => _directory.SetAccountOptionsAsync(ObjectGuid, null, mustChangePasswordAtNextLogon: !MustChangePassword, ct),
+            "onprem.account.options");
+
+    /// <summary>When the account stops working, in words, or "Never".</summary>
+    [ObservableProperty]
+    private string _accountExpiresText = "Never";
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ClearExpiryCommand))]
+    private bool _hasExpiry;
+
+    /// <summary>Typed as a date. Parsed as one; anything else disables the button rather than sending nonsense.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SetExpiryCommand))]
+    private string _newExpiryText = string.Empty;
+
+    private bool CanSetExpiry => TryParseExpiry(NewExpiryText, out _);
+
+    private static bool TryParseExpiry(string text, out DateTimeOffset when)
+    {
+        // The end of the given day, which is what ADUC's "End of" date picker means.
+        if (DateTime.TryParseExact(text.Trim(), "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.AssumeLocal, out var d) ||
+            DateTime.TryParse(text.Trim(), CultureInfo.CurrentCulture, DateTimeStyles.AssumeLocal, out d))
+        {
+            var endOfDay = d.Date.AddDays(1);
+            when = new DateTimeOffset(endOfDay, TimeZoneInfo.Local.GetUtcOffset(endOfDay));
+            return true;
+        }
+
+        when = default;
+        return false;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSetExpiry))]
+    private async Task SetExpiryAsync()
+    {
+        if (!TryParseExpiry(NewExpiryText, out var when)) return;
+        await RunAsync(ct => _directory.SetAccountExpiryAsync(ObjectGuid, when, ct), "onprem.account.expiry");
+        NewExpiryText = string.Empty;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasExpiry))]
+    private Task ClearExpiryAsync() =>
+        RunAsync(ct => _directory.SetAccountExpiryAsync(ObjectGuid, null, ct), "onprem.account.expiry");
+
+    // ---- manager (M12.11) ----------------------------------------------------------------------------------------
+
+    [ObservableProperty]
+    private string _managerText = "None";
+
+    /// <summary>Everyone in the domain, for the manager picker. Loaded once, on first use.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<OnPremUser> _people = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SetManagerCommand))]
+    private OnPremUser? _managerTarget;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ClearManagerCommand))]
+    private bool _hasManager;
+
+    private bool CanSetManager => ManagerTarget is not null && ManagerTarget.ObjectGuid != ObjectGuid;
+
+    [RelayCommand(CanExecute = nameof(CanSetManager))]
+    private async Task SetManagerAsync()
+    {
+        if (ManagerTarget is not { } target) return;
+        await RunAsync(ct => _directory.SetManagerAsync(ObjectGuid, target.ObjectGuid, ct), "onprem.manager");
+        ManagerTarget = null;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasManager))]
+    private Task ClearManagerAsync() =>
+        RunAsync(ct => _directory.SetManagerAsync(ObjectGuid, null, ct), "onprem.manager");
+
+    // ---- member of (M12.11) --------------------------------------------------------------------------------------
+
+    [ObservableProperty]
+    private IReadOnlyList<AdMembershipRow> _memberOf = [];
+
+    /// <summary>Every group in the domain, for the add picker. Loaded once, on first use.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<OnPremGroup> _groups = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddToGroupCommand))]
+    private OnPremGroup? _groupTarget;
+
+    private bool CanAddToGroup => GroupTarget is not null;
+
+    [RelayCommand(CanExecute = nameof(CanAddToGroup))]
+    private async Task AddToGroupAsync()
+    {
+        if (GroupTarget is not { } group) return;
+        await RunAsync(ct => _directory.AddToGroupAsync(group.ObjectGuid, ObjectGuid, ct), "onprem.group.member.add");
+        GroupTarget = null;
+    }
+
+    [RelayCommand]
+    private Task RemoveFromGroupAsync(AdMembershipRow row) =>
+        RunAsync(ct => _directory.RemoveFromGroupAsync(row.ObjectGuid, ObjectGuid, ct), "onprem.group.member.remove");
 
     // ---- move ----------------------------------------------------------------------------------------------------
 
@@ -181,9 +387,7 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         NewName = string.Empty;
     }
 
-    // ---- LAPS ----------------------------------------------------------------------------------------------------
-
-    public bool IsComputer => Kind == OnPremKind.Computer;
+    // ---- computers: LAPS and the machine account -----------------------------------------------------------------
 
     [ObservableProperty]
     private bool _isReadingLaps;
@@ -246,6 +450,28 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         return $"Stored by {source}. {expiry} Nothing here is written to the cache or the activity log.";
     }
 
+    /// <summary>
+    /// ADUC's "Reset Account". The consequence is the whole reason for the confirm: the machine's secure channel
+    /// stops working the moment this succeeds, and an admin who did not know that spends the afternoon on "the
+    /// trust relationship between this workstation and the primary domain failed".
+    /// </summary>
+    [RelayCommand]
+    private async Task ResetComputerAccountAsync()
+    {
+        var confirmed = await _dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = $"Reset the account for {Name}?",
+            Message = "The machine password goes back to its initial value. The machine will not be able to authenticate " +
+                      "to the domain until it is rejoined. This is the fix for a broken trust relationship, not something to " +
+                      "do to a machine that is working.",
+            ConfirmLabel = "Reset account",
+            Destructive = true,
+        });
+
+        if (!confirmed) return;
+        await RunAsync(ct => _directory.ResetComputerAccountAsync(ObjectGuid, ct), "onprem.computer.reset");
+    }
+
     // ---- delete --------------------------------------------------------------------------------------------------
 
     [RelayCommand]
@@ -271,6 +497,38 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         Report(outcome, "onprem.delete");
         if (outcome.Success) GoBack?.Invoke();
     }
+
+    // ---- the attribute sheet -------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Edit-on-blur save for one attribute. A null or empty value clears it, which is a delete rather than a write of
+    /// "" — the same trap Graph sprang with <c>department</c>, and the one AD springs for most attributes.
+    /// </summary>
+    private async Task<WriteOutcome> SaveAttributeAsync(string ldapName, object? value)
+    {
+        var text = value switch
+        {
+            string s when !string.IsNullOrWhiteSpace(s) => s.Trim(),
+            IReadOnlyList<string> { Count: > 0 } list => list[0].Trim(),
+            _ => null,
+        };
+
+        var outcome = await _directory.SetAttributesAsync(ObjectGuid, new Dictionary<string, string?> { [ldapName] = text }, CancellationToken.None);
+        if (!outcome.Success)
+        {
+            return new WriteOutcome { Success = false, Summary = outcome.Summary, FriendlyError = outcome.FriendlyError };
+        }
+
+        if (outcome.WasNoOp) return WriteOutcome.NoOp(outcome.Summary);
+
+        var summary = text is null ? $"Cleared {ldapName} on {Name}" : $"Set {ldapName} to {text} on {Name}";
+        Record("onprem.setAttribute", summary, $"{ldapName} on {DistinguishedName}");
+        _toasts.Show(summary);
+        return new WriteOutcome { Success = true, Summary = summary };
+    }
+
+    private EditableField Field(string label, string ldapName, string? value, bool mono = false, string? placeholder = null) =>
+        new(label, ldapName, value, SaveAttributeAsync, isMono: mono, placeholder: placeholder);
 
     // ---- running one write ---------------------------------------------------------------------------------------
 
@@ -330,6 +588,9 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         ObjectGuid = objectGuid;
         Kind = kind;
         OnPropertyChanged(nameof(IsComputer));
+        OnPropertyChanged(nameof(IsUser));
+        OnPropertyChanged(nameof(HasMembership));
+        OnPropertyChanged(nameof(NoMembershipText));
         OnPropertyChanged(nameof(HasAccountPanel));
         _ = RefreshAsync(CancellationToken.None);
     }
@@ -351,10 +612,10 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
                     await LoadGroupAsync(ct);
                     break;
                 case OnPremKind.Computer:
-                    LoadComputer(await _directory.GetComputerAsync(ObjectGuid, ct));
+                    await LoadComputerAsync(ct);
                     break;
                 default:
-                    LoadUser(await _directory.GetUserAsync(ObjectGuid, ct));
+                    await LoadUserAsync(ct);
                     break;
             }
         }
@@ -373,9 +634,45 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         }
     }
 
-    private void LoadUser(OnPremUser? user)
+    /// <summary>
+    /// The group list, for membership. Loaded once: it doubles as the DN-to-GUID map the remove button needs, since
+    /// <c>memberOf</c> holds distinguished names and the contract addresses groups by GUID. Capped at 500, which is
+    /// plenty for a lab and worth revisiting for a large domain — a row past the cap keeps its name but loses its
+    /// remove button, and says so.
+    /// </summary>
+    private async Task EnsureGroupsAsync(CancellationToken ct)
     {
+        if (Groups.Count > 0) return;
+        Groups = (await _directory.SearchGroupsAsync(string.Empty, 500, null, ct))
+            .OrderBy(g => g.Primary, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
+
+    private async Task EnsurePeopleAsync(CancellationToken ct)
+    {
+        if (People.Count > 0) return;
+        People = (await _directory.SearchUsersAsync(string.Empty, 500, null, ct))
+            .Where(u => u.ObjectGuid != ObjectGuid)
+            .OrderBy(u => u.Primary, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
+
+    private void LoadMembership(IReadOnlyList<string> memberOfDns)
+    {
+        var byDn = Groups.ToDictionary(g => g.DistinguishedName, g => g, StringComparer.OrdinalIgnoreCase);
+        MemberOf = memberOfDns
+            .Select(dn => byDn.TryGetValue(dn, out var g)
+                ? new AdMembershipRow(g.Primary, g.ObjectGuid, dn, g.ScopeText)
+                : new AdMembershipRow(DistinguishedNames.LeafName(dn) ?? dn, Guid.Empty, dn, "Beyond the first 500 groups loaded — remove it from the group's own page"))
+            .OrderBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    private async Task LoadUserAsync(CancellationToken ct)
+    {
+        var user = await _directory.GetUserAsync(ObjectGuid, ct);
         if (user is null) { NotFound("user"); return; }
+
+        await EnsureGroupsAsync(ct);
+        await EnsurePeopleAsync(ct);
 
         MissingReason = null;
         Name = user.Primary;
@@ -384,19 +681,88 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         Location = DistinguishedNames.Friendly(user.DistinguishedName);
         HasAccountState = true;
         IsEnabled = user.Enabled;
+        IsLockedOut = user.IsLockedOut;
+        PasswordNeverExpires = user.PasswordNeverExpires;
+        MustChangePassword = user.MustChangePasswordAtNextLogon;
+        HasExpiry = user.AccountExpires is not null;
+        AccountExpiresText = user.AccountExpires is { } when
+            ? (user.AccountHasExpired ? $"Expired {TimeText.Both(when)}" : $"Expires {TimeText.Both(when)}")
+            : "Never";
 
+        HasManager = user.ManagerDn is not null;
+        ManagerText = user.ManagerDn is null ? "None"
+            : People.FirstOrDefault(p => string.Equals(p.DistinguishedName, user.ManagerDn, StringComparison.OrdinalIgnoreCase))?.Primary
+              ?? DistinguishedNames.LeafName(user.ManagerDn) ?? user.ManagerDn;
+
+        LoadMembership(user.MemberOfDns);
+
+        // Rebuilding on every refresh would throw away half-typed text, so update in place once the rows exist.
+        if (Sections.Count > 0)
+        {
+            var values = UserValues(user);
+            foreach (var field in Sections.SelectMany(s => s.Fields))
+            {
+                if (!field.IsSaving && values.TryGetValue(field.PropertyName, out var v)) field.Reset(v);
+            }
+        }
+        else
+        {
+            Sections =
+            [
+                new EditableSection("Name",
+                [
+                    Field("Display name", "displayName", user.DisplayName),
+                    Field("First name", "givenName", user.GivenName),
+                    Field("Last name", "sn", user.Surname),
+                    Field("User principal name", "userPrincipalName", user.UserPrincipalName, mono: true),
+                    Field("Description", "description", user.Description),
+                ]),
+                new EditableSection("Job",
+                [
+                    Field("Job title", "title", user.JobTitle),
+                    Field("Department", "department", user.Department),
+                    Field("Company", "company", user.Company),
+                    Field("Office", "physicalDeliveryOfficeName", user.Office),
+                    Field("Employee ID", "employeeID", user.EmployeeId, mono: true),
+                ]),
+                new EditableSection("Contact",
+                [
+                    Field("Email", "mail", user.Mail, mono: true),
+                    Field("Telephone", "telephoneNumber", user.TelephoneNumber, mono: true),
+                    Field("Mobile", "mobile", user.Mobile, mono: true),
+                ]),
+                new EditableSection("Address",
+                [
+                    Field("Street", "streetAddress", user.StreetAddress),
+                    Field("City", "l", user.City),
+                    Field("State or county", "st", user.State),
+                    Field("Postal code", "postalCode", user.PostalCode),
+                    Field("Country", "co", user.Country, placeholder: "the name, e.g. United Kingdom"),
+                ]),
+            ];
+        }
+
+        var flags = string.Join(", ", AccountFlags.Describe(user.UserAccountControl));
         Facts =
         [
             new FactRow("Sign-in name", user.SamAccountName),
-            new FactRow("Job title", Or(user.JobTitle)),
-            new FactRow("Department", Or(user.Department)),
-            new FactRow("Member of", $"{user.MemberOfDns.Count} group{(user.MemberOfDns.Count == 1 ? string.Empty : "s")}"),
-            new FactRow("Account", string.Join(", ", AccountFlags.Describe(user.UserAccountControl))),
+            new FactRow("Account", flags.Length > 0 ? flags : "Normal"),
             new FactRow("Created", TimeText.Both(user.WhenCreated)),
-            new FactRow("Password last set", TimeText.Both(user.PasswordLastSet)),
+            new FactRow("Password last set", user.PasswordLastSet is null ? "Never" : TimeText.Both(user.PasswordLastSet)),
             new FactRow("Last logon", user.LastLogon is null ? "Never" : TimeText.Both(user.LastLogon)),
         ];
     }
+
+    private static Dictionary<string, string?> UserValues(OnPremUser u) => new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["displayName"] = u.DisplayName, ["givenName"] = u.GivenName, ["sn"] = u.Surname,
+        ["userPrincipalName"] = u.UserPrincipalName, ["description"] = u.Description,
+        ["title"] = u.JobTitle, ["department"] = u.Department, ["company"] = u.Company,
+        ["physicalDeliveryOfficeName"] = u.Office, ["employeeID"] = u.EmployeeId,
+        ["mail"] = u.Mail, ["telephoneNumber"] = u.TelephoneNumber, ["mobile"] = u.Mobile,
+        ["streetAddress"] = u.StreetAddress, ["l"] = u.City, ["st"] = u.State,
+        ["postalCode"] = u.PostalCode, ["co"] = u.Country,
+    };
 
     private async Task LoadGroupAsync(CancellationToken ct)
     {
@@ -428,17 +794,46 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         ];
     }
 
-    private void LoadComputer(OnPremComputer? computer)
+    private async Task LoadComputerAsync(CancellationToken ct)
     {
+        var computer = await _directory.GetComputerAsync(ObjectGuid, ct);
         if (computer is null) { NotFound("computer"); return; }
+
+        await EnsureGroupsAsync(ct);
 
         MissingReason = null;
         Name = computer.Name;
-        Subtitle = Or(computer.OperatingSystem);
+        Subtitle = computer.OperatingSystem ?? computer.DnsHostName ?? computer.SamAccountName;
         DistinguishedName = computer.DistinguishedName;
         Location = DistinguishedNames.Friendly(computer.DistinguishedName);
         HasAccountState = true;
         IsEnabled = computer.Enabled;
+
+        // A computer's memberOf is not on the projection; the group list already holds every member DN.
+        LoadMembership(Groups
+            .Where(g => g.MemberDns.Contains(computer.DistinguishedName, StringComparer.OrdinalIgnoreCase))
+            .Select(g => g.DistinguishedName)
+            .ToList());
+
+        if (Sections.Count > 0)
+        {
+            foreach (var field in Sections.SelectMany(s => s.Fields))
+            {
+                if (field.IsSaving) continue;
+                field.Reset(field.PropertyName == "description" ? computer.Description : computer.Location);
+            }
+        }
+        else
+        {
+            Sections =
+            [
+                new EditableSection("Details",
+                [
+                    Field("Description", "description", computer.Description),
+                    Field("Location", "location", computer.Location, placeholder: "e.g. Leeds office, floor 2"),
+                ]),
+            ];
+        }
 
         Facts =
         [
@@ -511,3 +906,10 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
 
 /// <summary>One label-and-value line on the AD object page.</summary>
 public sealed record FactRow(string Label, string Value);
+
+/// <summary>One row of an AD object's group membership, carrying the GUID the remove button needs (M12.11).</summary>
+public sealed record AdMembershipRow(string Name, Guid ObjectGuid, string DistinguishedName, string Detail)
+{
+    /// <summary>False when the group was beyond the list that was loaded, so there is no GUID to remove by.</summary>
+    public bool CanRemove => ObjectGuid != Guid.Empty;
+}

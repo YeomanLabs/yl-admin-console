@@ -347,3 +347,30 @@ different language, which is what the gate is actually for: nothing checks its o
 The checker begins by looking up an object that cannot exist and asserting it is absent. That is not ceremony: the
 first version bound with `DirectoryEntry`, which does not reliably fail for a missing distinguished name, and it
 reported a deleted object as present. A checker that cannot tell absent from present is worse than no checker.
+
+## M12.9 — a Domain row resolves to the cloud object first, and falls back only when there is none
+
+A synced user has a User 360 with licences, groups, sign-in activity and devices on it. Opening a bare attribute
+sheet instead, purely because the admin arrived from the Domain list rather than the Users list, makes one person
+look like two objects depending on the door used. So the row resolves through the join M12.4 proved
+(`onPremisesImmutableId` for users; for computers the Entra `deviceId`, which for a hybrid join is the AD
+`objectGUID`) and opens the AD page only when the cloud genuinely has nothing. The user lookup scans synced rows and
+compares anchors in C# rather than adding a column and a migration: it runs once per click, not on the search path.
+
+## M12.11 — the AD-only page is a whole page, not a stub
+
+For someone who exists only in AD there is no User 360 to fall back to, so a fact sheet with four buttons sends the
+admin back to ADUC for the fifth thing and they keep ADUC open beside the console for good. The page now carries what
+ADUC's tabs carry. Two choices worth recording:
+
+- The editable rows are the User 360 identity rows reused, with the LDAP attribute itself as each row's property
+  name. On this page there is no Graph name to translate from, and inventing a second naming layer would have
+  created a second place for the `country`/`co` class of bug to live.
+- Membership uses one group list per page, loaded once and capped at 500, because `memberOf` holds distinguished
+  names and the contract addresses groups by GUID. The alternative — a DN lookup per row — would be dozens of LDAP
+  round trips to draw one list. A row past the cap keeps its name, loses its remove button, and says why, which is
+  the honest version of a limit rather than a silent one. Worth revisiting for a large domain.
+
+`ResetComputerAccountAsync` writes `unicodePwd` as the lower-case machine name, which is exactly what ADUC's "Reset
+Account" does. It is behind a confirm that names the consequence — the machine's secure channel dies until it
+rejoins — because that is the part nobody knows the first time.

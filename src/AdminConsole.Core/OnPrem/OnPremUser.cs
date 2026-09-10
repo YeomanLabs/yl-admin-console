@@ -1,4 +1,4 @@
-﻿namespace AdminConsole.Core.OnPrem;
+namespace AdminConsole.Core.OnPrem;
 
 /// <summary>
 /// An Active Directory user, projected into the console's vocabulary rather than LDAP's (M12.1).
@@ -28,6 +28,22 @@ public sealed record OnPremUser
     public string? Office { get; init; }
     public string? EmployeeId { get; init; }
     public string? Description { get; init; }
+
+    // The rest of what ADUC shows on the General, Address and Telephones tabs (M12.11). Present so the AD-only page
+    // can be an admin's whole page for somebody who exists only in AD, rather than a fact sheet with four buttons.
+    public string? TelephoneNumber { get; init; }
+    public string? Mobile { get; init; }
+    public string? StreetAddress { get; init; }
+    public string? City { get; init; }
+    public string? State { get; init; }
+    public string? PostalCode { get; init; }
+    public string? Country { get; init; }
+
+    /// <summary>When the account stops working, or null for never. AD has two encodings of "never"; both read as null.</summary>
+    public DateTimeOffset? AccountExpires { get; init; }
+
+    /// <summary>True when <c>pwdLastSet</c> is 0, which is how AD says the next sign-in must change it.</summary>
+    public bool MustChangePasswordAtNextLogon { get; init; }
 
     /// <summary>Distinguished name of the manager, or null. Resolving it to a name costs another read.</summary>
     public string? ManagerDn { get; init; }
@@ -59,6 +75,8 @@ public sealed record OnPremUser
     public bool IsLockedOut => LockedOutUntil is not null && LockedOutUntil > DateTimeOffset.UtcNow;
 
     public bool PasswordNeverExpires => AccountFlags.PasswordNeverExpires(UserAccountControl);
+
+    public bool AccountHasExpired => AccountExpires is { } when && when <= DateTimeOffset.UtcNow;
 
     public string Primary => string.IsNullOrWhiteSpace(DisplayName) ? SamAccountName : DisplayName;
 

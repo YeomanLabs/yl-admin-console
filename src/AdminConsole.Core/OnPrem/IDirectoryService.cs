@@ -87,6 +87,24 @@ public interface IDirectoryService
     /// <summary>Sets a password. Needs an encrypted connection; the failure when there is not one says so.</summary>
     Task<DirectoryOutcome> SetPasswordAsync(Guid objectGuid, string password, bool mustChangeAtNextLogon, CancellationToken ct);
 
+    /// <summary>
+    /// The account options on ADUC's Account tab (M12.11). Null leaves an option as it is. Both are flags in the
+    /// same <c>userAccountControl</c> field and are masked in rather than assigned.
+    /// </summary>
+    Task<DirectoryOutcome> SetAccountOptionsAsync(Guid objectGuid, bool? passwordNeverExpires, bool? mustChangePasswordAtNextLogon, CancellationToken ct);
+
+    /// <summary>When the account stops working. Null means never.</summary>
+    Task<DirectoryOutcome> SetAccountExpiryAsync(Guid objectGuid, DateTimeOffset? expires, CancellationToken ct);
+
+    /// <summary>Sets or clears the manager. Addressed by GUID and resolved to a DN at write time.</summary>
+    Task<DirectoryOutcome> SetManagerAsync(Guid userGuid, Guid? managerGuid, CancellationToken ct);
+
+    /// <summary>
+    /// ADUC's "Reset Account" on a computer: puts the machine password back to the well-known initial value so the
+    /// machine can rejoin without being deleted and recreated. Its existing secure channel stops working until it does.
+    /// </summary>
+    Task<DirectoryOutcome> ResetComputerAccountAsync(Guid computerGuid, CancellationToken ct);
+
     /// <summary>Moves an object to another OU. The GUID does not change, so anything holding one stays valid.</summary>
     Task<DirectoryOutcome> MoveAsync(Guid objectGuid, string targetOuDn, CancellationToken ct);
 

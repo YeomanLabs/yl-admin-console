@@ -619,6 +619,20 @@
                                     Command="{Binding CopyCommand}" CommandParameter="{Binding OnPremDn}" AutomationProperties.Name="Copy distinguished name" Margin="-4,0,0,0">
                                 <TextBlock Text="{Binding OnPremDn}" TextWrapping="Wrap" MaxWidth="220" />
                             </Button>
+
+                            <!-- M12.10: move the AD object from the page you are already on. Sitting under the DN
+                                 because that is the fact it changes, and where an admin looks to check it. -->
+                            <TextBlock Style="{StaticResource FactLabel}" Text="Move to OU" Margin="0,10,0,0" />
+                            <ComboBox ItemsSource="{Binding OrganisationalUnits}" SelectedItem="{Binding MoveTarget}"
+                                      DisplayMemberPath="DistinguishedName" MaxWidth="220" HorizontalAlignment="Left"
+                                      AutomationProperties.Name="Organisational unit to move this account to"
+                                      Visibility="{Binding MoveBlockedReason, Converter={StaticResource NullToCollapsed}, ConverterParameter=invert}" />
+                            <ui:Button Content="Move" Margin="0,6,0,0" Command="{Binding MoveToOuCommand}"
+                                       AutomationProperties.Name="Move this account to the chosen organisational unit"
+                                       Visibility="{Binding MoveBlockedReason, Converter={StaticResource NullToCollapsed}, ConverterParameter=invert}" />
+                            <!-- UX §6: when it cannot be offered, say why rather than showing a dead control. -->
+                            <TextBlock Style="{StaticResource Caption}" MaxWidth="220" Text="{Binding MoveBlockedReason}"
+                                       Visibility="{Binding MoveBlockedReason, Converter={StaticResource NullToCollapsed}}" />
                         </StackPanel>
 
                         <TextBlock Style="{StaticResource FactLabel}" Text="Manager" />

@@ -25,6 +25,44 @@ public sealed partial class CacheDb
 
     public EntraDevice? GetEntraDevice(string id) => Parse(GetRaw(CacheEntity.Devices, id), EntraDevice.FromJson);
 
+    /// <summary>
+    /// The cloud account behind an on-prem one (M12.9), found by the source anchor Entra Connect writes.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Only synced accounts are considered, which is both correct and what keeps this cheap: a cloud-only user has no
+    /// anchor to match and a tenant's synced set is usually a fraction of the whole. The comparison is ordinal — the
+    /// anchor is base64, so case matters, and a case-insensitive match would happily pair two different objects whose
+    /// anchors differ only in case.
+    /// </para>
+    /// <para>
+    /// Deliberately not a <c>json_extract</c> query. The anchor has no column of its own, so an indexed lookup would
+    /// need a migration, and this runs once when somebody clicks a row rather than on the search path.
+    /// </para>
+    /// </remarks>
+    public DirectoryUser? FindUserByImmutableId(string immutableId)
+    {
+        if (string.IsNullOrEmpty(immutableId)) return null;
+
+        using var conn = OpenConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT raw FROM users WHERE synced = 1;";
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            var raw = r.GetString(0);
+            using var doc = JsonDocument.Parse(raw);
+            if (!doc.RootElement.TryGetProperty("onPremisesImmutableId", out var anchor)) continue;
+            if (anchor.ValueKind != JsonValueKind.String) continue;
+            if (string.Equals(anchor.GetString(), immutableId, StringComparison.Ordinal))
+            {
+                return DirectoryUser.FromJson(doc.RootElement);
+            }
+        }
+
+        return null;
+    }
+
     /// <summary>Entra device object by <c>deviceId</c> (== Intune <c>azureADDeviceId</c>).</summary>
     public EntraDevice? GetEntraDeviceByDeviceId(string deviceId)
     {

@@ -257,6 +257,78 @@ public sealed class FakeDirectoryService : IDirectoryService
         return Task.FromResult(DirectoryOutcome.Failed("Set enabled", DirectoryErrorText.NoSuchObject, null, "that object"));
     }
 
+    public Task<DirectoryOutcome> SetAccountOptionsAsync(Guid objectGuid, bool? passwordNeverExpires, bool? mustChangePasswordAtNextLogon, CancellationToken ct)
+    {
+        if (Get<OnPremUser>(objectGuid) is not { } user)
+        {
+            return Task.FromResult(DirectoryOutcome.Failed("Set account options", DirectoryErrorText.NoSuchObject, null, "that user"));
+        }
+
+        var updated = user;
+        var changes = new List<string>();
+        if (passwordNeverExpires is { } never && never != user.PasswordNeverExpires)
+        {
+            updated = updated with { UserAccountControl = AccountFlags.SetPasswordNeverExpires(updated.UserAccountControl, never) };
+            changes.Add(never ? "password never expires" : "password expires normally");
+        }
+
+        if (mustChangePasswordAtNextLogon is { } must && must != user.MustChangePasswordAtNextLogon)
+        {
+            updated = updated with { MustChangePasswordAtNextLogon = must, PasswordLastSet = must ? null : DateTimeOffset.UtcNow };
+            changes.Add(must ? "must change password at next sign-in" : "no password change required");
+        }
+
+        if (changes.Count == 0) return Task.FromResult(DirectoryOutcome.NoOp($"{user.Primary} already has those options"));
+        Replace(objectGuid, user.DistinguishedName, updated);
+        return Task.FromResult(DirectoryOutcome.Ok($"{user.Primary}: {string.Join(", ", changes)}"));
+    }
+
+    public Task<DirectoryOutcome> SetAccountExpiryAsync(Guid objectGuid, DateTimeOffset? expires, CancellationToken ct)
+    {
+        if (Get<OnPremUser>(objectGuid) is not { } user)
+        {
+            return Task.FromResult(DirectoryOutcome.Failed("Set account expiry", DirectoryErrorText.NoSuchObject, null, "that user"));
+        }
+
+        Replace(objectGuid, user.DistinguishedName, user with { AccountExpires = expires });
+        return Task.FromResult(DirectoryOutcome.Ok(expires is { } w ? $"{user.Primary} expires {w:yyyy-MM-dd}" : $"{user.Primary} never expires"));
+    }
+
+    public Task<DirectoryOutcome> SetManagerAsync(Guid userGuid, Guid? managerGuid, CancellationToken ct)
+    {
+        if (Get<OnPremUser>(userGuid) is not { } user)
+        {
+            return Task.FromResult(DirectoryOutcome.Failed("Set manager", DirectoryErrorText.NoSuchObject, null, "that user"));
+        }
+
+        if (managerGuid is null)
+        {
+            Replace(userGuid, user.DistinguishedName, user with { ManagerDn = null });
+            return Task.FromResult(DirectoryOutcome.Ok($"Cleared the manager of {user.Primary}"));
+        }
+
+        if (managerGuid == userGuid) return Task.FromResult(DirectoryOutcome.Refused("Set manager", $"{user.Primary} cannot be their own manager."));
+        if (Get<OnPremUser>(managerGuid.Value) is not { } manager)
+        {
+            return Task.FromResult(DirectoryOutcome.Failed("Set manager", DirectoryErrorText.NoSuchObject, null, "that manager"));
+        }
+
+        Replace(userGuid, user.DistinguishedName, user with { ManagerDn = manager.DistinguishedName });
+        return Task.FromResult(DirectoryOutcome.Ok($"{manager.Primary} is now the manager of {user.Primary}"));
+    }
+
+    public Task<DirectoryOutcome> ResetComputerAccountAsync(Guid computerGuid, CancellationToken ct)
+    {
+        if (Get<OnPremComputer>(computerGuid) is { } computer)
+        {
+            return Task.FromResult(DirectoryOutcome.Ok($"Reset the account for {computer.Name}. It must rejoin the domain."));
+        }
+
+        return Task.FromResult(_objects.ContainsKey(computerGuid)
+            ? DirectoryOutcome.Refused("Reset account", "Only a computer account can be reset this way.")
+            : DirectoryOutcome.Failed("Reset account", DirectoryErrorText.NoSuchObject, null, "that computer"));
+    }
+
     public Task<DirectoryOutcome> UnlockAsync(Guid objectGuid, CancellationToken ct)
     {
         if (Get<OnPremUser>(objectGuid) is not { } user)

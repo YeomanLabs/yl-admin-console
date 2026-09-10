@@ -428,8 +428,66 @@ public sealed partial class ShellViewModel : ObservableObject
         OpenPage(CreateObjectPage(type, id, new SearchHit { ObjectType = type, Id = id, Primary = title, Score = 0 }));
     }
 
-    /// <summary>Opens one AD object (M12.6) in the current tab, the way a list row opens a cloud object.</summary>
+    /// <summary>
+    /// Opens what a Domain row points at (M12.9): the object's real page where the cloud knows about it, and the
+    /// AD-only page where it does not.
+    /// </summary>
+    /// <remarks>
+    /// A synced user has a User 360 with licences, groups, sign-in activity and devices on it; sending an admin to a
+    /// bare attribute sheet instead, purely because they arrived from the Domain list rather than the Users list,
+    /// makes the same person look like two different objects depending on the door used. So the row resolves to the
+    /// cloud object first and only falls back when there genuinely is nothing else to show.
+    ///
+    /// The joins are the ones M12.4 proved: <c>onPremisesImmutableId</c> for a user, and for a computer the Entra
+    /// <c>deviceId</c>, which for a hybrid join is the AD <c>objectGUID</c> itself.
+    /// </remarks>
     private void OpenDirectoryObject(Guid objectGuid, OnPremKind kind)
+    {
+        _ = OpenDirectoryObjectAsync(objectGuid, kind);
+    }
+
+    private async Task OpenDirectoryObjectAsync(Guid objectGuid, OnPremKind kind)
+    {
+        try
+        {
+            var directory = _services.GetRequiredService<IDirectoryService>();
+            var cache = _services.GetRequiredService<CacheDb>();
+
+            if (kind == OnPremKind.User &&
+                await directory.GetUserAsync(objectGuid, CancellationToken.None) is { } adUser)
+            {
+                var anchor = Convert.ToBase64String(adUser.ObjectGuid.ToByteArray());
+                if (cache.FindUserByImmutableId(anchor) is { } cloudUser)
+                {
+                    OpenObjectFromPage(ObjectType.User, cloudUser.Id, cloudUser.DisplayName ?? cloudUser.UserPrincipalName);
+                    return;
+                }
+            }
+            else if (kind == OnPremKind.Computer &&
+                     await directory.GetComputerAsync(objectGuid, CancellationToken.None) is { } adComputer)
+            {
+                // A hybrid-joined machine's Entra deviceId is its AD objectGUID, so this is a direct lookup rather
+                // than a name match - which would pair the wrong machine the first time two of them shared a name.
+                if (cache.GetEntraDeviceByDeviceId(adComputer.ObjectGuid.ToString()) is { } device)
+                {
+                    OpenObjectFromPage(ObjectType.Device, device.Id, device.DisplayName ?? adComputer.Name);
+                    return;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Not being able to reach the directory is not a reason to open nothing: the AD page states that case
+            // for itself.
+            _services.GetRequiredService<ILogger<ShellViewModel>>()
+                .LogWarning(ex, "Could not resolve the cloud object behind {Guid}", objectGuid);
+        }
+
+        OpenAdObjectPage(objectGuid, kind);
+    }
+
+    /// <summary>The AD-only view, for an object the cloud has never heard of.</summary>
+    private void OpenAdObjectPage(Guid objectGuid, OnPremKind kind)
     {
         var page = _services.GetRequiredService<DomainObjectViewModel>();
 
