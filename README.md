@@ -56,9 +56,9 @@ scopes only, and asks for write permission the first time you change something r
 
 ```powershell
 dotnet restore
-dotnet build YeomanLabs.AdminConsole.sln -c Debug
-dotnet test tests/YeomanLabs.AdminConsole.Core.Tests
-dotnet run --project src/YeomanLabs.AdminConsole.App
+dotnet build AdminConsole.sln -c Debug
+dotnet test tests/AdminConsole.Core.Tests
+dotnet run --project src/AdminConsole.App
 ```
 
 The Core project is plain .NET and testable anywhere. The App project is WPF and needs Windows.
@@ -124,10 +124,10 @@ Everything is under `%LOCALAPPDATA%\YeomanLabs\AdminConsole`:
 ## Repository
 
 ```
-src/YeomanLabs.AdminConsole.Core/    no WPF, fully testable — Auth, Graph, Cache, Sync, Search,
+src/AdminConsole.Core/    no WPF, fully testable — Auth, Graph, Cache, Sync, Search,
                                      Users, Groups, Devices, Licensing, Offboarding, Templates
-src/YeomanLabs.AdminConsole.App/     the WPF shell, view-models and views
-tests/YeomanLabs.AdminConsole.Core.Tests/
+src/AdminConsole.App/     the WPF shell, view-models and views
+tests/AdminConsole.Core.Tests/
 docs/                                the specification this was built from
 ```
 

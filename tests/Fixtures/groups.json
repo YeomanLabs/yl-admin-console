@@ -4,7 +4,7 @@
     {
       "id": "22541b24-c217-4f5f-b3eb-51637e745207",
       "displayName": "Contact Form Senders",
-      "description": "Scope for the yeomanlabs.co contact form access policy. Contains only info@yeomanlabs.co.",
+      "description": "Scope for the contoso.com contact form access policy. Contains only info@contoso.com.",
       "mail": "group1@contoso.com",
       "mailEnabled": true,
       "mailNickname": "contact-form-senders",

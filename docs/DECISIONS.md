@@ -2,7 +2,7 @@
 
 Append-only. Format: `YYYY-MM-DD · <area> · <decision> · <why> · <alternatives rejected>`
 
-- 2026-09-08 · naming · Working name "YeomanLabs Admin Console", namespace `YeomanLabs.AdminConsole` · placeholder until product name chosen · —
+- 2026-09-08 · naming · Working name "YeomanLabs Admin Console", namespace `AdminConsole` · placeholder until product name chosen · —
 - 2026-09-08 · Graph access · Raw HttpClient, no Microsoft.Graph SDK · control over batching/delta/throttling, smaller payloads, matches existing Invoke-MgGraphRequest habits · Graph SDK v5 (heavy, generated types fight `$select`)
 - 2026-09-08 · auth · Own multi-tenant public-client app registration with incremental consent · product must be consentable by customers and pass security review; granular scopes over Directory.* · reusing Microsoft Graph CLI first-party app ID (fine for personal use, not for a product)
 - 2026-09-08 · UI framework · WPF + WPF-UI 3.x · existing WPF experience, mature tooling; WinUI 3 rejected for tooling friction and unpackaged-app pain
@@ -187,3 +187,20 @@ mean either the script fetching a list from something it cannot reach, or a buil
 that parses the script and compares is duller and catches the same mistake — and the mistake it catches is expensive:
 drift shows up as a consent failure on a client's first write, in their tenant, long after anyone would connect it to
 the edit that caused it.
+
+## M11.1 — A unit test must not be able to reach a real installation
+
+The migration that carries a pre-rename install's data to the new folder was first written as one method,
+`AppPaths.MigrateLegacyRoot()`, reading two static paths under `%LOCALAPPDATA%`. The test for it called that method.
+
+Running the suite therefore moved the developer's own live installation — cache, saved templates, action log and MSAL
+token cache — and by the end of the run the data was gone. The test failed loudly, which is the only good thing about
+it; a passing version would have destroyed the same data silently on every machine that ever ran the suite, including
+a client's.
+
+The move is now `Migrate(from, to)`, an internal method taking explicit paths, with `MigrateLegacyRoot()` a one-line
+wrapper the app calls. Every test works inside a temp directory, and they cover more than the original did: that
+everything comes across, that an existing destination is never overwritten, and that a second run is a no-op.
+
+The general rule this earns: a test may not call a method whose behaviour depends on an ambient machine path. If the
+only way to test something is to run it for real, the paths are the wrong shape — pass them in.

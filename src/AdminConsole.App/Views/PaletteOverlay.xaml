@@ -1,0 +1,154 @@
+﻿<UserControl x:Class="AdminConsole.App.Views.PaletteOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+             xmlns:b="clr-namespace:AdminConsole.App.Behaviors"
+             xmlns:pal="clr-namespace:AdminConsole.App.ViewModels.Palette"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=pal:PaletteViewModel}">
+    <!-- UX §3: overlay centred at 20% from the top, 720 px wide. Backdrop click closes; Esc closes. -->
+    <UserControl.Resources>
+        <Style x:Key="PaletteRowButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <!-- Without this a result row inherits the button's dimmed foreground and the name comes out darker than
+                 the sign-in name beside it — the one word you are actually reading, hardest to read. -->
+            <Setter Property="Foreground" Value="{DynamicResource YlTextPrimary}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+            <Setter Property="Focusable" Value="False" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="4" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            </DataTrigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ControlFillColorTertiaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="Badge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Backdrop -->
+        <Border Background="#66000000">
+            <Border.InputBindings>
+                <MouseBinding MouseAction="LeftClick" Command="{Binding CloseCommand}" />
+            </Border.InputBindings>
+        </Border>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="0.2*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="0.8*" />
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="1" Width="720" HorizontalAlignment="Center" CornerRadius="8" Padding="0"
+                    Background="{DynamicResource ApplicationBackgroundBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.5" />
+                </Border.Effect>
+                <StackPanel>
+                    <ui:TextBox x:Name="SearchBox" Margin="12,12,12,8" FontSize="16" ClearButtonEnabled="False"
+                                Icon="{ui:SymbolIcon Search24}"
+                                PlaceholderText="{Binding Placeholder}"
+                                Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}"
+                                b:FocusBehavior.FocusWhen="{Binding IsOpen}"
+                                AutomationProperties.Name="Command palette search">
+                        <ui:TextBox.InputBindings>
+                            <KeyBinding Key="Down" Command="{Binding MoveDownCommand}" />
+                            <KeyBinding Key="Up" Command="{Binding MoveUpCommand}" />
+                            <KeyBinding Key="Return" Command="{Binding OpenSelectedCommand}" />
+                            <KeyBinding Modifiers="Ctrl" Key="Return" Command="{Binding OpenSelectedInNewTabCommand}" />
+                            <KeyBinding Key="Escape" Command="{Binding CloseCommand}" />
+                        </ui:TextBox.InputBindings>
+                    </ui:TextBox>
+
+                    <ui:InfoBar Severity="Informational" IsClosable="False" Margin="12,0,12,8"
+                                IsOpen="{Binding HasPartialWarning, Mode=OneWay}" Message="{Binding PartialIndexText}" />
+
+                    <ScrollViewer MaxHeight="440" VerticalScrollBarVisibility="Auto" Margin="8,0,8,0"
+                                  Visibility="{Binding HasResults, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl ItemsSource="{Binding Groups}" AutomationProperties.Name="Search results">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type pal:PaletteGroup}">
+                                    <StackPanel Margin="0,0,0,6">
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" Margin="10,6,0,2" />
+                                        <ItemsControl ItemsSource="{Binding Rows}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type pal:PaletteRow}">
+                                                    <Button Style="{StaticResource PaletteRowButton}"
+                                                            Command="{Binding DataContext.ChooseRowCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                            CommandParameter="{Binding}" AutomationProperties.Name="{Binding Primary}">
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="28" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <ui:SymbolIcon Symbol="{Binding Symbol}" FontSize="16" Opacity="0.8" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding Primary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320" />
+                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding Secondary}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                                       FontFamily="{StaticResource YlMono}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                            <ItemsControl Grid.Column="3" ItemsSource="{Binding Badges}" VerticalAlignment="Center">
+                                                                <ItemsControl.ItemsPanel>
+                                                                    <ItemsPanelTemplate>
+                                                                        <StackPanel Orientation="Horizontal" />
+                                                                    </ItemsPanelTemplate>
+                                                                </ItemsControl.ItemsPanel>
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate>
+                                                                        <Border Style="{StaticResource Badge}">
+                                                                            <TextBlock Text="{Binding}" FontSize="11" />
+                                                                        </Border>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+
+                    <DockPanel Margin="12,6,12,10">
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" DockPanel.Dock="Right" Text="↑↓ move · Enter open · Ctrl+Enter new tab · Esc close" FontSize="11" VerticalAlignment="Center" />
+                        <!-- The rows are not focusable by design, so this is what a screen reader reads as the -->
+                        <!-- selection moves. AutomationProperties.LiveSetting makes it announce on change.        -->
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding FooterText}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                                   AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding FooterText}" />
+                    </DockPanel>
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

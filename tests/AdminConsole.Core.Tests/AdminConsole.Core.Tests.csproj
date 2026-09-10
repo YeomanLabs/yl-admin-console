@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>AdminConsole.Core.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="FluentAssertions" Version="7.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\AdminConsole.Core\AdminConsole.Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Scrubbed Graph JSON captured from the dev tenant (docs/10 tip). Copied beside the test binaries. -->
+    <None Include="..\Fixtures\**\*.json" LinkBase="Fixtures" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

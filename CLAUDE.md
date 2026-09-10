@@ -2,7 +2,7 @@
 
 You are building a Windows desktop admin console that unifies Entra ID, Intune, (later) on-prem AD, and (later) Exchange Online into one fast, search-first UI. Read `docs/00-README.md` first, then the doc it points you to for the current task.
 
-**"Admin Console" is a working name.** Do not invent branding, taglines, or a logo. Use `YeomanLabs.AdminConsole` as the namespace/assembly name until told otherwise.
+**"Admin Console" is a working name.** Do not invent branding, taglines, or a logo. Use `AdminConsole` as the namespace/assembly name until told otherwise.
 
 ## Non-negotiables
 
@@ -20,15 +20,15 @@ You are building a Windows desktop admin console that unifies Entra ID, Intune, 
 - `Microsoft.Identity.Client` + `.Broker` + `.Extensions.Msal` for auth
 - `Microsoft.Data.Sqlite` (bundled e_sqlite3 has FTS5) for the cache
 - `System.Text.Json` for all serialization
-- Tests: xUnit + FluentAssertions in `tests/YeomanLabs.AdminConsole.Core.Tests` (Core only; the WPF project is not unit-tested)
+- Tests: xUnit + FluentAssertions in `tests/AdminConsole.Core.Tests` (Core only; the WPF project is not unit-tested)
 
 ## Repository layout
 
 ```
-src/YeomanLabs.AdminConsole.Core/    # no WPF references, fully testable
+src/AdminConsole.Core/    # no WPF references, fully testable
   Auth/  Graph/  Cache/  Models/  Sync/  Search/  Templates/  Offboarding/  Licensing/
-src/YeomanLabs.AdminConsole.App/     # WPF shell, ViewModels, Views
-tests/YeomanLabs.AdminConsole.Core.Tests/
+src/AdminConsole.App/     # WPF shell, ViewModels, Views
+tests/AdminConsole.Core.Tests/
 docs/                                 # the spec — the source of truth
 ```
 
@@ -38,10 +38,10 @@ Core never references App. App never calls Graph directly — always through a C
 
 ```powershell
 dotnet restore
-dotnet build src/YeomanLabs.AdminConsole.Core -c Debug
-dotnet test tests/YeomanLabs.AdminConsole.Core.Tests
-dotnet build src/YeomanLabs.AdminConsole.App -c Debug   # Windows only
-dotnet run --project src/YeomanLabs.AdminConsole.App
+dotnet build src/AdminConsole.Core -c Debug
+dotnet test tests/AdminConsole.Core.Tests
+dotnet build src/AdminConsole.App -c Debug   # Windows only
+dotnet run --project src/AdminConsole.App
 ```
 
 Before declaring any task done: `dotnet build` the whole solution with **zero warnings** (warnings are errors in CI later), run tests, and if the task touched UI, launch the app and exercise the feature against the dev tenant.

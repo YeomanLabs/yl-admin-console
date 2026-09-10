@@ -1,0 +1,635 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:vm="clr-namespace:AdminConsole.App.ViewModels"
+                    xmlns:b="clr-namespace:AdminConsole.App.Behaviors"
+                    xmlns:pages="clr-namespace:AdminConsole.App.ViewModels.Pages"
+                    xmlns:models="clr-namespace:AdminConsole.Core.Models;assembly=AdminConsole.Core"
+                    xmlns:auth="clr-namespace:AdminConsole.Core.Auth;assembly=AdminConsole.Core">
+    <!-- User 360 (UX §4). Merged after Theme.xaml and PageTemplates.xaml (uses SkeletonBlock from there). -->
+
+    <!-- Header badge with tone colours. Coral is never used for badges (UX §1). -->
+    <DataTemplate x:Key="HeaderBadge" DataType="{x:Type vm:BadgeItem}">
+        <Border x:Name="Chip" CornerRadius="4" Padding="8,2" Margin="0,0,6,0" BorderThickness="1" ToolTip="{Binding ToolTip}"
+                Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}">
+            <TextBlock x:Name="Label" Text="{Binding Text}" FontSize="12" />
+        </Border>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsGood}" Value="True">
+                <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource YlSuccess}" />
+                <Setter TargetName="Label" Property="Foreground" Value="{StaticResource YlSuccess}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                <Setter TargetName="Chip" Property="BorderBrush" Value="#E0A030" />
+                <Setter TargetName="Label" Property="Foreground" Value="#E0A030" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsDanger}" Value="True">
+                <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsInfo}" Value="True">
+                <Setter TargetName="Chip" Property="BorderBrush" Value="#4A9EE0" />
+                <Setter TargetName="Label" Property="Foreground" Value="#4A9EE0" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- Small neutral chip for list rows (group kinds, auth method kinds) -->
+    <Style x:Key="Chip" TargetType="Border">
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="6,1" />
+        <Setter Property="Margin" Value="6,0,0,0" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ControlStrokeColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+    <DataTemplate x:Key="StringChip">
+        <Border Style="{StaticResource Chip}">
+            <TextBlock Text="{Binding}" FontSize="11" />
+        </Border>
+    </DataTemplate>
+
+    <!-- Mono value that copies itself on click (UX §4: UPN / object ID click to copy). -->
+    <Style x:Key="CopyableMono" TargetType="Button">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="4,1" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="FontFamily" Value="{StaticResource YlMono}" />
+        <!-- Inherited, not fixed: this style is used on the page surface and on the navy sidebar, which need
+             opposite foregrounds once the light theme is in play. -->
+        <Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+        <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+        <Setter Property="HorizontalAlignment" Value="Left" />
+        <Setter Property="ToolTip" Value="Click to copy" />
+        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bg" Background="{TemplateBinding Background}" CornerRadius="3" Padding="{TemplateBinding Padding}">
+                        <StackPanel Orientation="Horizontal">
+                            <ContentPresenter VerticalAlignment="Center" />
+                            <ui:SymbolIcon x:Name="Icon" Symbol="Copy24" FontSize="12" Margin="6,0,0,0" Opacity="0.75" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                            <Setter TargetName="Icon" Property="Opacity" Value="0.8" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style x:Key="FactLabel" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+        <Setter Property="Margin" Value="0,10,0,1" />
+    </Style>
+
+    <Style x:Key="FactValue" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <Style x:Key="SectionTitle" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Margin" Value="0,16,0,6" />
+    </Style>
+
+    <Style x:Key="Caption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- Identity property sheet row (UX §4 tab 1): edit-on-blur, spinner then check, no Save button.
+         Read-only rows show the hybrid caption instead of an editor (UX §6). -->
+    <DataTemplate x:Key="EditableFieldRow" DataType="{x:Type pages:EditableField}">
+        <Grid MinHeight="34" Margin="0,0,0,2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="170" />
+                <ColumnDefinition Width="280" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Label}" VerticalAlignment="Center" />
+
+            <!-- Editable -->
+            <ui:TextBox x:Name="Editor" Grid.Column="1" VerticalAlignment="Center"
+                        Text="{Binding Value, UpdateSourceTrigger=LostFocus}"
+                        PlaceholderText="{Binding Placeholder}"
+                        b:CommitOnBlur.Command="{Binding CommitCommand}"
+                        b:CommitOnBlur.RevertCommand="{Binding RevertCommand}"
+                        AutomationProperties.Name="{Binding Label}"
+                        Visibility="{Binding IsEditable, Converter={StaticResource BoolToVisibility}}" />
+
+            <!-- Read-only (hybrid) -->
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" x:Name="ReadOnlyValue" Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center"
+                       TextTrimming="CharacterEllipsis"
+                       Visibility="{Binding IsReadOnly, Converter={StaticResource BoolToVisibility}}" />
+
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14"
+                                 Visibility="{Binding IsSaving, Converter={StaticResource BoolToVisibility}}" />
+                <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="14" Foreground="{StaticResource YlSuccess}"
+                               Visibility="{Binding JustSaved, Converter={StaticResource BoolToVisibility}}" />
+                <ui:SymbolIcon Symbol="LockClosed24" FontSize="12" Opacity="0.75" ToolTip="{Binding ReadOnlyReason}"
+                               Visibility="{Binding IsReadOnly, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+
+            <TextBlock Grid.Column="3" Text="{Binding ReadOnlyReason}" Style="{StaticResource Caption}" VerticalAlignment="Center" Margin="6,0,0,0"
+                       Visibility="{Binding HasReadOnlyReason, Converter={StaticResource BoolToVisibility}}" />
+            <TextBlock Grid.Column="3" Text="{Binding ErrorText}" FontSize="11" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
+                       VerticalAlignment="Center" Margin="6,0,0,0"
+                       Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsMono}" Value="True">
+                <Setter TargetName="Editor" Property="FontFamily" Value="{StaticResource YlMono}" />
+                <Setter TargetName="Editor" Property="FontSize" Value="12" />
+                <Setter TargetName="ReadOnlyValue" Property="FontFamily" Value="{StaticResource YlMono}" />
+                <Setter TargetName="ReadOnlyValue" Property="FontSize" Value="12" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsSaving}" Value="True">
+                <Setter TargetName="Editor" Property="IsEnabled" Value="False" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- Access tab rows -->
+    <DataTemplate x:Key="LicenseRowTemplate" DataType="{x:Type pages:LicenseRow}">
+        <Grid Height="30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="28" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <CheckBox IsChecked="{Binding IsAssigned, Mode=TwoWay}" IsEnabled="{Binding IsToggleable}" VerticalAlignment="Center"
+                      ToolTipService.ShowOnDisabled="True" ToolTip="{Binding BlockedReason}"
+                      AutomationProperties.Name="{Binding Name}" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding PartNumber}" FontFamily="{StaticResource YlMono}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                <Border Style="{StaticResource Chip}" Visibility="{Binding IsGroupAssigned, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding Caption}">
+                    <TextBlock Text="Group" FontSize="11" />
+                </Border>
+                <TextBlock Text="{Binding ErrorText}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Visibility="{Binding HasError, Converter={StaticResource BoolToVisibility}}" />
+                <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="8,0,0,0" VerticalAlignment="Center"
+                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                <TextBlock Text="{Binding BlockedReason}" Style="{StaticResource Caption}" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding SeatsText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="GroupRowTemplate" DataType="{x:Type pages:GroupMembershipRow}">
+        <Grid Height="30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="28" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:SymbolIcon Symbol="PeopleTeam24" FontSize="14" Opacity="0.75" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                <ItemsControl ItemsSource="{Binding Badges}" ItemTemplate="{StaticResource StringChip}" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+                <TextBlock Text="{Binding BlockedReason}" Style="{StaticResource Caption}" Margin="8,0,0,0" VerticalAlignment="Center"
+                           Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding MembersText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
+            <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+                <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
+                <ui:Button Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent" Padding="6,2" Command="{Binding RemoveCommand}"
+                           IsEnabled="{Binding CanRemove}" ToolTip="{Binding BlockedReason}" ToolTipService.ShowOnDisabled="True"
+                           AutomationProperties.Name="Remove from group" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="RoleRowTemplate" DataType="{x:Type auth:DirectoryRoleRef}">
+        <Grid Height="28">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="28" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <ui:SymbolIcon Symbol="Shield24" FontSize="14" Opacity="0.75" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding DisplayName}" VerticalAlignment="Center" />
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate x:Key="AuthMethodRowTemplate" DataType="{x:Type pages:AuthMethodRow}">
+        <Grid Height="30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="28" />
+                <ColumnDefinition Width="200" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ui:SymbolIcon Symbol="Key24" FontSize="14" Opacity="0.75" VerticalAlignment="Center" />
+            <TextBlock Grid.Column="1" Text="{Binding KindLabel}" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding DisplayName}" FontFamily="{StaticResource YlMono}" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Detail}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}" />
+            </StackPanel>
+            <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Delete24}" Appearance="Transparent" Padding="6,2"
+                       Command="{Binding DeleteCommand}" IsEnabled="{Binding CanDelete}"
+                       ToolTip="{Binding BlockedReason, TargetNullValue='Remove this method'}"
+                       ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="Remove method"
+                       Visibility="{Binding IsDeletable, Converter={StaticResource BoolToVisibility}}" />
+        </Grid>
+    </DataTemplate>
+
+    <!-- Devices tab card -->
+    <DataTemplate x:Key="DeviceCardTemplate" DataType="{x:Type pages:DeviceCard}">
+        <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalContentAlignment="Stretch" FocusVisualStyle="{x:Null}"
+                Command="{Binding DataContext.OpenDeviceCommand, RelativeSource={RelativeSource AncestorType=TabControl}}" CommandParameter="{Binding}"
+                AutomationProperties.Name="{Binding Name}">
+            <Border Width="300" Margin="0,0,12,12" Padding="14,12" CornerRadius="6"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <ui:SymbolIcon Symbol="Laptop24" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="220" />
+                    </StackPanel>
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ModelText}" FontSize="12" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OsText}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Serial}" FontFamily="{StaticResource YlMono}" FontSize="11" Margin="0,2,0,0" />
+                    <WrapPanel Margin="0,8,0,0">
+                        <Border x:Name="ComplianceChip" Style="{StaticResource Chip}" Margin="0,0,6,4">
+                            <TextBlock x:Name="ComplianceLabel" Text="{Binding ComplianceText}" FontSize="11" />
+                        </Border>
+                        <Border Style="{StaticResource Chip}" Margin="0,0,6,4">
+                            <TextBlock Text="{Binding EncryptionText}" FontSize="11" />
+                        </Border>
+                        <Border Style="{StaticResource Chip}" Margin="0,0,6,4" Visibility="{Binding IsAutopilot, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Text="Autopilot" FontSize="11" />
+                        </Border>
+                    </WrapPanel>
+                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding LastSyncText}" FontSize="11" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text=" · live" FontSize="11" Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </Button>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding ComplianceTone}" Value="Good">
+                <Setter TargetName="ComplianceChip" Property="BorderBrush" Value="{StaticResource YlSuccess}" />
+                <Setter TargetName="ComplianceLabel" Property="Foreground" Value="{StaticResource YlSuccess}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ComplianceTone}" Value="Danger">
+                <Setter TargetName="ComplianceChip" Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                <Setter TargetName="ComplianceLabel" Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding ComplianceTone}" Value="Warning">
+                <Setter TargetName="ComplianceChip" Property="BorderBrush" Value="#E0A030" />
+                <Setter TargetName="ComplianceLabel" Property="Foreground" Value="#E0A030" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate x:Key="AuditRowTemplate" DataType="{x:Type models:AuditEvent}">
+        <Grid Height="30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActivityDateTime.LocalDateTime, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontFamily="{StaticResource YlMono}" FontSize="12" VerticalAlignment="Center" />
+            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock x:Name="Activity" Text="{Binding Activity}" VerticalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ResultReason}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding ResultReason, Converter={StaticResource NullToCollapsed}}" />
+            </StackPanel>
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding InitiatedBy}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsFailure}" Value="True">
+                <Setter TargetName="Activity" Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pages:UserDetailViewModel}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Main column: header + tabs -->
+            <Grid Grid.Column="0" Margin="24,16,16,8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <!-- Header (UX §4): avatar · name · UPN · badges | primary actions -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <Border Width="48" Height="48" CornerRadius="24" Background="{StaticResource YlRailBackground}"
+                            BorderBrush="{StaticResource YlCoral}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
+                        <TextBlock Text="{Binding Initials}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
+                        <Button Style="{StaticResource CopyableMono}" Content="{Binding User.UserPrincipalName}"
+                                Command="{Binding CopyCommand}" CommandParameter="{Binding User.UserPrincipalName}"
+                                AutomationProperties.Name="Copy user principal name" Margin="-4,2,0,0" />
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <ItemsControl ItemsSource="{Binding Badges}" ItemTemplate="{StaticResource HeaderBadge}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                            <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="6,0,6,0" VerticalAlignment="Center"
+                                             Visibility="{Binding IsHydrating, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding HydrateError}" FontSize="12" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Margin="0,6,0,0" TextWrapping="Wrap"
+                                   Visibility="{Binding HydrateError, Converter={StaticResource NullToCollapsed}}" />
+                    </StackPanel>
+
+                    <!-- Primary actions; greyed with the UX §6 inline caption until M5/M6 wire them -->
+                    <StackPanel Grid.Column="2" VerticalAlignment="Top" Margin="16,0,0,0">
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <ui:Button Content="Reset password" Command="{Binding ResetPasswordCommand}" IsEnabled="{Binding CanRunActions}"
+                                       ToolTip="{Binding ActionsDisabledReason, TargetNullValue='Set a new password for this user'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
+                            <ui:Button Content="Revoke sessions" Command="{Binding RevokeSessionsCommand}" IsEnabled="{Binding CanRunActions}"
+                                       ToolTip="{Binding ActionsDisabledReason, TargetNullValue='Sign this user out everywhere'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
+                            <ui:Button Content="Offboard…" Appearance="Primary" Command="{Binding OffboardCommand}" IsEnabled="{Binding CanOffboard}"
+                                       ToolTip="{Binding OffboardDisabledReason, TargetNullValue='Run the offboarding checklist (Ctrl+Shift+O)'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
+                            <ui:Button Icon="{ui:SymbolIcon MoreHorizontal24}" IsEnabled="False" ToolTip="More actions" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="More actions" />
+                            <ui:Button Icon="{ui:SymbolIcon PanelRight24}" Command="{Binding ToggleSidebarCommand}" ToolTip="Toggle quick facts" AutomationProperties.Name="Toggle quick facts" Margin="8,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActionsDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="320"
+                                   Visibility="{Binding ActionsDisabledReason, Converter={StaticResource NullToCollapsed}}" />
+                    </StackPanel>
+                </Grid>
+
+                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" SelectedIndex="{Binding SelectedTabIndex, Mode=TwoWay}"
+                            AutomationProperties.Name="User sections">
+                    <!-- 1. Identity: read-only property sheet with hybrid captions (M5.2 adds edit-on-blur) -->
+                    <TabItem Header="Identity">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="0,0,16,16">
+                                <ui:InfoBar Severity="Informational" IsClosable="False" Margin="0,8,0,0" IsOpen="{Binding IdentityCaption, Converter={StaticResource NullToBool}, Mode=OneWay}"
+                                            Message="{Binding IdentityCaption}" />
+                                <ContentControl Content="{Binding}">
+                                    <ContentControl.Style>
+                                        <Style TargetType="ContentControl">
+                                            <Setter Property="ContentTemplate">
+                                                <Setter.Value>
+                                                    <DataTemplate>
+                                                        <ItemsControl ItemsSource="{Binding IdentitySections}">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type pages:EditableSection}">
+                                                                    <StackPanel>
+                                                                        <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitle}" />
+                                                                        <ItemsControl ItemsSource="{Binding Fields}" ItemTemplate="{StaticResource EditableFieldRow}" />
+                                                                    </StackPanel>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </DataTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding HasUser}" Value="False">
+                                                    <Setter Property="ContentTemplate" Value="{StaticResource SkeletonBlock}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ContentControl.Style>
+                                </ContentControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- 2. Access: licenses · groups · roles · auth methods -->
+                    <TabItem Header="Access">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ContentControl Content="{Binding}" Margin="0,0,16,16">
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl">
+                                        <Setter Property="ContentTemplate">
+                                            <Setter.Value>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <TextBlock Text="Licences" Style="{StaticResource SectionTitle}" />
+                                                        <ItemsControl ItemsSource="{Binding Licenses}" ItemTemplate="{StaticResource LicenseRowTemplate}" />
+                                                        <TextBlock Text="No licences assigned. A new starter cannot use Microsoft 365 until one is." Style="{StaticResource Caption}"
+                                                                   TextWrapping="Wrap" Visibility="{Binding Licenses.Count, Converter={StaticResource ZeroToVisible}}" />
+
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="Groups" Style="{StaticResource SectionTitle}" />
+                                                            <ui:Button Content="Add to group…" Command="{Binding AddToGroupCommand}" Padding="10,2" Margin="12,16,0,6" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding GroupsCaption}" Style="{StaticResource Caption}" Margin="0,0,0,4" Visibility="{Binding GroupsCaption, Converter={StaticResource NullToCollapsed}}" />
+                                                        <ItemsControl ItemsSource="{Binding Groups}" ItemTemplate="{StaticResource GroupRowTemplate}" />
+
+                                                        <TextBlock Text="Directory roles" Style="{StaticResource SectionTitle}" />
+                                                        <ItemsControl ItemsSource="{Binding Roles}" ItemTemplate="{StaticResource RoleRowTemplate}" />
+                                                        <TextBlock Text="No directory roles" Style="{StaticResource Caption}" Visibility="{Binding Roles.Count, Converter={StaticResource ZeroToVisible}}" />
+
+                                                        <TextBlock Text="Authentication methods" Style="{StaticResource SectionTitle}" />
+                                                        <TextBlock Text="{Binding AuthMethodsError}" Style="{StaticResource Caption}" Visibility="{Binding AuthMethodsError, Converter={StaticResource NullToCollapsed}}" />
+                                                        <ItemsControl ItemsSource="{Binding AuthMethods}" ItemTemplate="{StaticResource AuthMethodRowTemplate}" />
+                                                        <TextBlock Text="Nothing registered. This account has no second factor and cannot be reached for one." Style="{StaticResource Caption}"
+                                                                   TextWrapping="Wrap" Visibility="{Binding AuthMethods.Count, Converter={StaticResource ZeroToVisible}}" />
+                                                        <TextBlock Text="{Binding LastMfaRegistrationText}" Style="{StaticResource Caption}" Margin="0,6,0,0" Visibility="{Binding LastMfaRegistrationText, Converter={StaticResource NullToCollapsed}}" />
+                                                        <TextBlock Text="{Binding AuthDeleteReason}" Style="{StaticResource Caption}" Margin="0,2,0,0" Visibility="{Binding AuthDeleteReason, Converter={StaticResource NullToCollapsed}}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsAccessLoaded}" Value="False">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource SkeletonBlock}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                            </ContentControl>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- 3. Devices: Intune cards from cache, compliance overlaid live -->
+                    <TabItem Header="Devices">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <StackPanel Margin="0,12,16,16">
+                                <TextBlock Text="{Binding DevicesCaption}" Style="{StaticResource Caption}" Margin="0,0,0,8" Visibility="{Binding DevicesCaption, Converter={StaticResource NullToCollapsed}}" />
+                                <ItemsControl ItemsSource="{Binding DeviceCards}" ItemTemplate="{StaticResource DeviceCardTemplate}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <WrapPanel />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                </ItemsControl>
+                                <TextBlock Text="No Intune devices have this user as primary." Style="{StaticResource Caption}" Visibility="{Binding DeviceCards.Count, Converter={StaticResource ZeroToVisible}}" />
+
+                                <StackPanel Visibility="{Binding RegisteredOnlyDevices.Count, Converter={StaticResource NonZeroToVisible}}">
+                                    <TextBlock Text="Registered in Entra, not managed by Intune" Style="{StaticResource SectionTitle}" />
+                                    <ItemsControl ItemsSource="{Binding RegisteredOnlyDevices}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type models:EntraDevice}">
+                                                <Grid Height="28">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="28" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <ui:SymbolIcon Symbol="Desktop24" FontSize="14" Opacity="0.75" VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                        <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
+                                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OperatingSystem}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding TrustType}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                    </StackPanel>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- 4. Activity: sign-in activity (P1) · password · audit events (lazy) -->
+                    <TabItem Header="Activity">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ContentControl Content="{Binding}" Margin="0,0,16,16">
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl">
+                                        <Setter Property="ContentTemplate">
+                                            <Setter.Value>
+                                                <DataTemplate>
+                                                    <StackPanel>
+                                                        <ui:InfoBar Severity="Informational" IsClosable="False" Margin="0,8,0,0" Title="Sign-in activity requires Entra ID P1"
+                                                                    Message="This tenant's license or your permissions do not expose sign-in activity."
+                                                                    IsOpen="{Binding ShowSignInUnavailable, Mode=OneWay}" />
+                                                        <TextBlock Text="Sign-in" Style="{StaticResource SectionTitle}" />
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="170" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="28" />
+                                                                <RowDefinition Height="28" />
+                                                                <RowDefinition Height="28" />
+                                                            </Grid.RowDefinitions>
+                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Last interactive" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding LastInteractiveText}" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="1" Text="Last non-interactive" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastNonInteractiveText}" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="2" Text="Last successful" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LastSuccessfulText}" VerticalAlignment="Center" />
+                                                        </Grid>
+
+                                                        <TextBlock Text="Account" Style="{StaticResource SectionTitle}" />
+                                                        <Grid>
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="170" />
+                                                                <ColumnDefinition Width="*" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <Grid.RowDefinitions>
+                                                                <RowDefinition Height="28" />
+                                                                <RowDefinition Height="28" />
+                                                            </Grid.RowDefinitions>
+                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Created" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding CreatedText}" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="1" Text="Last password change" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastPasswordChangeText}" VerticalAlignment="Center" />
+                                                        </Grid>
+
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="Recent audit events" Style="{StaticResource SectionTitle}" />
+                                                            <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="8,16,0,6" Visibility="{Binding IsAuditLoading, Converter={StaticResource BoolToVisibility}}" />
+                                                        </StackPanel>
+                                                        <TextBlock Text="{Binding AuditCaption}" Style="{StaticResource Caption}" Visibility="{Binding AuditCaption, Converter={StaticResource NullToCollapsed}}" />
+                                                        <ItemsControl ItemsSource="{Binding AuditEvents}" ItemTemplate="{StaticResource AuditRowTemplate}" />
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </Setter.Value>
+                                        </Setter>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsActivityLoaded}" Value="False">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource SkeletonBlock}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                            </ContentControl>
+                        </ScrollViewer>
+                    </TabItem>
+
+                    <!-- 5. Mailbox: Phase 3 -->
+                    <TabItem Header="Mailbox" IsEnabled="False" ToolTip="{Binding MailboxDisabledReason}" ToolTipService.ShowOnDisabled="True" />
+                </TabControl>
+            </Grid>
+
+            <!-- Sidebar (UX §4): 280 px quick facts, collapsible -->
+            <Border Grid.Column="1" Width="280" Background="{StaticResource YlRailBackground}" Padding="16,16,16,8"
+                    TextElement.Foreground="{StaticResource YlOnNavy}"
+                    Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVisibility}}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="Quick facts" FontWeight="SemiBold" />
+
+                        <TextBlock Style="{StaticResource FactLabel}" Text="Object ID" />
+                        <Button Style="{StaticResource CopyableMono}" FontSize="11"
+                                Command="{Binding CopyCommand}" CommandParameter="{Binding Id}" AutomationProperties.Name="Copy object ID" Margin="-4,0,0,0">
+                            <TextBlock Text="{Binding Id}" TextWrapping="Wrap" MaxWidth="220" />
+                        </Button>
+
+                        <TextBlock Style="{StaticResource FactLabel}" Text="Created" />
+                        <TextBlock Style="{StaticResource FactValue}" Text="{Binding CreatedText}" />
+
+                        <StackPanel Visibility="{Binding IsSynced, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock Style="{StaticResource FactLabel}" Text="Last sync from on-prem" />
+                            <TextBlock Style="{StaticResource FactValue}" Text="{Binding LastSyncText}" />
+                            <TextBlock Style="{StaticResource FactLabel}" Text="Source anchor" />
+                            <Button Style="{StaticResource CopyableMono}" Content="{Binding SourceAnchor}" FontSize="12"
+                                    Command="{Binding CopyCommand}" CommandParameter="{Binding SourceAnchor}" AutomationProperties.Name="Copy source anchor" Margin="-4,0,0,0" />
+                            <TextBlock Style="{StaticResource FactLabel}" Text="On-prem DN" />
+                            <Button Style="{StaticResource CopyableMono}" FontSize="11"
+                                    Command="{Binding CopyCommand}" CommandParameter="{Binding OnPremDn}" AutomationProperties.Name="Copy distinguished name" Margin="-4,0,0,0">
+                                <TextBlock Text="{Binding OnPremDn}" TextWrapping="Wrap" MaxWidth="220" />
+                            </Button>
+                        </StackPanel>
+
+                        <TextBlock Style="{StaticResource FactLabel}" Text="Manager" />
+                        <TextBlock Style="{StaticResource FactValue}" Text="{Binding ManagerText}" />
+
+                        <TextBlock Style="{StaticResource FactLabel}" Text="Direct reports" />
+                        <TextBlock Style="{StaticResource FactValue}" Text="{Binding DirectReportsText}" />
+
+                        <TextBlock Style="{StaticResource FactLabel}" Text="Loaded" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Style="{StaticResource FactValue}" Text="{Binding TimingText}" FontSize="12" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

@@ -1,0 +1,731 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+                    xmlns:pages="clr-namespace:AdminConsole.App.ViewModels.Pages"
+                    xmlns:views="clr-namespace:AdminConsole.App.Views"
+                    xmlns:tpl="clr-namespace:AdminConsole.Core.Templates;assembly=AdminConsole.Core">
+    <!-- Doc 03: navigation is ContentControl + one DataTemplate per page ViewModel type. -->
+
+    <!-- Home (M9.5). It was one sentence pointing at Ctrl+K. It is now somewhere to start from: search, the things
+         people do, what is in the tenant, what is worth a look, and what you had open last. -->
+    <DataTemplate DataType="{x:Type pages:HomePageViewModel}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <Grid Margin="24,20,24,56">
+                <!-- Left-aligning this panel would size it to its widest child, which made the search box as
+                     narrow as its own caption. Stretching to a max width lets the search invite a click. -->
+                <StackPanel MaxWidth="980" HorizontalAlignment="Stretch">
+
+                    <TextBlock Text="{Binding Greeting}" FontSize="26" FontWeight="SemiBold" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding TenantName}" FontSize="13" Margin="0,2,0,0" />
+
+                    <!-- The search box is a button: clicking anywhere on it opens the palette, which is the real
+                         search. A second text box that behaved differently would be worse than one that is honest. -->
+                    <Button Command="{Binding SearchCommand}" Margin="0,18,0,0" HorizontalContentAlignment="Stretch"
+                            Padding="14,12" Cursor="Hand" BorderThickness="1"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                            AutomationProperties.Name="Search users, devices and groups">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ui:SymbolIcon Symbol="Search24" FontSize="18" Opacity="0.75" VerticalAlignment="Center" />
+                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="Search for a person, a device or a group" Margin="10,0,0,0"
+                                       FontSize="14" VerticalAlignment="Center" />
+                            <Border Grid.Column="2" CornerRadius="3" Padding="6,2"
+                                    Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Ctrl+K" FontSize="11" FontFamily="{StaticResource YlMono}" />
+                            </Border>
+                        </Grid>
+                    </Button>
+
+                    <!-- First run (M9.8). Three lines, not a tour. The third is the one that matters to someone who
+                         has just been handed the keys to a directory. -->
+                    <Border Margin="0,20,0,0" Padding="16,14" CornerRadius="6"
+                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                            BorderBrush="{StaticResource YlCoral}" BorderThickness="1"
+                            Visibility="{Binding ShowIntro, Converter={StaticResource BoolToVisibility}}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="New here?" FontSize="14" FontWeight="SemiBold" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"
+                                           Text="Search finds anyone or anything by name, sign-in name, serial or phone number — the box above, or Ctrl+K from anywhere." />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Text="The rail on the left browses everything: users, groups and devices, with filters for the questions a helpdesk actually asks." />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" Margin="0,4,0,0" TextWrapping="Wrap"
+                                           Text="Nothing destructive happens without showing you exactly what it will change first, and most of it can be undone. Everything you change is recorded in the activity log." />
+                            </StackPanel>
+                            <ui:Button Grid.Column="1" Content="Got it" VerticalAlignment="Top" Margin="16,0,0,0"
+                                       Command="{Binding DismissIntroCommand}"
+                                       AutomationProperties.Name="Dismiss the introduction" />
+                        </Grid>
+                    </Border>
+
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Start something" FontSize="13" FontWeight="SemiBold" Margin="0,24,0,8" />
+                    <WrapPanel>
+                        <ui:Button Icon="{ui:SymbolIcon PersonAdd24}" Content="New user from a template" Margin="0,0,8,8"
+                                   Command="{Binding CreateUserCommand}"
+                                   AutomationProperties.Name="Create a new user from a template" />
+                        <ui:Button Icon="{ui:SymbolIcon PersonDelete24}" Content="Offboard someone" Margin="0,0,8,8"
+                                   Command="{Binding OffboardUserCommand}"
+                                   AutomationProperties.Name="Offboard someone" />
+                        <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" Content="Sync now" Margin="0,0,8,8"
+                                   Command="{Binding SyncCommand}"
+                                   AutomationProperties.Name="Sync now" />
+                    </WrapPanel>
+
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="In this tenant" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,8" />
+                    <ItemsControl ItemsSource="{Binding Totals}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pages:HomeTile}">
+                                <Button Style="{StaticResource HomeTileButton}" Command="{Binding OpenCommand}"
+                                        AutomationProperties.Name="{Binding AccessibleName}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding CountText}" FontSize="26" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Label}" FontSize="13" Margin="0,2,0,0" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Description}" FontSize="11" Margin="0,2,0,0"
+                                                   TextWrapping="Wrap" MaxWidth="190" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Worth a look" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,8" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Nothing needs attention — no disabled accounts holding licences, no non-compliant devices, no empty groups."
+                               FontSize="12" TextWrapping="Wrap" MaxWidth="620" HorizontalAlignment="Left"
+                               Visibility="{Binding NothingNeedsAttention, Converter={StaticResource BoolToVisibility}}" />
+                    <ItemsControl ItemsSource="{Binding Attention}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pages:HomeTile}">
+                                <Button Style="{StaticResource HomeTileButton}" Command="{Binding OpenCommand}"
+                                        AutomationProperties.Name="{Binding AccessibleName}">
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding CountText}" FontSize="26" FontWeight="SemiBold"
+                                                   Foreground="{StaticResource YlCoral}" />
+                                        <TextBlock Text="{Binding Label}" FontSize="13" Margin="0,2,0,0" TextWrapping="Wrap" MaxWidth="190" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Description}" FontSize="11" Margin="0,2,0,0"
+                                                   TextWrapping="Wrap" MaxWidth="190" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <StackPanel Visibility="{Binding HasRecent, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Where you were" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,8" />
+                        <ItemsControl ItemsSource="{Binding Recent}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type pages:RecentEntry}">
+                                    <Button Style="{StaticResource ListRowButton}" Command="{Binding OpenCommand}"
+                                            Margin="0,0,8,8" MinWidth="220"
+                                            AutomationProperties.Name="{Binding Primary}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Secondary}" FontSize="11"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
+                </StackPanel>
+            </Grid>
+        </ScrollViewer>
+    </DataTemplate>
+
+    <!-- UX §9 step 1: splash + Sign in with Microsoft, with the three failure states -->
+    <DataTemplate DataType="{x:Type pages:SignInPageViewModel}">
+        <Grid>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="440">
+                <TextBlock Text="Admin Console" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Entra ID and Intune in one search-first console." HorizontalAlignment="Center" Margin="0,6,0,28" />
+
+                <ui:InfoBar Severity="Error" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,16"
+                            Title="{Binding ErrorTitle}" Message="{Binding ErrorMessage}">
+                    <ui:InfoBar.Content>
+                        <StackPanel>
+                            <TextBlock Text="{Binding ErrorHint}" FontWeight="SemiBold" Margin="0,4,0,0"
+                                       Visibility="{Binding ErrorHint, Converter={StaticResource NullToCollapsed}}" />
+                            <Expander Header="Details" Margin="0,4,0,0" Visibility="{Binding HasErrorDetails, Converter={StaticResource BoolToVisibility}}">
+                                <TextBox Text="{Binding ErrorDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="160"
+                                         FontFamily="{StaticResource YlMono}" FontSize="12" VerticalScrollBarVisibility="Auto" />
+                            </Expander>
+                        </StackPanel>
+                    </ui:InfoBar.Content>
+                </ui:InfoBar>
+
+                <ui:Button Appearance="Primary" HorizontalAlignment="Stretch" Height="40" FontSize="14"
+                           Content="Sign in with Microsoft" Icon="{ui:SymbolIcon Person24}"
+                           Command="{Binding SignInCommand}" IsDefault="True" />
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,0"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding BusyText}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Personal sign-in with the Windows account broker. No service accounts, no data leaves your tenant." FontSize="12" TextWrapping="Wrap" TextAlignment="Center" Margin="0,28,0,0" />
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <!-- UX §9 step 2: our own scope explanation before the prompt -->
+    <DataTemplate DataType="{x:Type pages:ScopesPageViewModel}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="560" Margin="0,24">
+                <TextBlock Text="What the console will read" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Read-only permissions only. Write permissions are requested later, the first time you change something." TextWrapping="Wrap" Margin="0,6,0,12" />
+                <ItemsControl ItemsSource="{Binding Scopes}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,0,0,6">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <ui:SymbolIcon Symbol="CheckmarkCircle24" Foreground="{StaticResource YlCoral}" Margin="0,2,10,0" VerticalAlignment="Top" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Why}" TextWrapping="Wrap" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Scope}" FontSize="11" FontFamily="{StaticResource YlMono}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                    <ui:Button Content="Back" Command="{Binding BackCommand}" Margin="0,0,8,0" />
+                    <ui:Button Appearance="Primary" Content="Continue to sign-in" Command="{Binding ContinueCommand}" IsDefault="True" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}">
+                    <ui:ProgressRing IsIndeterminate="True" Width="18" Height="18" Margin="0,0,8,0" />
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Waiting for Windows sign-in…" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </DataTemplate>
+
+    <!-- UX §9 step 3: counts ticking up -->
+    <DataTemplate DataType="{x:Type pages:SyncProgressPageViewModel}">
+        <Grid>
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="480">
+                <TextBlock Text="{Binding Headline}" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Detail}" TextWrapping="Wrap" Margin="0,6,0,20" />
+                <ItemsControl ItemsSource="{Binding Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Height="32">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="28" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                                <ui:SymbolIcon Symbol="CheckmarkCircle24" Foreground="#4CC38A" Visibility="{Binding IsDone, Converter={StaticResource BoolToVisibility}}" />
+                                <ui:SymbolIcon Symbol="ErrorCircle24" Foreground="#F04E4E" Visibility="{Binding IsFailed, Converter={StaticResource BoolToVisibility}}" />
+                                <Ellipse Width="6" Height="6" Fill="#8A8A8A" Visibility="{Binding IsPending, Converter={StaticResource BoolToVisibility}}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" />
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding CountText}" VerticalAlignment="Center" FontFamily="{StaticResource YlMono}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Skeleton shown in a tab until its section has loaded (UX §4: each tab shows a skeleton until data arrives) -->
+    <DataTemplate x:Key="SkeletonBlock">
+        <StackPanel Margin="0,8,0,0">
+            <Border Height="14" Width="260" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" Margin="0,0,0,10" />
+            <Border Height="14" Width="380" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" Margin="0,0,0,10" />
+            <Border Height="14" Width="180" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" Margin="0,0,0,10" />
+            <Border Height="14" Width="320" HorizontalAlignment="Left" CornerRadius="3" Background="{DynamicResource ControlFillColorSecondaryBrush}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Placeholder object page from the palette until M4 -->
+    <DataTemplate DataType="{x:Type pages:ObjectPageViewModel}">
+        <StackPanel Margin="24">
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Kind}" FontSize="12" />
+            <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Secondary}" FontFamily="{StaticResource YlMono}" Margin="0,4,0,0" />
+            <ItemsControl ItemsSource="{Binding Badges}" Margin="0,8,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Border CornerRadius="3" Padding="6,1" Margin="0,0,4,0" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                            <TextBlock Text="{Binding}" FontSize="11" />
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Id}" FontFamily="{StaticResource YlMono}" FontSize="12" Margin="0,16,0,0" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ArrivesIn}" Margin="0,8,0,0" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
+        <StackPanel Margin="24">
+            <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ArrivesIn}" Margin="0,8,0,0" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Templates (M7.2): saved templates on the left, the file itself on the right. -->
+    <DataTemplate DataType="{x:Type pages:TemplatesPageViewModel}">
+        <!-- Bottom margin leaves the toast stack (UX §10, bottom-right) somewhere to sit that is not on top of Save. -->
+        <Grid Margin="24,16,24,56">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="Templates" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <ui:Button Content="New from user…" Icon="{ui:SymbolIcon PersonAdd24}" Margin="16,0,0,0"
+                           Command="{Binding NewFromUserCommand}" AutomationProperties.Name="New template from user" />
+                <ui:Button Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="8,0,0,0"
+                           Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
+                           AutomationProperties.Name="Delete template" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
+                <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,0,0,8"
+                            IsOpen="{Binding HasLoadError, Mode=OneWay}" Message="{Binding LoadError}" />
+                <ui:InfoBar Severity="Informational" IsClosable="False" Margin="0,0,0,8"
+                            IsOpen="{Binding IsHybridTenant, Mode=OneWay}" Message="{Binding HybridNote}" />
+            </StackPanel>
+
+            <Border Grid.Row="2" Grid.Column="0" Margin="0,0,12,0" CornerRadius="6" Padding="4"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <Grid>
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="No templates yet. Snapshot one from a user who already has the role."
+                               TextWrapping="Wrap" FontSize="12" Margin="10" VerticalAlignment="Top"
+                               Visibility="{Binding TemplatesList.Count, Converter={StaticResource ZeroToVisible}}" />
+                    <ListBox ItemsSource="{Binding TemplatesList}" SelectedItem="{Binding Selected}"
+                             Background="Transparent" BorderThickness="0"
+                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                             AutomationProperties.Name="Templates"
+                             Visibility="{Binding HasTemplates, Converter={StaticResource BoolToVisibility}}">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                                <Setter Property="Padding" Value="8,6" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="{x:Type tpl:UserTemplate}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CreatedFrom.Upn}" FontSize="11"
+                                               FontFamily="{StaticResource YlMono}" TextTrimming="CharacterEllipsis"
+                                               Visibility="{Binding CreatedFrom, Converter={StaticResource NullToCollapsed}}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Licenses.Count, StringFormat={}{0} licence(s)}" FontSize="11" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text=" · " FontSize="11" />
+                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Groups.Count, StringFormat={}{0} group(s)}" FontSize="11" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="2" Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBox Grid.Row="0" Text="{Binding Json, UpdateSourceTrigger=PropertyChanged}"
+                         AcceptsReturn="True" AcceptsTab="True" TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                         FontFamily="{StaticResource YlMono}" FontSize="12" Padding="10"
+                         IsEnabled="{Binding HasSelection}"
+                         AutomationProperties.Name="Template JSON" />
+
+                <StackPanel Grid.Row="1" Margin="0,10,0,0">
+                    <TextBlock Text="{Binding ValidationError}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" TextWrapping="Wrap"
+                               Visibility="{Binding HasValidationError, Converter={StaticResource BoolToVisibility}}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                        <ui:Button Content="Revert" Margin="0,0,8,0" Command="{Binding RevertCommand}" IsEnabled="{Binding HasSelection}" />
+                        <ui:Button Content="Save" Appearance="Primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Users (M9.2). Row order: who they are, what they do, then the flags that decide what can be done to them. -->
+    <DataTemplate DataType="{x:Type pages:UsersPageViewModel}">
+        <views:ListPageView>
+            <views:ListPageView.RowsContent>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:UserRow}">
+                        <Button Style="{StaticResource ListRowButton}"
+                                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Primary}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="320" />
+                                    <ColumnDefinition Width="240" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Upn}" FontSize="11" FontFamily="{StaticResource YlMono}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding JobTitle}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Department}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDangerFill}"
+                                            Visibility="{Binding Enabled, Converter={StaticResource InverseBoolToVisibility}}">
+                                        <TextBlock Text="Disabled" FontSize="11" Foreground="White" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding IsGuest, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="Guest" FontSize="11" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Licensed, Converter={StaticResource InverseBoolToVisibility}}">
+                                        <TextBlock Text="Unlicensed" FontSize="11" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Synced, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Mastered in on-prem AD — most attributes are read-only until Phase 2">
+                                        <TextBlock Text="From AD" FontSize="11" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </views:ListPageView.RowsContent>
+        </views:ListPageView>
+    </DataTemplate>
+
+    <!-- Devices (M9.3). Entra and Intune in one list; an Entra-only row shows the gap rather than hiding it. -->
+    <DataTemplate DataType="{x:Type pages:DevicesPageViewModel}">
+        <views:ListPageView>
+            <views:ListPageView.RowsContent>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:DeviceRow}">
+                        <Button Style="{StaticResource ListRowButton}"
+                                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Primary}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="320" />
+                                    <ColumnDefinition Width="260" />
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding SubtitleText}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Margin="0,0,10,0" VerticalAlignment="Center">
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OwnerText}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OsText}" FontSize="11" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding LastSeenText}" FontSize="11"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" TextTrimming="CharacterEllipsis" />
+
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <Border Style="{StaticResource RowBadge}" Background="{StaticResource YlDangerFill}"
+                                            Visibility="{Binding IsNonCompliant, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="Not compliant" FontSize="11" Foreground="White" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding IsEntraOnly, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Registered in Entra but never enrolled in Intune — no compliance state and no remote actions">
+                                        <TextBlock Text="Not in Intune" FontSize="11" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding IsUnencrypted, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="Not encrypted" FontSize="11" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </views:ListPageView.RowsContent>
+        </views:ListPageView>
+    </DataTemplate>
+
+    <!-- Groups (M9.4). The badges are the ones that decide whether membership can be changed here at all. -->
+    <DataTemplate DataType="{x:Type pages:GroupsPageViewModel}">
+        <views:ListPageView>
+            <views:ListPageView.RowsContent>
+                <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:GroupRow}">
+                        <Button Style="{StaticResource ListRowButton}"
+                                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Primary}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="340" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+
+                                <StackPanel Margin="0,0,10,0">
+                                    <TextBlock Text="{Binding Primary}" Foreground="{DynamicResource YlTextPrimary}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Mail}" FontSize="11" FontFamily="{StaticResource YlMono}"
+                                               TextTrimming="CharacterEllipsis"
+                                               Visibility="{Binding Mail, Converter={StaticResource NullToCollapsed}}" />
+                                </StackPanel>
+
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="{Binding Description}" FontSize="11"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" TextTrimming="CharacterEllipsis" />
+
+                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding MemberCountText}" FontSize="11"
+                                           VerticalAlignment="Center" Margin="0,0,10,0" />
+
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
+                                    <Border Style="{StaticResource RowBadge}">
+                                        <TextBlock Text="{Binding KindText}" FontSize="11" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Dynamic, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Membership comes from a rule — members cannot be added or removed by hand">
+                                        <TextBlock Text="Dynamic" FontSize="11" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding Synced, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Mastered in on-prem AD — membership is changed in AD until Phase 2">
+                                        <TextBlock Text="From AD" FontSize="11" />
+                                    </Border>
+                                    <Border Style="{StaticResource RowBadge}"
+                                            Visibility="{Binding RoleAssignable, Converter={StaticResource BoolToVisibility}}"
+                                            ToolTip="Can hold a directory role — changing it needs Privileged Role Administrator">
+                                        <TextBlock Text="Role-assignable" FontSize="11" />
+                                    </Border>
+                                </StackPanel>
+                            </Grid>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </views:ListPageView.RowsContent>
+        </views:ListPageView>
+    </DataTemplate>
+
+
+    <!-- First-run setup (M10.2): which app registration does this installation sign in with? -->
+    <DataTemplate DataType="{x:Type pages:SetupPageViewModel}">
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="560" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="24,32">
+                <TextBlock Text="Connect to your tenant" FontSize="24" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" HorizontalAlignment="Center" TextAlignment="Center"
+                           TextWrapping="Wrap" Margin="0,8,0,0" FontSize="13"
+                           Text="This console signs in through an app registration in your own Entra tenant. It needs the client ID of that registration once; after that it remembers." />
+
+                <Border Margin="0,20,0,0" Padding="14,12" CornerRadius="6"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Don't have one yet?" FontSize="13" FontWeight="SemiBold" />
+                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,6"
+                                   Text="Run this from the repository, signed in as someone who can create an app registration. It creates one in your tenant, asks for the permissions this console uses, and prints the client ID. Run it with -WhatIf first to see what it would do without changing anything." />
+                        <Border CornerRadius="4" Padding="8,6" Background="{DynamicResource ControlFillColorSecondaryBrush}">
+                            <TextBlock Text="{Binding ScriptCommand}" FontFamily="{StaticResource YlMono}" FontSize="12"
+                                       TextWrapping="Wrap" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Text="Client ID" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,4" />
+                <ui:TextBox Text="{Binding ClientId, UpdateSourceTrigger=PropertyChanged}"
+                            PlaceholderText="00000000-0000-0000-0000-000000000000"
+                            FontFamily="{StaticResource YlMono}"
+                            AutomationProperties.Name="Client ID of the app registration" />
+                <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" Margin="0,4,0,0"
+                           TextWrapping="Wrap" Text="{Binding ClientIdError}"
+                           Visibility="{Binding ClientIdError, Converter={StaticResource NullToCollapsed}}" />
+
+                <CheckBox Content="Only allow sign-in from one tenant" IsChecked="{Binding SingleTenant}" Margin="0,16,0,0"
+                          AutomationProperties.Name="Restrict sign-in to a single tenant" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="24,2,0,0"
+                           Text="Leave this off unless the registration was created with -SingleTenant. The default works for any tenant." />
+                <ui:TextBox Text="{Binding TenantId, UpdateSourceTrigger=PropertyChanged}" Margin="24,6,0,0"
+                            PlaceholderText="contoso.onmicrosoft.com, or the tenant GUID"
+                            AutomationProperties.Name="Tenant"
+                            Visibility="{Binding SingleTenant, Converter={StaticResource BoolToVisibility}}" />
+
+                <ui:Button Appearance="Primary" Content="Save and continue" HorizontalAlignment="Stretch" Height="38"
+                           Margin="0,22,0,0" Command="{Binding SaveCommand}"
+                           AutomationProperties.Name="Save the registration and continue" />
+
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" FontSize="11" TextWrapping="Wrap" TextAlignment="Center"
+                           Margin="0,16,0,0"
+                           Text="Nothing is sent anywhere by saving this. It is written to your own machine, and the console still signs in as you." />
+            </StackPanel>
+        </ScrollViewer>
+    </DataTemplate>
+
+    <!-- Saved: the client ID is read when the auth client is built, so it takes a restart. -->
+    <DataTemplate DataType="{x:Type pages:SetupSavedViewModel}">
+        <StackPanel MaxWidth="460" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="40" HorizontalAlignment="Center"
+                           Foreground="{StaticResource YlSuccess}" />
+            <TextBlock Text="Registration saved" FontSize="20" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,12,0,0" />
+            <TextBlock Foreground="{DynamicResource YlTextSecondary}" HorizontalAlignment="Center" TextAlignment="Center"
+                       TextWrapping="Wrap" Margin="0,8,0,0" FontSize="13"
+                       Text="Close the console and start it again to sign in. It reads the registration once, when it starts." />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Activity log (M8.2): every write this admin made, filtered, and copyable as markdown. -->
+    <DataTemplate DataType="{x:Type pages:ActivityPageViewModel}">
+        <Grid Margin="24,16,24,56">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <TextBlock Text="Activity log" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CountText}" FontSize="12" VerticalAlignment="Center" Margin="14,0,0,0" />
+            </StackPanel>
+
+            <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox MinWidth="130" Margin="0,0,8,0" ItemsSource="{Binding Kinds}" SelectedItem="{Binding Kind}"
+                          AutomationProperties.Name="Object kind" />
+                <ComboBox Grid.Column="1" MinWidth="130" Margin="0,0,8,0" ItemsSource="{Binding Outcomes}" SelectedItem="{Binding Outcome}"
+                          AutomationProperties.Name="Outcome" />
+                <ComboBox Grid.Column="2" MinWidth="130" Margin="0,0,8,0" ItemsSource="{Binding Ranges}" SelectedItem="{Binding Range}"
+                          AutomationProperties.Name="Time range" />
+                <ui:TextBox Grid.Column="3" Margin="0,0,8,0" PlaceholderText="Filter by name, action or text"
+                            Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"
+                            Icon="{ui:SymbolIcon Search24}" AutomationProperties.Name="Filter the activity log" />
+                <ui:Button Grid.Column="4" Content="Clear" Margin="0,0,8,0" Command="{Binding ClearFiltersCommand}"
+                           AutomationProperties.Name="Clear all filters" />
+                <ui:Button Grid.Column="5" Content="Copy as markdown" Command="{Binding CopyAsMarkdownCommand}" IsEnabled="{Binding HasRows}"
+                           AutomationProperties.Name="Copy the log as markdown" />
+            </Grid>
+
+            <Border Grid.Row="2" CornerRadius="6" Padding="4"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <Grid>
+                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Nothing matches these filters. Writes appear here as you make them."
+                               TextWrapping="Wrap" FontSize="12" Margin="10" VerticalAlignment="Top"
+                               Visibility="{Binding Rows.Count, Converter={StaticResource ZeroToVisible}}" />
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding HasRows, Converter={StaticResource BoolToVisibility}}">
+                        <ItemsControl ItemsSource="{Binding Rows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type pages:ActivityRow}">
+                                    <Border Padding="10,7" Margin="0,0,0,2" CornerRadius="4"
+                                            Background="{DynamicResource ControlFillColorDefaultBrush}">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="170" />
+                                                <ColumnDefinition Width="200" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding WhenText}" FontSize="11" VerticalAlignment="Top" Margin="0,1,8,0" />
+
+                                            <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                                                <TextBlock Text="{Binding ActionText}" FontSize="12" FontFamily="{StaticResource YlMono}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CorrelationText}" FontSize="11" TextTrimming="CharacterEllipsis"
+                                                           Visibility="{Binding HasCorrelation, Converter={StaticResource BoolToVisibility}}" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2">
+                                                <ui:HyperlinkButton Content="{Binding TargetName}" Command="{Binding OpenCommand}" Padding="0"
+                                                                    HorizontalAlignment="Left" AutomationProperties.Name="{Binding TargetName}" />
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding DetailText}" FontSize="11" TextWrapping="Wrap" />
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="3" VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding OutcomeText}" FontSize="11" HorizontalAlignment="Right">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsFailed}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                                    <Setter Property="Opacity" Value="1" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="undone" FontSize="11" HorizontalAlignment="Right"
+                                                           Visibility="{Binding WasUndone, Converter={StaticResource BoolToVisibility}}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </DataTemplate>
+</ResourceDictionary>

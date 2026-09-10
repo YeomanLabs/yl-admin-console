@@ -1,0 +1,108 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:conv="clr-namespace:AdminConsole.App.Converters">
+    <!-- Merged before PageTemplates.xaml: StaticResource inside a merged dictionary only sees dictionaries merged earlier. -->
+
+    <!-- UX §1 palette: navy window base, coral accent for primary actions, focus rings and the active nav item only. -->
+    <Color x:Key="YlNavyColor">#041635</Color>
+    <Color x:Key="YlCoralColor">#FF6950</Color>
+    <SolidColorBrush x:Key="YlNavy" Color="{StaticResource YlNavyColor}" />
+    <SolidColorBrush x:Key="YlCoral" Color="{StaticResource YlCoralColor}" />
+    <SolidColorBrush x:Key="YlCoralDim" Color="#B3FF6950" />
+    <SolidColorBrush x:Key="YlRailBackground" Color="#0A1F45" />
+    <!-- The chrome is navy in every theme, so text on it is light in every theme. Without this the light
+         theme paints dark text on the navy rail, status bar and quick-facts panel. -->
+    <SolidColorBrush x:Key="YlOnNavy" Color="#F2F5FA" />
+    <SolidColorBrush x:Key="YlSuccess" Color="#4CC38A" />
+    <!-- Danger has two jobs with opposite requirements, and one brush could not do both.
+         As a badge FILL it needs white text to pass: #F04E4E gave 3.56:1, #C62F2F gives 5.46:1.
+         As TEXT it sits on the page or a row and needs to be light: #F04E4E measured 4.63:1 on the page but only
+         3.87:1 on a row, which is where it is actually used. SystemFillColorCriticalBrush is the platform's own
+         critical colour and follows the theme, so the light theme gets a dark red rather than a washed-out pink. -->
+    <SolidColorBrush x:Key="YlDangerFill" Color="#C62F2F" />
+    <SolidColorBrush x:Key="YlDanger" Color="#F04E4E" />
+    <!-- Text levels, measured rather than assumed. WPF-UI's own TextFillColor*Brush resolve far dimmer than their
+         names suggest in 3.0.5 — secondary rendered as #868686 (5.1:1) and even primary came out #999999 inside a
+         button, which is how the whole app ended up grey-on-grey. These two are ours, and AppearanceService swaps
+         them when the theme changes. Dark values here; see AppearanceService for light.
+         Dark:  primary #FFFFFF = 16.5:1, secondary #C8C8C8 = 9.9:1 on the page.
+         Light: primary #1A1A1A = 16.9:1, secondary #4A4A4A = 8.6:1 on white. -->
+    <SolidColorBrush x:Key="YlTextPrimary" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="YlTextSecondary" Color="#C8C8C8" />
+    <FontFamily x:Key="YlMono">Cascadia Mono, Consolas</FontFamily>
+
+    <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+    <conv:NullToCollapsedConverter x:Key="NullToCollapsed" />
+    <conv:NullToBoolConverter x:Key="NullToBool" />
+    <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
+    <conv:SecondsConverter x:Key="Seconds" />
+    <conv:InverseBoolConverter x:Key="InverseBool" />
+    <conv:CountToVisibilityConverter x:Key="ZeroToVisible" />
+    <conv:CountToVisibilityConverter x:Key="NonZeroToVisible" WhenNonZero="True" />
+    <!-- ================= List pages (M9.2-9.4) =================
+         Users, Groups and Devices differ only in the columns each row draws, so the chrome — heading, filter box,
+         chips, sort, count, empty state and paging — is written once here and each page supplies only its rows. -->
+
+    <Style x:Key="FilterChipStyle" TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
+        <Setter Property="Margin" Value="0,0,6,6" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="FontSize" Value="12" />
+        <Style.Triggers>
+            <!-- Nothing would match. This used to drop the whole chip to 0.4 opacity, which took its label to
+                 2.79:1 — unreadable, in order to say "not worth reading". The zero says that by itself. -->
+            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- A row in any list: one clickable band, so the whole row is the target rather than a link inside it. -->
+    <Style x:Key="ListRowButton" TargetType="Button">
+        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+        <!-- Without this a row inherits the button's dimmed foreground, and the name ends up darker than the sign-in
+             name beneath it — the hierarchy upside down. -->
+        <Setter Property="Foreground" Value="{DynamicResource YlTextPrimary}" />
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="Margin" Value="0,0,0,2" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd" CornerRadius="4" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                        <ContentPresenter HorizontalAlignment="Stretch" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- A small pill for a row flag: Disabled, Guest, Dynamic, Not compliant. -->
+    <Style x:Key="RowBadge" TargetType="Border">
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="5,1" />
+        <Setter Property="Margin" Value="0,0,4,0" />
+        <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+
+
+
+    <!-- A Home tile: a figure you can click, which opens the list already filtered to it. -->
+    <Style x:Key="HomeTileButton" TargetType="Button" BasedOn="{StaticResource ListRowButton}">
+        <Setter Property="MinWidth" Value="210" />
+        <Setter Property="Padding" Value="14,12" />
+        <Setter Property="Margin" Value="0,0,10,10" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
+    </Style>
+
+</ResourceDictionary>

@@ -5,11 +5,11 @@ Work top to bottom. One task = one commit. Check the box and add a one-line note
 Legend: 🧪 has a unit test requirement · 🖥 requires launching the app against the dev tenant.
 
 ## M0 — Repo hygiene
-- [x] 0.1 Add `tests/YeomanLabs.AdminConsole.Core.Tests` (xUnit, FluentAssertions) to the solution; add a trivial passing test. — done: xunit 2.9.2 + FluentAssertions 7.0.0 (last Apache-2.0 line) + Test.Sdk 17.11.1; `dotnet test` 1/1 passed, 0 warnings
+- [x] 0.1 Add `tests/AdminConsole.Core.Tests` (xUnit, FluentAssertions) to the solution; add a trivial passing test. — done: xunit 2.9.2 + FluentAssertions 7.0.0 (last Apache-2.0 line) + Test.Sdk 17.11.1; `dotnet test` 1/1 passed, 0 warnings
 - [x] 0.2 Add `Directory.Build.props` with `TreatWarningsAsErrors=false` for now, `Nullable=enable`, `AnalysisLevel=latest`, deterministic builds. — done: Nullable/ImplicitUsings/AnalysisLevel=latest/Deterministic + ContinuousIntegrationBuild on GitHub Actions; Core + Tests rebuild with 0 warnings
 - [x] 0.3 Add `docs/DECISIONS.md` with the header and the first entry: chosen working name/namespace. — done: file was already present in the imported spec with header + naming entry (verified); appended FluentAssertions 7.x pin decision
 - [x] 0.4 Add a GitHub Actions workflow `build.yml` on `windows-latest`: restore, build solution, test. (Will fail until App compiles — that's fine; it's the gate for M3.) — done: `.github/workflows/build.yml` restore→build sln (Release)→test; expected red until App compiles at M3
-- **Gate:** `dotnet build src/YeomanLabs.AdminConsole.Core && dotnet test` green.
+- **Gate:** `dotnet build src/AdminConsole.Core && dotnet test` green.
 
 ## M1 — Core: auth + Graph client
 - [x] 1.1 `Auth/AuthOptions` (ClientId, Authority), `Auth/Scopes` (Read/Write/Sensitive constants from doc 08). — done: `AuthOptions` (section `Auth`), `Scopes` with Read/Write/Sensitive lists (22 scopes; `Device.ReadWrite.All` dropped per DECISIONS 2026-09-09; casing as issued by Graph); Core builds 0 warnings
@@ -119,3 +119,23 @@ review, and nothing YeomanLabs owns holds standing access to their directory.
 - [x] 10.4 🧪 A test that fails if the script's scope list and `Scopes` in code ever drift apart. — done. Parses the three arrays out of the script and compares them to `Scopes.Read/Write/Sensitive`. Without it, drift would surface as a consent failure on the first write **in a customer tenant**, long after anyone would connect it to the edit that caused it. Two more tests guard the shape rather than the contents: every `resourceAccess` entry must be type `Scope` and never `Role`, and there must be no client secret — the console signs in as the admin and must never be able to act without one. And one that the script still supports being run harmlessly first.
 - [x] 10.5 📄 Rewrite doc 08 around the script, keeping the manual steps as the fallback. — done. Doc 08 leads with the two commands, says what gets created and how to undo it, tabulates the options, and keeps the click-through at the bottom with a note on why it is easy to get subtly wrong (a missing broker redirect URI fails only on machines that use the broker, which is all of them). The roles an admin needs are now a table of "to do this / they need" rather than a paragraph. README updated to match, and `tenant.json` added to its file table.
 - [x] **Gate:** run the script against a real tenant into a second registration, point a clean install at it, sign in and use it, then delete that registration. — **met.** The script created "YeomanLabs Admin Console (gate test)" in the dev tenant and granted consent; the result was verified in Graph rather than trusted: multi-tenant public client, the broker redirect URI carrying the right client id, **zero secrets**, 22 delegated permissions **all of type `Scope`**, and one `AllPrincipals` grant covering all 22. A clean install — shipped `appsettings.json` blanked, `tenant.json` pointed at the new id — started, accepted the registration and reached its sign-in page with no error. It stops there because MSAL's token cache is keyed on the client id, so a brand-new registration has no cached account and needs a WAM prompt only a person can answer. That is correct behaviour and exactly what a client sees on first run, so Andrew completed it at the keyboard: signed in through the new registration and landed on Home against the right tenant. The registration was then deleted and the deletion verified — application gone, service principal gone, and its consent grant with it, leaving only the original. Entra soft-deletes app registrations, so it sits recoverable in Deleted applications for 30 days and then goes on its own. The run also found a real defect: `ConfirmImpact = High` made `ShouldProcess` throw a bare null reference when there was no interactive host to prompt on, which would have met anyone scripting this. It now explains itself and names `-Confirm:$false`.
+
+## M11 — White-label
+
+M10 made the app work in any tenant. It still looks and reads as YeomanLabs software: navy and coral from UX §1, an
+exe called `AdminConsole.exe`, and `%LOCALAPPDATA%\YeomanLabs\AdminConsole` on disk, which Settings shows
+to whoever is using it. A client console should not carry another company's name.
+
+Decision (2026-09-10, Andrew): **neutral product, brandable per install.** Not merely stripped — a deployment can set
+its own product name and accent, so a client gets a console in their colours with their name on it, and YeomanLabs
+becomes one branding among others rather than the baseline. Neutral name: **Admin Console**, which is what CLAUDE.md
+already called the working name and what the title bar already shows, so nothing has to be invented.
+
+This supersedes CLAUDE.md's "use `AdminConsole` as the namespace until told otherwise".
+
+- [ ] 11.1 🧪 Rename the namespace, assembly, projects and folders to `AdminConsole`, and move `%LOCALAPPDATA%` with a migration for installs that already hold a cache, templates and a tenant.json.
+- [ ] 11.2 🖥 A neutral default palette, with the brand colours no longer baked into `Theme.xaml`.
+- [ ] 11.3 🧪 `branding.json`: product name and accent colour per install, applied at startup.
+- [ ] 11.4 🖥 Settings shows the branding and can change it; the window title, sign-in page and about text follow it.
+- [ ] 11.5 📄 Docs, README and CLAUDE.md updated; the registration script's default name follows the branding.
+- **Gate:** run a default install and a YeomanLabs-branded one side by side; confirm the second is only a `branding.json` apart, and that an existing install keeps its cache and settings across the rename.

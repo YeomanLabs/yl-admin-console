@@ -1,0 +1,21 @@
+<Application x:Class="AdminConsole.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
+    <!-- No StartupUri: the window is created by the host in App.xaml.cs after DI is up. -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ui:ThemesDictionary Theme="Dark" />
+                <ui:ControlsDictionary />
+                <!-- Order matters: Theme (palette + converters) must precede the templates that reference it. -->
+                <ResourceDictionary Source="Views/Theme.xaml" />
+                <ResourceDictionary Source="Views/PageTemplates.xaml" />
+                <ResourceDictionary Source="Views/UserPage.xaml" />
+                <ResourceDictionary Source="Views/DevicePage.xaml" />
+                <ResourceDictionary Source="Views/GroupPage.xaml" />
+                <ResourceDictionary Source="Views/SettingsPage.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

@@ -16,13 +16,13 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Restore
-        run: dotnet restore YeomanLabs.AdminConsole.sln
+        run: dotnet restore AdminConsole.sln
 
       - name: Build
-        run: dotnet build YeomanLabs.AdminConsole.sln --configuration Release --no-restore
+        run: dotnet build AdminConsole.sln --configuration Release --no-restore
 
       - name: Test
-        run: dotnet test tests/YeomanLabs.AdminConsole.Core.Tests --configuration Release --no-build --logger "trx;LogFileName=results.trx"
+        run: dotnet test tests/AdminConsole.Core.Tests --configuration Release --no-build --logger "trx;LogFileName=results.trx"
 
       - name: Upload test results
         if: always()
