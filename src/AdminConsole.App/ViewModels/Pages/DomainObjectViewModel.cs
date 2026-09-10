@@ -90,7 +90,14 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
 
     /// <summary>Groups have no account to enable, so the control is absent rather than greyed.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAccountPanel))]
     private bool _hasAccountState;
+
+    /// <summary>
+    /// Whether the account card has anything in it at all. A group has neither an account to disable nor a LAPS
+    /// password, and an empty bordered box on the page reads as something that failed to load.
+    /// </summary>
+    public bool HasAccountPanel => HasAccountState || IsComputer;
 
     public string EnableLabel => IsEnabled ? "Disable account" : "Enable account";
 
@@ -323,6 +330,7 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
         ObjectGuid = objectGuid;
         Kind = kind;
         OnPropertyChanged(nameof(IsComputer));
+        OnPropertyChanged(nameof(HasAccountPanel));
         _ = RefreshAsync(CancellationToken.None);
     }
 
