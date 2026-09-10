@@ -304,3 +304,46 @@ security group into a distribution one, which grants nothing — every permissio
 working, silently, and be noticed days later by whoever lost access. `SetGroupTypeAsync` therefore takes both, and
 the value is built from nothing each time rather than by flipping bits on the old one, since two scope bits set at
 once is rejected.
+
+## M12.6 — "protect from accidental deletion" is read from the DACL, not guessed at
+
+There is no attribute for the checkbox. Ticking it writes a deny ACE for Everyone covering Delete and Delete Subtree,
+and AD answers a blocked delete with a bare access-denied that is indistinguishable from a missing delegation. Without
+reading the descriptor, the console would send an admin to audit rights that were never the problem. `CommonSecurityDescriptor`
+from the BCL parses the raw bytes, so this needs no dependency on `System.DirectoryServices` and its Windows-only
+object model — but the method is marked `[SupportedOSPlatform("windows")]`, as is `LdapDirectoryService` as a whole,
+because both were always Windows-only and saying so lets the analyser check callers instead of warning inside.
+
+## M12.7 — the leavers OU is configuration, and its absence blocks the step rather than defaulting
+
+`OnPrem:DisabledOu` has no default. An OU carries policy — a restrictive GPO, a different password policy, exclusion
+from sync — so a console-chosen destination would apply somebody else's rules to an account at the moment it matters
+most. Unset, the step previews as blocked and names the setting.
+
+Neither on-prem step halts the run when it fails. They are the steps that make an offboarding permanent, but stopping
+there would leave licences assigned and sessions live, which is worse than carrying on and reporting loudly.
+
+## M12.8 — a bad move destination is LDAP 80, and AD cannot say which kind of bad
+
+Result code 80 with `00002089 ... problem 5012 (DIR_ERROR)` comes back both for a malformed distinguished name and
+for a container that does not exist. Nothing in the answer distinguishes them, so the console reads the destination
+before sending and says which. Code 80 is also in the table now; it was not, and both cases produced "Active
+Directory returned error 80".
+
+## M12.8 — the password-policy message names the rule nobody expects
+
+Windows complexity rejects any password containing a three-character-or-longer run from the account name or the
+display name. `GateP@ssw0rd!2026x` was refused on an account called Gate Subject: long, mixed case, digits and
+symbols, refused for containing "Gate". A message listing only length, complexity and age would leave an admin
+retrying longer and longer passwords.
+
+## M12 gate — the checker uses ADSI rather than Get-AD*, and proves itself first
+
+The plan called for `Get-AD*`. That needs RSAT installed on this machine or WinRM remoting to the DC, and both need
+an elevated prompt on the user's own computer — not something to take unasked. ADSI (`System.DirectoryServices`) is a
+different library from the `System.DirectoryServices.Protocols` the console is built on, in a different process and a
+different language, which is what the gate is actually for: nothing checks its own work.
+
+The checker begins by looking up an object that cannot exist and asserting it is absent. That is not ceremony: the
+first version bound with `DirectoryEntry`, which does not reliably fail for a missing distinguished name, and it
+reported a deleted object as present. A checker that cannot tell absent from present is worse than no checker.

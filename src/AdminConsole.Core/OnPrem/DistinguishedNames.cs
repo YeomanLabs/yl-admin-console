@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 
 namespace AdminConsole.Core.OnPrem;
 
@@ -81,6 +81,25 @@ public static class DistinguishedNames
     {
         var containers = Split(dn)
             .Skip(1)
+            .Where(p => !p.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
+            .Select(p => Unescape(p[(p.IndexOf('=') + 1)..]))
+            .Reverse()
+            .ToList();
+
+        return containers.Count == 0 ? string.Empty : string.Join(" / ", containers);
+    }
+
+    /// <summary>
+    /// The readable path of a container itself, leaf included: <c>OU=Disabled,OU=Lab,DC=corp</c> becomes
+    /// <c>Lab / Disabled</c> (M12.6).
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Friendly"/> answers "where does this object live" and so drops the leaf, which is right for a user
+    /// and wrong for an OU — naming a move target with it produced "moving to Lab" when the target was Lab / Disabled.
+    /// </remarks>
+    public static string FriendlyPath(string? dn)
+    {
+        var containers = Split(dn)
             .Where(p => !p.StartsWith("DC=", StringComparison.OrdinalIgnoreCase))
             .Select(p => Unescape(p[(p.IndexOf('=') + 1)..]))
             .Reverse()

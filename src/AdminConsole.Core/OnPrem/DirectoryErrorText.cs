@@ -36,6 +36,12 @@ public static class DirectoryErrorText
     public const int StrongAuthRequired = 8;
 
     /// <summary>
+    /// What AD actually returns when a move's destination is wrong (M12.8) — not 32 or 34, as the shape of the
+    /// failure suggests. It is the catch-all code, so the message stays about what was being attempted.
+    /// </summary>
+    public const int Other = 80;
+
+    /// <summary>
     /// What to show the admin. <paramref name="diagnostic"/> is the server's extended message, which is where the
     /// Win32 sub-code lives and where the real reason usually is.
     /// </summary>
@@ -70,6 +76,7 @@ public static class DirectoryErrorText
             ReferralCode => "That object lives in another domain. Cross-domain operations are not supported yet.",
             UnwillingToPerform => "The domain controller refused the operation. This usually means a policy on the domain forbids it.",
             OperationsError => "The domain controller reported an internal error handling the request.",
+            Other => $"Active Directory could not carry out that change to {subject}. If it was a move, check that the destination container exists and that you can see it.",
             _ => $"Active Directory returned error {resultCode}." + (string.IsNullOrWhiteSpace(diagnostic) ? string.Empty : $" {Trim(diagnostic)}"),
         };
     }
@@ -132,6 +139,9 @@ public static class DirectoryErrorText
         "701" => "That account has expired.",
         "773" => "The password must be changed before the account can be used.",
         "775" => "That account is locked out. Unlock it before trying again.",
+        // A move whose destination does not exist, or is not a valid distinguished name. AD gives both the same
+        // answer, so the message names both rather than asserting one.
+        "2089" => "That change could not be made. If it was a move, the destination container does not exist or the path is not valid.",
         // Modify refusals. AD answers "no such attribute" (LDAP 16) to two different situations, and only the leading
         // code separates them: 0x57 when the attribute is not in this forest's schema at all — mailNickname without
         // the Exchange extension — and 0x2076 when it is simply not set on this object. Left undistinguished, a
@@ -139,7 +149,11 @@ public static class DirectoryErrorText
         "57" => "Active Directory would not accept that attribute. It may not exist in this forest's schema — mailNickname, for instance, needs the Exchange schema extension — or the value may be the wrong type for it.",
         "2076" => "That value was not there to remove.",
         // Password-set refusals, which are the ones an admin most often meets.
-        "52d" => "The password does not meet the domain's policy — usually its length, complexity, or how recently it was last changed.",
+        // The name-containment rule belongs in this sentence because it is the one nobody expects: Windows complexity
+        // rejects a password containing any three-or-more-character run from the account name or the display name.
+        // Provoked in the lab by "GateP@ssw0rd!2026x" on an account called Gate Subject — long, mixed-case, with
+        // digits and symbols, and refused for containing "Gate".
+        "52d" => "The password does not meet the domain's policy. That usually means its length or complexity, how recently it was last changed, or that it contains part of the account or display name.",
         "56" => "The new password matches one the domain remembers. The password history policy forbids reuse.",
         _ => null,
     };

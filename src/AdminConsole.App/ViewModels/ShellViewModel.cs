@@ -15,6 +15,7 @@ using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
+using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Groups;
 using AdminConsole.Core.Sync;
 using AdminConsole.Core.Templates;
@@ -142,7 +143,11 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
         if (page is SettingsPageViewModel settings) settings.SignedOut = ReturnToSignIn;
         if (page is ActivityPageViewModel activity) activity.OpenObject = OpenObjectFromPage;
-        if (page is DomainPageViewModel domain) domain.Start();
+        if (page is DomainPageViewModel domain)
+        {
+            domain.OpenObject = OpenDirectoryObject;
+            domain.Start();
+        }
 
         // The list pages (M9.2-9.4) open the object a row points at, and start their first read only once the shell
         // has finished building them.
@@ -421,6 +426,22 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         _services.GetRequiredService<CacheDb>().TouchRecent(id, type.ToString().ToLowerInvariant());
         OpenPage(CreateObjectPage(type, id, new SearchHit { ObjectType = type, Id = id, Primary = title, Score = 0 }));
+    }
+
+    /// <summary>Opens one AD object (M12.6) in the current tab, the way a list row opens a cloud object.</summary>
+    private void OpenDirectoryObject(Guid objectGuid, OnPremKind kind)
+    {
+        var page = _services.GetRequiredService<DomainObjectViewModel>();
+
+        // Back goes to the Domain list rather than closing the tab: an admin who has just deleted something is
+        // usually about to look at the next thing, not to leave.
+        page.GoBack = () =>
+        {
+            if (NavItems.FirstOrDefault(i => i.Id == "domain") is { } item) Navigate(item);
+        };
+
+        page.Start(objectGuid, kind);
+        OpenPage(page);
     }
 
     private void RunAction(string id)

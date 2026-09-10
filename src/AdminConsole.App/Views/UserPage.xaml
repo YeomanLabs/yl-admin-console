@@ -102,11 +102,6 @@
         <Setter Property="Margin" Value="0,16,0,6" />
     </Style>
 
-    <Style x:Key="Caption" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="11" />
-        <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
-        <Setter Property="TextWrapping" Value="Wrap" />
-    </Style>
 
     <!-- Identity property sheet row (UX §4 tab 1): edit-on-blur, spinner then check, no Save button.
          Read-only rows show the hybrid caption instead of an editor (UX §6). -->

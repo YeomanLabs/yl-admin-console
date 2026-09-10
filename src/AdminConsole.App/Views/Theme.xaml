@@ -43,6 +43,13 @@
     <conv:CountToVisibilityConverter x:Key="ZeroToVisible" />
     <conv:CountToVisibilityConverter x:Key="NonZeroToVisible" WhenNonZero="True" />
     <conv:DepthToMarginConverter x:Key="DepthToMargin" />
+
+    <!-- Small explanatory text under a control (UX §6). Used by every page that has a reason to give. -->
+    <Style x:Key="Caption" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
     <!-- ================= List pages (M9.2-9.4) =================
          Users, Groups and Devices differ only in the columns each row draws, so the chrome — heading, filter box,
          chips, sort, count, empty state and paging — is written once here and each page supplies only its rows. -->

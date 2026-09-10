@@ -191,7 +191,9 @@ public sealed class FakeDirectoryServiceTests
         var outcome = await ad.DeleteAsync(lab.ObjectGuid, Ct);
 
         outcome.Success.Should().BeFalse();
-        outcome.FriendlyError.Should().Contain("Empty it");
+        // M12.6: the reason now counts what is in the way, because "empty it first" leaves an admin opening ADUC to
+        // find out how much there is. The real service says the same thing from the same count.
+        outcome.FriendlyError.Should().Contain("still holds 2 objects", "the Disabled OU and the user, both direct children");
     }
 
     [Fact]

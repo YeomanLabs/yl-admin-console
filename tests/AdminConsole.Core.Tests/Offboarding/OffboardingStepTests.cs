@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -10,6 +10,7 @@ using AdminConsole.Core.Groups;
 using AdminConsole.Core.Licensing;
 using AdminConsole.Core.Models;
 using AdminConsole.Core.Offboarding;
+using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Offboarding.Steps;
 using AdminConsole.Core.Tests.Fakes;
 using AdminConsole.Core.Users;
@@ -27,6 +28,11 @@ public sealed class OffboardingStepTests : IDisposable
     private readonly CacheDb _db = CacheDb.OpenInMemory();
     private readonly ActionLog _actions = ActionLog.OpenInMemory();
     private readonly TenantContext _tenant = new();
+
+    // The on-prem half of the catalog (M12.7). An empty LdapOptions is the cloud-only case, which is what most of
+    // these tests are about; the on-prem steps have their own.
+    private readonly FakeDirectoryService _directory = new();
+    private readonly LdapOptions _onPrem = new();
     private readonly GraphClient _graph;
     private readonly UserService _users;
     private readonly GroupService _groups;
@@ -424,7 +430,7 @@ public sealed class OffboardingStepTests : IDisposable
     // ---- the catalog ------------------------------------------------------------------------------------------------
 
     private IReadOnlyList<IOffboardingStep> Catalog() =>
-        OffboardingCatalog.Build(_users, _groups, _licenses, _devices, _graph, _actions, _tenant);
+        OffboardingCatalog.Build(_users, _groups, _licenses, _devices, _graph, _actions, _tenant, _directory, _onPrem);
 
     [Fact]
     public void Catalog_HasAllNineteenStepsOfDoc06_InOrder_WithUniqueIds()
@@ -465,6 +471,10 @@ public sealed class OffboardingStepTests : IDisposable
 
         catalog.Where(s => s.Surface == StepSurface.Exchange).Should().HaveCount(5, "steps 10-14");
         catalog.Where(s => s.Surface == StepSurface.OnPremAd).Should().HaveCount(2, "steps 18-19");
-        catalog.OfType<NotInThisPhaseStep>().Should().HaveCount(9, "5 Exchange, 2 on-prem AD, plus device deletion and OneDrive delegation");
+
+        // M12.7: the two on-prem steps are real now, so seven remain unbuilt rather than nine. They are still
+        // registered rather than omitted — a step an admin cannot see is a step they cannot know exists.
+        catalog.OfType<NotInThisPhaseStep>().Should().HaveCount(7, "5 Exchange, plus device deletion and OneDrive delegation");
+        catalog.Where(s => s.Surface == StepSurface.OnPremAd).Should().NotContain(s => s is NotInThisPhaseStep);
     }
 }

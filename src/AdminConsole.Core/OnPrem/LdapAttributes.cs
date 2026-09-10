@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text;
 using System.DirectoryServices.Protocols;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 namespace AdminConsole.Core.OnPrem;
 
@@ -176,5 +178,47 @@ public static class LdapAttributes
         };
 
         return category == GroupCategory.Security ? value | GroupSecurityEnabled : value;
+    }
+
+    /// <summary>
+    /// Whether a binary security descriptor denies Everyone the right to delete the object (M12.6) — which is how
+    /// AD stores the "protect object from accidental deletion" checkbox.
+    /// </summary>
+    /// <remarks>
+    /// There is no attribute for the checkbox. Ticking it writes a deny ACE for Everyone covering Delete and Delete
+    /// Subtree, and the only way to know it is set is to read the DACL and look. Without this, the refusal that
+    /// follows is a bare access-denied, indistinguishable from a delegation the admin has not been given — so they
+    /// go and audit rights that were never the problem.
+    /// </remarks>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public static bool DeniesDeletion(byte[]? securityDescriptor)
+    {
+        if (securityDescriptor is null || securityDescriptor.Length == 0) return false;
+
+        // ActiveDirectoryRights: Delete is 0x10000 and DeleteTree is 0x40. Both live in the standard access mask, so
+        // a raw descriptor can be read without System.DirectoryServices and its Windows-only object model.
+        const int delete = 0x00010000;
+        const int deleteTree = 0x00000040;
+
+        try
+        {
+            var descriptor = new CommonSecurityDescriptor(true, true, securityDescriptor, 0);
+            if (descriptor.DiscretionaryAcl is not { } dacl) return false;
+
+            foreach (var rule in dacl.Cast<CommonAce>())
+            {
+                if (rule.AceType != AceType.AccessDenied) continue;
+                if ((rule.AccessMask & (delete | deleteTree)) == 0) continue;
+                if (rule.SecurityIdentifier.IsWellKnown(WellKnownSidType.WorldSid)) return true;
+            }
+
+            return false;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or InvalidCastException)
+        {
+            // A descriptor shape this cannot read is not evidence either way, and guessing "protected" would block a
+            // delete AD would have allowed.
+            return false;
+        }
     }
 }

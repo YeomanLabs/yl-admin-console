@@ -46,6 +46,18 @@ public interface IDirectoryService
     /// <summary>Every OU in the domain, flat. The tree is assembled from distinguished names by the caller.</summary>
     Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct);
 
+    Task<OnPremOu?> GetOrganisationalUnitAsync(Guid objectGuid, CancellationToken ct);
+
+    /// <summary>
+    /// The local administrator password AD holds for a machine (M12.6), from whichever LAPS this forest uses.
+    /// </summary>
+    /// <remarks>
+    /// Windows LAPS and the older downloadable LAPS store it in different attributes with different encodings, and a
+    /// forest can have either, both, or neither. Reading only one and reporting nothing when it is absent would tell
+    /// an admin the machine has no password when it may simply have the other kind.
+    /// </remarks>
+    Task<LapsReadResult> GetLapsPasswordAsync(Guid computerGuid, CancellationToken ct);
+
     /// <summary>
     /// Which attributes the signed-in admin may actually write on this object, from the directory's own
     /// <c>allowedAttributesEffective</c>.
@@ -94,6 +106,9 @@ public interface IDirectoryService
     /// unwilling to perform" does not tell an admin which of three different rules they have met.
     /// </remarks>
     Task<DirectoryOutcome> SetGroupTypeAsync(Guid groupGuid, GroupScope scope, GroupCategory category, CancellationToken ct);
+
+    /// <summary>Creates an organisational unit under <paramref name="parentDn"/> (M12.6).</summary>
+    Task<DirectoryOutcome> CreateOuAsync(string name, string parentDn, CancellationToken ct);
 
     /// <summary>Deletes an object. Refuses a non-empty container and a protected one, with a reason rather than a code.</summary>
     Task<DirectoryOutcome> DeleteAsync(Guid objectGuid, CancellationToken ct);

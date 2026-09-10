@@ -1,4 +1,4 @@
-﻿using System.Net;
+using System.Net;
 
 namespace AdminConsole.Core.OnPrem;
 
@@ -30,6 +30,13 @@ public sealed class LdapOptions
     public bool UseTls { get; set; }
 
     public TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Where offboarding moves a leaver's AD object (M12.7), as a distinguished name. Empty leaves that step blocked
+    /// with the reason, because an OU chosen by the console would apply somebody else's policy to an account at the
+    /// exact moment it matters most.
+    /// </summary>
+    public string DisabledOu { get; set; } = string.Empty;
 
     /// <summary>
     /// Explicit credentials. Null in normal use, where the admin's own Kerberos ticket is the point. This exists so a

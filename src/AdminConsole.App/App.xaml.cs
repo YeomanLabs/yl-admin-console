@@ -195,7 +195,9 @@ public sealed partial class App : Application
                 sp.GetRequiredService<DeviceService>(),
                 sp.GetRequiredService<GraphClient>(),
                 sp.GetRequiredService<ActionLog>(),
-                sp.GetRequiredService<TenantContext>()),
+                sp.GetRequiredService<TenantContext>(),
+                sp.GetRequiredService<IDirectoryService>(),
+                sp.GetRequiredService<LdapOptions>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
         services.AddSingleton(sp => new UserSettingsStore(UserSettingsStore.DefaultPath, sp.GetRequiredService<ILogger<UserSettingsStore>>()));
         services.AddSingleton<UserProvisioningService>();
@@ -229,6 +231,7 @@ public sealed partial class App : Application
         services.AddTransient<TemplatesPageViewModel>();
         services.AddTransient<ActivityPageViewModel>();
         services.AddTransient<DomainPageViewModel>();
+        services.AddTransient<DomainObjectViewModel>();
     }
 
     private void HookGlobalExceptionHandlers()

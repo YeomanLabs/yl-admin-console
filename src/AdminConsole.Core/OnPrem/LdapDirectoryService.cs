@@ -20,7 +20,11 @@ namespace AdminConsole.Core.OnPrem;
 /// resets working out of the box and needing a PKI conversation first.
 /// </para>
 /// </remarks>
-public sealed class LdapDirectoryService : IDirectoryService, IDisposable
+// Windows only, and always was: the bind is Negotiate through the platform's own SSPI, and reading the "protect from
+// accidental deletion" ACE needs the Windows security-descriptor model. Saying so lets the analyser check callers
+// rather than warning inside every method that touches either.
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
+public sealed partial class LdapDirectoryService : IDirectoryService, IDisposable
 {
     private readonly LdapOptions _options;
     private readonly ILogger<LdapDirectoryService> _logger;
@@ -63,6 +67,7 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
     private static readonly string[] OuAttributes =
     [
         "objectGUID", "distinguishedName", "ou", "name", "description", "isCriticalSystemObject",
+        "nTSecurityDescriptor",
     ];
 
     // ---- connection ----------------------------------------------------------------------------------------------
@@ -263,6 +268,9 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
     public Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct) =>
         SearchAsync(OuFilter, OuAttributes, ReadOu, 5000, ct);
 
+    public Task<OnPremOu?> GetOrganisationalUnitAsync(Guid objectGuid, CancellationToken ct) =>
+        FindOneAsync($"(&{OuFilter}(objectGUID={LdapAttributes.GuidFilter(objectGuid)}))", OuAttributes, ReadOu, ct);
+
     public async Task<IReadOnlySet<string>?> GetWritableAttributesAsync(Guid objectGuid, CancellationToken ct)
     {
         var dn = await ResolveDnAsync(objectGuid, ct).ConfigureAwait(false);
@@ -378,8 +386,21 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
         var leaf = DistinguishedNames.Split(dn).FirstOrDefault();
         if (leaf is null) return DirectoryOutcome.Refused("Move", "That object's name could not be read.");
 
+        // A destination that does not exist and one that is not a valid distinguished name come back from AD as the
+        // same thing: result code 80 with "problem 5012 (DIR_ERROR)". Nothing in that answer says which, so the
+        // destination is checked first and the console can name the actual problem.
+        if (await ReadByDnAsync(targetOuDn, ["distinguishedName"], ct).ConfigureAwait(false) is null)
+        {
+            // Echoing a path that is not a distinguished name back at the admin reads as nonsense, so it is only
+            // named when it is one.
+            var looksLikeDn = DistinguishedNames.Split(targetOuDn).Any(p => p.Contains('='));
+            return DirectoryOutcome.Refused("Move", looksLikeDn
+                ? $"The destination container was not found. Check that {DistinguishedNames.FriendlyPath(targetOuDn)} still exists and that you can see it."
+                : "The destination is not a valid container path, so there is nowhere to move this to.");
+        }
+
         var request = new ModifyDNRequest(dn, targetOuDn, leaf) { DeleteOldRdn = true };
-        return await SendAsync(request, $"Moved to {DistinguishedNames.Friendly(targetOuDn)}", "that object", ct).ConfigureAwait(false);
+        return await SendAsync(request, $"Moved to {DistinguishedNames.FriendlyPath(targetOuDn)}", "that object", ct).ConfigureAwait(false);
     }
 
     public async Task<DirectoryOutcome> RenameAsync(Guid objectGuid, string newName, CancellationToken ct)
@@ -514,6 +535,27 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
             return DirectoryOutcome.Refused("Delete", $"{name} is a built-in object and cannot be deleted.");
         }
 
+        // A container with anything under it comes back as NotAllowedOnNonLeaf, which is accurate and says nothing
+        // about what is in the way. Counting first turns it into a number the admin can go and look at.
+        var children = await CountChildrenAsync(entry.DistinguishedName, ct).ConfigureAwait(false);
+        if (children > 0)
+        {
+            var name = LdapAttributes.String(entry, "name") ?? "That container";
+            return DirectoryOutcome.Refused("Delete",
+                $"{name} still holds {children} object{(children == 1 ? string.Empty : "s")}. Move or delete what is in it first.");
+        }
+
+        // "Protect object from accidental deletion" is a deny ACE, and AD answers it with a bare access-denied that
+        // looks exactly like a missing delegation. Naming the checkbox is the difference between a two-minute fix
+        // and an afternoon spent auditing rights.
+        if (await IsProtectedFromDeletionAsync(entry.DistinguishedName, ct).ConfigureAwait(false))
+        {
+            var name = LdapAttributes.String(entry, "name") ?? "That object";
+            return DirectoryOutcome.Refused("Delete",
+                $"{name} has \"Protect object from accidental deletion\" ticked. Untick it on the Object tab in " +
+                "Active Directory Users and Computers, then try again.");
+        }
+
         var request = new DeleteRequest(entry.DistinguishedName);
         return await SendAsync(request, $"Deleted {LdapAttributes.String(entry, "name") ?? "the object"}", "that object", ct).ConfigureAwait(false);
     }
@@ -524,6 +566,57 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
     /// Sends a request. <paramref name="alreadyDone"/> lists result codes that mean the directory is already in the
     /// state being asked for — AD reports those as errors, and the console should not.
     /// </summary>
+    public async Task<DirectoryOutcome> CreateOuAsync(string name, string parentDn, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return DirectoryOutcome.Refused("Create OU", "An organisational unit needs a name.");
+
+        // The name goes into the distinguished name, so it is escaped rather than trusted: a comma or a plus in a
+        // name would otherwise be read as extra components and put the OU somewhere nobody asked for.
+        var dn = $"OU={DistinguishedNames.Escape(name.Trim())},{parentDn}";
+        var request = new AddRequest(dn, new DirectoryAttribute("objectClass", "organizationalUnit"));
+        return await SendAsync(request, $"Created {name.Trim()}", "that container", ct).ConfigureAwait(false);
+    }
+
+    private async Task<int> CountChildrenAsync(string dn, CancellationToken ct)
+    {
+        try
+        {
+            var connection = await EnsureConnectedAsync(ct).ConfigureAwait(false);
+            var request = new SearchRequest(dn, "(objectClass=*)", SearchScope.OneLevel, "distinguishedName");
+            var response = await Task.Run(() => (SearchResponse)connection.SendRequest(request), ct).ConfigureAwait(false);
+            return response.Entries.Count;
+        }
+        catch (Exception ex) when (ex is LdapException or DirectoryOperationException)
+        {
+            // Not being able to count is not a reason to block the delete. AD still gets the final say.
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Whether AD's "protect from accidental deletion" checkbox is ticked, which it stores as a deny ACE rather
+    /// than as an attribute anybody can read.
+    /// </summary>
+    private async Task<bool> IsProtectedFromDeletionAsync(string dn, CancellationToken ct)
+    {
+        try
+        {
+            var connection = await EnsureConnectedAsync(ct).ConfigureAwait(false);
+            var request = new SearchRequest(dn, "(objectClass=*)", SearchScope.Base, "nTSecurityDescriptor");
+            // Without this control the DC returns the SACL too, which needs a privilege the admin may not hold, and
+            // the whole read fails rather than coming back without it.
+            request.Controls.Add(new SecurityDescriptorFlagControl(SecurityMasks.Dacl));
+            var response = await Task.Run(() => (SearchResponse)connection.SendRequest(request), ct).ConfigureAwait(false);
+            if (response.Entries.Count == 0) return false;
+
+            return LdapAttributes.DeniesDeletion(LdapAttributes.Bytes(response.Entries[0], "nTSecurityDescriptor"));
+        }
+        catch (Exception ex) when (ex is LdapException or DirectoryOperationException)
+        {
+            return false;
+        }
+    }
+
     private async Task<DirectoryOutcome> SendAsync(DirectoryRequest request, string summary, string what, CancellationToken ct,
         params int[] alreadyDone)
     {

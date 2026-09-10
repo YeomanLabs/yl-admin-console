@@ -439,6 +439,35 @@ public sealed class FakeDirectoryService : IDirectoryService
         return Task.FromResult(DirectoryOutcome.Ok($"Removed from {group.Primary}"));
     }
 
+    public Task<OnPremOu?> GetOrganisationalUnitAsync(Guid objectGuid, CancellationToken ct) =>
+        Task.FromResult(Get<OnPremOu>(objectGuid));
+
+    /// <summary>What this stands-in forest has, which is nothing until a test says otherwise.</summary>
+    public LapsReadResult Laps { get; set; } = LapsReadResult.NoSchema;
+
+    public Task<LapsReadResult> GetLapsPasswordAsync(Guid computerGuid, CancellationToken ct) =>
+        Task.FromResult(Get<OnPremComputer>(computerGuid) is null
+            ? LapsReadResult.None("That computer no longer exists in Active Directory.")
+            : Laps);
+
+    public Task<DirectoryOutcome> CreateOuAsync(string name, string parentDn, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return Task.FromResult(DirectoryOutcome.Refused("Create OU", "An organisational unit needs a name."));
+        }
+
+        var dn = DistinguishedNames.Child("OU", name.Trim(), parentDn);
+        if (_objects.Values.Any(e => string.Equals(e.Dn, dn, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Task.FromResult(DirectoryOutcome.Failed("Create OU", DirectoryErrorText.EntryAlreadyExists, null));
+        }
+
+        var ou = new OnPremOu { ObjectGuid = Guid.NewGuid(), Name = name.Trim(), DistinguishedName = dn };
+        Insert(ou.ObjectGuid, ou.DistinguishedName, ou);
+        return Task.FromResult(DirectoryOutcome.Ok($"Created {ou.Name}"));
+    }
+
     public Task<DirectoryOutcome> DeleteAsync(Guid objectGuid, CancellationToken ct)
     {
         if (!_objects.TryGetValue(objectGuid, out var entry))
@@ -457,9 +486,15 @@ public sealed class FakeDirectoryService : IDirectoryService
             return Task.FromResult(DirectoryOutcome.Refused("Delete", $"{critical.Primary} is a built-in group and cannot be deleted."));
         }
 
-        if (_objects.Values.Any(e => DistinguishedNames.IsUnder(e.Dn, entry.Dn)))
+        // Direct children only, which is what a one-level LDAP search returns and what ADUC shows when the container
+        // is opened. Counting the whole subtree would put a number in the message that does not match either.
+        var children = _objects.Values.Count(e =>
+            string.Equals(DistinguishedNames.Parent(e.Dn), entry.Dn, StringComparison.OrdinalIgnoreCase));
+        if (children > 0)
         {
-            return Task.FromResult(DirectoryOutcome.Failed("Delete", DirectoryErrorText.NotAllowedOnNonLeaf, null));
+            var name = DistinguishedNames.LeafName(entry.Dn) ?? "That container";
+            return Task.FromResult(DirectoryOutcome.Refused("Delete",
+                $"{name} still holds {children} object{(children == 1 ? string.Empty : "s")}. Move or delete what is in it first."));
         }
 
         _objects.TryRemove(objectGuid, out _);

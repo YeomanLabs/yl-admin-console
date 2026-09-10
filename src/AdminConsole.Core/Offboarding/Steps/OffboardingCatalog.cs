@@ -1,9 +1,10 @@
-﻿using AdminConsole.Core.Cache;
+using AdminConsole.Core.Cache;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Devices;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Groups;
 using AdminConsole.Core.Licensing;
+using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Users;
 
 namespace AdminConsole.Core.Offboarding.Steps;
@@ -24,7 +25,9 @@ public static class OffboardingCatalog
         DeviceService devices,
         GraphClient graph,
         ActionLog actions,
-        TenantContext tenant) =>
+        TenantContext tenant,
+        IDirectoryService directory,
+        LdapOptions onPrem) =>
     [
         new DisableAccountStep(users),                                  // 1
         new RevokeSessionsStep(users),                                  // 2
@@ -53,7 +56,10 @@ public static class OffboardingCatalog
         new RemoveTeamsOwnershipStep(graph, actions, tenant),           // 16
         new UpdateAttributesStep(users),                                // 17
 
-        new NotInThisPhaseStep("move-ou", "Move the AD object to the disabled OU", StepSurface.OnPremAd, OnPremPhase, defaultEnabled: true),  // 18
-        new NotInThisPhaseStep("disable-ad-account", "Disable the on-prem AD account", StepSurface.OnPremAd, OnPremPhase, defaultEnabled: true), // 19
+        // M12.7: the last two were greyed with "arrives in Phase 2" from M6 until Phase 2 existed. Doc 06 orders the
+        // move before the on-prem disable, and it is left that way: sign-in is already blocked by step 1, so the
+        // move happens against a live object where a mistake is visible and reversible.
+        new MoveToDisabledOuStep(directory, onPrem),                    // 18
+        new DisableAdAccountStep(directory),                            // 19
     ];
 }

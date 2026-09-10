@@ -100,4 +100,57 @@ public sealed class RealDirectoryFindingsTests
         writable.Should().NotBeNull();
         writable!.Should().Contain("title").And.NotContain("mailNickname");
     }
+
+    [Fact]
+    public void A_bad_move_destination_comes_back_as_code_80_not_32_or_34()
+    {
+        // Captured from the lab DC. Both a malformed distinguished name and a container that does not exist return
+        // result code 80 with the same diagnostic — not NoSuchObject and not InvalidDnSyntax, which is what the
+        // shape of the failure suggests. The table did not know 80 at all, so both fell through to "Active Directory
+        // returned error 80", which is the exact message this milestone exists to remove.
+        const string diagnostic = "00002089: UpdErr: DSID-031B0ED7, problem 5012 (DIR_ERROR), data 2";
+
+        DirectoryErrorText.Other.Should().Be(80);
+        var text = DirectoryErrorText.Friendly(DirectoryErrorText.Other, diagnostic, "that object");
+        text.Should().NotContain("returned error");
+        text.Should().Contain("destination");
+    }
+
+    [Fact]
+    public void Every_code_the_table_claims_to_know_has_a_sentence_rather_than_a_number()
+    {
+        // The check the lab harness makes against a live DC, kept here so it holds without one.
+        int[] claimed =
+        [
+            DirectoryErrorText.NoSuchObject, DirectoryErrorText.EntryAlreadyExists, DirectoryErrorText.InvalidDnSyntax,
+            DirectoryErrorText.NotAllowedOnNonLeaf, DirectoryErrorText.ObjectClassViolation,
+            DirectoryErrorText.ConstraintViolation, DirectoryErrorText.AttributeOrValueExists,
+            DirectoryErrorText.NoSuchAttribute, DirectoryErrorText.InsufficientAccessRights,
+            DirectoryErrorText.UnwillingToPerform, DirectoryErrorText.InvalidCredentials,
+            DirectoryErrorText.StrongAuthRequired, DirectoryErrorText.Busy, DirectoryErrorText.Unavailable,
+            DirectoryErrorText.SizeLimitExceeded, DirectoryErrorText.ReferralCode,
+            DirectoryErrorText.OperationsError, DirectoryErrorText.Other,
+        ];
+
+        foreach (var code in claimed)
+        {
+            var text = DirectoryErrorText.Friendly(code, null, "that object");
+            text.Should().NotContain("returned error", $"code {code} should have its own sentence");
+            text.Length.Should().BeGreaterThan(24, $"code {code} should say something an admin can act on");
+        }
+    }
+
+    [Fact]
+    public async Task A_move_to_a_missing_container_is_refused_before_it_is_sent()
+    {
+        // Because AD cannot tell the two destination failures apart, the console checks first and says which.
+        var ad = new FakeDirectoryService();
+        var lab = ad.AddOu("Lab");
+        var user = ad.AddUser("ada", lab.DistinguishedName);
+
+        var outcome = await ad.MoveAsync(user.ObjectGuid, "OU=Nowhere,DC=corp,DC=example,DC=com", default);
+
+        outcome.Success.Should().BeFalse();
+        outcome.FriendlyError.Should().NotBeNullOrWhiteSpace();
+    }
 }

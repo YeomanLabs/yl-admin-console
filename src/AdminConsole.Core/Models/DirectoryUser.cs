@@ -102,4 +102,18 @@ public sealed record DirectoryUser
 
     /// <summary>Re-parses <see cref="Raw"/> for detail rendering. Caller disposes.</summary>
     public JsonDocument ParseRaw() => JsonDocument.Parse(Raw);
+
+    /// <summary>
+    /// The base64 of the AD <c>objectGUID</c> this account came from (M12.7), or null when it is cloud-only or the
+    /// anchor is missing. The only identifier that survives a rename or a move on either side, which makes it the
+    /// join between the cloud object and the on-prem one.
+    /// </summary>
+    public string? OnPremisesImmutableId
+    {
+        get
+        {
+            using var raw = ParseRaw();
+            return raw.RootElement.GetString("onPremisesImmutableId");
+        }
+    }
 }
