@@ -33,6 +33,38 @@ Read this before signing in, because the wizard does not say it plainly.
   `adlab.hybrid1@yeomanlab.onmicrosoft.com`. They cannot land on `yeomanlabs.co`.
 - **Password hash synchronisation off.** There is no reason to push lab password hashes into a live tenant.
 
+## Two prerequisites the wizard checks, and one it does not
+
+**TLS 1.2, which it does check.** Entra Connect 2.x refuses to install unless TLS 1.2 is switched on explicitly. On a
+fresh Server 2022 none of the keys exist at all — TLS 1.2 works implicitly, so everything *appears* fine right up to
+the point the prerequisite check stops you. Set on DC01:
+
+- `SCHANNEL\Protocols\TLS 1.2\{Client,Server}` → `Enabled=1`, `DisabledByDefault=0`
+- `.NETFramework4.0.30319` → `SystemDefaultTlsVersions=1`, `SchUseStrongCrypto=1`, in **both** the native and the
+  `WOW6432Node` hive, because parts of the wizard are 32-bit
+
+TLS 1.0 and 1.1 are deliberately left alone. The check asks whether 1.2 is on, not whether the old ones are off, and
+turning them off on a domain controller has a blast radius well beyond this exercise.
+
+SCHANNEL is read at boot, so this needs a restart. Verified afterwards by opening a socket to
+`login.microsoftonline.com`, `graph.windows.net` and `aadcdn.msauth.net` offering TLS 1.2 only — all three completed
+the handshake at `Tls12`/`Aes256`.
+
+**The clock, which it does not check — and which fails much more confusingly.** After the restart DC01 came back
+**70 minutes behind real time**. A domain controller holding the PDC emulator role sits at the top of the time
+hierarchy with nothing above it to sync from, so it runs on the CMOS clock and drifts; the event log had been saying
+so for hours. Kerberos tolerates five minutes of skew and OAuth token validation is no more forgiving, so the sign-in
+would have failed with an error naming none of this.
+
+```powershell
+w32tm /config /manualpeerlist:"time.windows.com,0x9 pool.ntp.org,0x9" /syncfromflags:manual /reliable:yes /update
+Restart-Service w32time
+w32tm /resync /force
+```
+
+Now stratum 3 off `pool.ntp.org`, four seconds from real time. Worth re-checking with `w32tm /query /status` if the
+VM has been paused or suspended for any length of time, since a suspended VM's clock stops with it.
+
 ## The wizard
 
 Run it on DC01 from the VirtualBox console window. **You have to do the sign-in step**: it needs Global Administrator
