@@ -139,3 +139,26 @@ This supersedes CLAUDE.md's "use `AdminConsole` as the namespace until told othe
 - [x] 11.4 🖥 Settings shows the branding and can change it; the window title and sign-in page follow it. — done. A Branding section in Settings with live colour swatches and inline validation, and it names the file path so a deployment can ship the file instead. Saving says a restart is needed rather than half-repainting a live window.
 - [x] 11.5 📄 Docs, README and CLAUDE.md updated; the registration script's default name follows the branding. — done. A **Branding it** section in the README covering the file, the fields, deploying it pre-branded, and what is deliberately *not* brandable and why. CLAUDE.md's "do not invent branding" instruction is replaced by the white-label rule that supersedes it. Doc 08 no longer names a company, and the script defaults to `Admin Console` with a note to pass `-Name` matching a branded deployment.
 - [x] **Gate:** run a default install and a branded one side by side; confirm the second is only a `branding.json` apart, and that an existing install keeps its cache and settings across the rename. — **met.** Default: title "Admin Console", slate chrome. Then one file added, nothing rebuilt: title "Contoso IT Console", purple chrome, purple rail, purple accent on the Home figures and the first-run panel. Nothing in the window named the deployer. The rename's migration was verified separately against a copy of a real installation.
+
+## M12 — On-prem Active Directory (Phase 2)
+
+Design in `docs/11-ONPREM-AD.md`. Connects by LDAP straight to a domain controller as the signed-in Windows user —
+the admin's own Kerberos ticket, so AD enforces what they have been delegated. No agent, no service account, keeping
+CLAUDE.md non-negotiable 4 intact on-prem as well as in the cloud.
+
+Most of the user half is not new UI: it is unlocking `DirectoryUser.OnPremMasteredProperties`, the 20 attributes
+Phase 1 greys with "Mastered in on-prem AD (Phase 2)". Genuinely new are OUs, computer objects, and group scope and
+category, none of which have a cloud equivalent.
+
+Tested against a disposable DC (`D:\Lab`, `adlab.test`), because a fake covers the logic and cannot cover LDAP
+semantics — and LDAP semantics are where the bugs are, exactly as the real Graph bugs only ever showed up live.
+
+- [x] 12.1 🧪 `IDirectoryService`, the on-prem projections, LDAP error translation, and an in-memory fake. No LDAP and no package yet, so it stays testable anywhere. — done, 46 tests. Objects are addressed by `objectGUID` and never by distinguished name, because a DN changes the moment somebody renames or moves the object and acting on a stale one either fails or succeeds against whatever is at that path now. Three helpers exist because each is a known trap: `DistinguishedNames` (splitting on commas breaks `CN=Smith\, John`), `AccountFlags` (assigning `userAccountControl` instead of masking silently clears "password never expires" and "smartcard required"), and `DirectoryErrorText` (the useful detail is the Win32 sub-code AD buries in the diagnostic — `data 52e` — not the LDAP result code). The fake refuses what a real DC refuses — duplicate names in a container, deleting a non-empty or protected container, removing a primary group, a group containing itself — because a fake that says yes to everything teaches the calling code to assume yes. The namespace is `OnPrem`, not `Directory`: the latter shadowed `System.IO.Directory` across the whole of Core.
+- [ ] 12.2 🧪 `LdapDirectoryService`: DC discovery by SRV, Negotiate bind, connection lifetime, read a user by objectGUID.
+- [ ] 12.3 🖥 Read paths — users, groups, computers, the OU tree — and a Domain page showing what was found.
+- [ ] 12.4 🖥 The hybrid unlock: the 20 greyed attributes write to AD, with the sync-pending caption.
+- [ ] 12.5 🧪 Group membership, scope and category, with the `primaryGroupID` and protected-object pre-checks.
+- [ ] 12.6 🖥 Computers and OUs: move, enable/disable, LAPS from AD, delete behind a confirmation.
+- [ ] 12.7 🖥 The two offboarding steps that have been registered and greyed since M6, un-greyed.
+- [ ] 12.8 🧪 Error translation over every LDAP result code the lab can be provoked into returning.
+- **Gate:** perform every operation against the lab DC, then verify each independently with `Get-AD*` rather than by re-reading through the console — reading back through the thing that did the write proves nothing.

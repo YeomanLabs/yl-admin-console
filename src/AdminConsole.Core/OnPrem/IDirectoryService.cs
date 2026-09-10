@@ -1,0 +1,73 @@
+﻿namespace AdminConsole.Core.OnPrem;
+
+/// <summary>
+/// Everything the console does to on-prem Active Directory (M12.1), in the console's vocabulary rather than LDAP's.
+/// </summary>
+/// <remarks>
+/// <para>
+/// One interface so the WPF layer never sees an <c>LdapConnection</c>, and so the whole of Phase 2 can be tested
+/// against <see cref="FakeDirectoryService"/> without a domain controller. The LDAP implementation is the only thing
+/// that knows about result codes, controls and distinguished-name syntax.
+/// </para>
+/// <para>
+/// Objects are addressed by <c>objectGUID</c>, never by distinguished name. A DN changes the moment somebody renames
+/// or moves the object, and acting on a stale one either fails or — worse — succeeds against whatever is at that path
+/// now. The GUID is what Entra's <c>onPremisesImmutableId</c> is derived from, so it is also the join.
+/// </para>
+/// </remarks>
+public interface IDirectoryService
+{
+    /// <summary>Whether a domain controller is reachable, and which one. Cheap enough to call on page load.</summary>
+    Task<DirectoryStatus> GetStatusAsync(CancellationToken ct);
+
+    // ---- reads ---------------------------------------------------------------------------------------------------
+
+    Task<OnPremUser?> GetUserAsync(Guid objectGuid, CancellationToken ct);
+
+    /// <summary>The AD user behind an Entra one, found from its <c>onPremisesImmutableId</c>.</summary>
+    Task<OnPremUser?> GetUserByImmutableIdAsync(string immutableId, CancellationToken ct);
+
+    Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, CancellationToken ct);
+
+    Task<OnPremGroup?> GetGroupAsync(Guid objectGuid, CancellationToken ct);
+
+    Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, CancellationToken ct);
+
+    /// <summary>Direct members of a group, resolved enough to draw a row for each.</summary>
+    Task<IReadOnlyList<OnPremMember>> GetGroupMembersAsync(Guid objectGuid, CancellationToken ct);
+
+    Task<OnPremComputer?> GetComputerAsync(Guid objectGuid, CancellationToken ct);
+
+    Task<IReadOnlyList<OnPremComputer>> SearchComputersAsync(string text, int limit, CancellationToken ct);
+
+    /// <summary>Every OU in the domain, flat. The tree is assembled from distinguished names by the caller.</summary>
+    Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct);
+
+    // ---- writes --------------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Sets attributes on an object. A null value clears the attribute — as with Graph, empty is not how you say
+    /// "no value", and the implementation is responsible for turning one into the other.
+    /// </summary>
+    Task<DirectoryOutcome> SetAttributesAsync(Guid objectGuid, IReadOnlyDictionary<string, string?> attributes, CancellationToken ct);
+
+    /// <summary>Enables or disables an account, preserving every other <c>userAccountControl</c> bit.</summary>
+    Task<DirectoryOutcome> SetEnabledAsync(Guid objectGuid, bool enabled, CancellationToken ct);
+
+    Task<DirectoryOutcome> UnlockAsync(Guid objectGuid, CancellationToken ct);
+
+    /// <summary>Sets a password. Needs an encrypted connection; the failure when there is not one says so.</summary>
+    Task<DirectoryOutcome> SetPasswordAsync(Guid objectGuid, string password, bool mustChangeAtNextLogon, CancellationToken ct);
+
+    /// <summary>Moves an object to another OU. The GUID does not change, so anything holding one stays valid.</summary>
+    Task<DirectoryOutcome> MoveAsync(Guid objectGuid, string targetOuDn, CancellationToken ct);
+
+    Task<DirectoryOutcome> RenameAsync(Guid objectGuid, string newName, CancellationToken ct);
+
+    Task<DirectoryOutcome> AddToGroupAsync(Guid groupGuid, Guid memberGuid, CancellationToken ct);
+
+    Task<DirectoryOutcome> RemoveFromGroupAsync(Guid groupGuid, Guid memberGuid, CancellationToken ct);
+
+    /// <summary>Deletes an object. Refuses a non-empty container and a protected one, with a reason rather than a code.</summary>
+    Task<DirectoryOutcome> DeleteAsync(Guid objectGuid, CancellationToken ct);
+}
