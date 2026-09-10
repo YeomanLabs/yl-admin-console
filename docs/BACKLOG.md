@@ -102,8 +102,7 @@ Two of the three bugs Andrew found in ten minutes of real use were in flows a mi
 The gates were honest about what they ran; they just ran the arrangement that made the feature work. Worth changing
 how a gate is written: pick the path a person would take who does not know what the feature needs.
 
-- **The hybrid unlock has never run against a genuinely synced user.** Every AD-side operation is proven against the
-  lab DC and the branching is unit-tested, but the lab is not joined to the tenant by Entra Connect, so no Entra user
-  has an `onPremisesImmutableId` pointing at a lab object. The join itself is proven only against the lab's own
-  objects. Closing this means installing Entra Connect on DC01 and syncing one OU into the tenant — which creates
-  real synced objects in a production Entra ID, so it is a decision to take deliberately rather than in passing.
+- **The hybrid unlock has never run against a genuinely synced user.** In progress: Entra Connect is being set up on
+  the lab DC to sync one OU into the tenant. See `docs/12-ENTRA-CONNECT-LAB.md`. Until the first non-staged sync
+  completes, the join from a real synced Entra user to its AD object remains proven only against the lab's own
+  objects.
