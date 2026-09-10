@@ -77,17 +77,17 @@ public sealed partial class App : Application
         _logger.LogInformation("Admin Console {Version} starting", typeof(App).Assembly.GetName().Version);
         if (_migratedLegacyData) _logger.LogInformation("Carried the previous installation's data forward from {Old}", AppPaths.LegacyRoot);
 
-        // CLAUDE.md: apply the theme before the window is shown. UX §1: coral is the accent for primary actions and focus.
+        // CLAUDE.md: apply the theme before the window is shown. The accent is whatever this installation is branded with.
         // The saved appearance, before any window exists: applying it later would flash the wrong theme.
         var settings = _host.Services.GetRequiredService<UserSettingsStore>().Load();
+        var branding = _host.Services.GetRequiredService<BrandingStore>().Load();
         ApplicationThemeManager.Apply(ApplicationTheme.Dark, Wpf.Ui.Controls.WindowBackdropType.None, false);
-        AppearanceService.ApplyAll(settings);
+        AppearanceService.ApplyAll(settings, branding);
 
         // The sync loop reads its intervals each cycle, so the saved choice takes effect from the first one.
         var syncOptions = _host.Services.GetRequiredService<SyncOptions>();
         syncOptions.DeltaIntervalSeconds = settings.DeltaIntervalSeconds;
         syncOptions.DeviceRefreshIntervalSeconds = settings.DeviceRefreshIntervalSeconds;
-        ApplicationAccentColorManager.Apply(System.Windows.Media.Color.FromRgb(0xFF, 0x69, 0x50), ApplicationTheme.Dark, false);
 
         var window = _host.Services.GetRequiredService<MainWindow>();
         var handles = _host.Services.GetRequiredService<WindowHandleProvider>();
@@ -138,6 +138,10 @@ public sealed partial class App : Application
         // M10.1: which registration this installation uses comes from %LOCALAPPDATA%, with appsettings.json as the
         // fallback. A client installation can be pointed at their own registration without editing a file under
         // Program Files that the next update would overwrite anyway.
+        services.AddSingleton(sp => new BrandingStore(
+            BrandingStore.DefaultPath,
+            sp.GetRequiredService<ILogger<BrandingStore>>()));
+
         services.AddSingleton(sp => new TenantConfigStore(
             TenantConfigStore.DefaultPath,
             sp.GetRequiredService<AuthOptions>(),

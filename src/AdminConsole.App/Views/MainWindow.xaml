@@ -9,7 +9,7 @@
                  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance Type=vm:ShellViewModel}"
-                 Title="Admin Console"
+                 Title="{Binding ProductName}"
                  Width="1280" Height="800" MinWidth="960" MinHeight="600"
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
@@ -35,17 +35,17 @@
                     <ControlTemplate TargetType="Button">
                         <Grid Background="{TemplateBinding Background}">
                             <Border x:Name="Indicator" Width="3" Height="20" HorizontalAlignment="Left" CornerRadius="1.5"
-                                    Background="{StaticResource YlCoral}" Visibility="Collapsed" />
+                                    Background="{DynamicResource AcAccent}" Visibility="Collapsed" />
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
                         </Grid>
                         <ControlTemplate.Triggers>
                             <DataTrigger Binding="{Binding IsSelected}" Value="True">
                                 <Setter TargetName="Indicator" Property="Visibility" Value="Visible" />
-                                <Setter Property="Foreground" Value="{StaticResource YlOnNavy}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AcOnChrome}" />
                             </DataTrigger>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource YlOnNavy}" />
+                                <Setter Property="Foreground" Value="{DynamicResource AcOnChrome}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource ControlFillColorSecondaryBrush}" />
@@ -76,7 +76,7 @@
             <Setter Property="Fill" Value="#8A8A8A" />
             <Style.Triggers>
                 <DataTrigger Binding="{Binding SyncState}" Value="Syncing">
-                    <Setter Property="Fill" Value="{StaticResource YlCoral}" />
+                    <Setter Property="Fill" Value="{DynamicResource AcAccent}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding SyncState}" Value="Ok">
                     <Setter Property="Fill" Value="#4CC38A" />
@@ -111,7 +111,7 @@
         <KeyBinding Key="Escape" Command="{Binding Dialogs.Current.CancelCommand}" />
     </ui:FluentWindow.InputBindings>
 
-    <Grid Background="{StaticResource YlNavy}">
+    <Grid Background="{DynamicResource AcChrome}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -120,12 +120,12 @@
         </Grid.RowDefinitions>
 
         <!-- Title bar: app name · tenant · sync pill · account (UX §2) -->
-        <ui:TitleBar Grid.Row="0" Title="Admin Console" ShowMaximize="True" ShowMinimize="True" AutomationProperties.Name="Window controls">
+        <ui:TitleBar Grid.Row="0" Title="{Binding ProductName}" ShowMaximize="True" ShowMinimize="True" AutomationProperties.Name="Window controls">
             <ui:TitleBar.Header>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,12,0"
-                            TextElement.Foreground="{StaticResource YlOnNavy}">
+                            TextElement.Foreground="{DynamicResource AcOnChrome}">
                     <TextBlock Text="{Binding TenantName}" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,16,0"
-                               Foreground="{StaticResource YlOnNavy}" />
+                               Foreground="{DynamicResource AcOnChrome}" />
 
                     <Border CornerRadius="10" Padding="8,2" VerticalAlignment="Center" Margin="0,0,12,0"
                             Background="{DynamicResource ControlFillColorSecondaryBrush}"
@@ -137,10 +137,10 @@
                     </Border>
 
                     <Border CornerRadius="12" Width="24" Height="24" VerticalAlignment="Center"
-                            Background="{StaticResource YlCoral}" ToolTip="{Binding AccountName}"
+                            Background="{DynamicResource AcAccent}" ToolTip="{Binding AccountName}"
                             AutomationProperties.Name="Signed-in account">
                         <TextBlock Text="{Binding AccountInitials}" FontSize="11" FontWeight="SemiBold"
-                                   HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#041635" />
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{DynamicResource AcChrome}" />
                     </Border>
                 </StackPanel>
             </ui:TitleBar.Header>
@@ -157,7 +157,7 @@
                 <StackPanel>
                     <Expander Header="Details" Visibility="{Binding HasErrorDetails, Converter={StaticResource BoolToVisibility}}">
                         <TextBox Text="{Binding ErrorDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="220"
-                                 FontFamily="{StaticResource YlMono}" FontSize="12" VerticalScrollBarVisibility="Auto" />
+                                 FontFamily="{StaticResource AcMono}" FontSize="12" VerticalScrollBarVisibility="Auto" />
                     </Expander>
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
                         <ui:Button Content="Copy details" Command="{Binding CopyErrorDetailsCommand}" Margin="0,0,8,0" />
@@ -174,7 +174,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <DockPanel Grid.Column="0" Background="#0A1F45" TextElement.Foreground="{StaticResource YlOnNavy}" Visibility="{Binding IsSessionReady, Converter={StaticResource BoolToVisibility}}">
+            <DockPanel Grid.Column="0" Background="{DynamicResource AcRailBackground}" TextElement.Foreground="{DynamicResource AcOnChrome}" Visibility="{Binding IsSessionReady, Converter={StaticResource BoolToVisibility}}">
                 <ContentControl DockPanel.Dock="Bottom" Content="{Binding SettingsItem}" ContentTemplate="{StaticResource NavRailItem}" Margin="0,0,0,4" />
                 <ItemsControl ItemsSource="{Binding NavItems}" AutomationProperties.Name="Navigation" ItemTemplate="{StaticResource NavRailItem}" Margin="0,4,0,0" />
             </DockPanel>
@@ -202,13 +202,13 @@
                                             Command="{Binding DataContext.SelectTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}" AutomationProperties.Name="{Binding Title}">
                                         <TextBlock Text="{Binding Title}" VerticalAlignment="Center" MaxWidth="180" TextTrimming="CharacterEllipsis"
-                                                   Foreground="{DynamicResource YlTextPrimary}" />
+                                                   Foreground="{DynamicResource AcTextPrimary}" />
                                     </Button>
                                     <Button Background="Transparent" BorderThickness="0" Padding="6,0" Cursor="Hand" FocusVisualStyle="{x:Null}"
                                             ToolTip="Close tab (Ctrl+W)" AutomationProperties.Name="Close tab"
                                             Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=Window}}"
                                             CommandParameter="{Binding}">
-                                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Foreground="{DynamicResource YlTextSecondary}" />
+                                        <ui:SymbolIcon Symbol="Dismiss24" FontSize="12" Foreground="{DynamicResource AcTextSecondary}" />
                                     </Button>
                                 </StackPanel>
                             </Border>
@@ -228,19 +228,19 @@
         </Grid>
 
         <!-- Status bar: cache age · last delta · errors · progress (UX §2) -->
-        <Border Grid.Row="3" Height="24" Background="#0A1F45" Padding="12,0" TextElement.Foreground="{StaticResource YlOnNavy}">
+        <Border Grid.Row="3" Height="24" Background="{DynamicResource AcRailBackground}" Padding="12,0" TextElement.Foreground="{DynamicResource AcOnChrome}">
             <DockPanel VerticalAlignment="Center">
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Visibility="{Binding IsProgressVisible, Converter={StaticResource BoolToVisibility}}">
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ProgressText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ProgressText}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <ProgressBar Width="120" Height="6" Minimum="0" Maximum="1" Value="{Binding ProgressFraction, Mode=OneWay}"
-                                 Foreground="{StaticResource YlCoral}" VerticalAlignment="Center" />
+                                 Foreground="{DynamicResource AcAccent}" VerticalAlignment="Center" />
                 </StackPanel>
                 <TextBlock DockPanel.Dock="Right" Text="{Binding StatusMessage}" FontSize="12" VerticalAlignment="Center" Margin="0,0,16,0"
-                           Foreground="{StaticResource YlCoral}" Visibility="{Binding StatusMessage, Converter={StaticResource NullToCollapsed}}" />
+                           Foreground="{DynamicResource AcAccent}" Visibility="{Binding StatusMessage, Converter={StaticResource NullToCollapsed}}" />
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CacheAgeText}" FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text=" · " FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding LastDeltaText}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding CacheAgeText}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text=" · " FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding LastDeltaText}" FontSize="12" VerticalAlignment="Center" />
                 </StackPanel>
             </DockPanel>
         </Border>

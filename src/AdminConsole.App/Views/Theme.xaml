@@ -3,33 +3,36 @@
                     xmlns:conv="clr-namespace:AdminConsole.App.Converters">
     <!-- Merged before PageTemplates.xaml: StaticResource inside a merged dictionary only sees dictionaries merged earlier. -->
 
-    <!-- UX §1 palette: navy window base, coral accent for primary actions, focus rings and the active nav item only. -->
-    <Color x:Key="YlNavyColor">#041635</Color>
-    <Color x:Key="YlCoralColor">#FF6950</Color>
-    <SolidColorBrush x:Key="YlNavy" Color="{StaticResource YlNavyColor}" />
-    <SolidColorBrush x:Key="YlCoral" Color="{StaticResource YlCoralColor}" />
-    <SolidColorBrush x:Key="YlCoralDim" Color="#B3FF6950" />
-    <SolidColorBrush x:Key="YlRailBackground" Color="#0A1F45" />
-    <!-- The chrome is navy in every theme, so text on it is light in every theme. Without this the light
-         theme paints dark text on the navy rail, status bar and quick-facts panel. -->
-    <SolidColorBrush x:Key="YlOnNavy" Color="#F2F5FA" />
-    <SolidColorBrush x:Key="YlSuccess" Color="#4CC38A" />
+    <!-- UX §1 palette. These are the neutral defaults an unbranded install paints with; AppearanceService replaces all
+         five at startup from branding.json, so an installation can carry its own colours (M11.3). They are measured,
+         not picked by eye: white on the chrome is 15.0:1 and the accent is 5.95:1 on chrome and 6.53:1 on the page.
+         The accent is used for primary actions, focus rings and the active nav item only. -->
+    <Color x:Key="AcChromeColor">#1F2733</Color>
+    <Color x:Key="AcAccentColor">#58A6FF</Color>
+    <SolidColorBrush x:Key="AcChrome" Color="{StaticResource AcChromeColor}" />
+    <SolidColorBrush x:Key="AcAccent" Color="{StaticResource AcAccentColor}" />
+    <SolidColorBrush x:Key="AcAccentDim" Color="#B358A6FF" />
+    <SolidColorBrush x:Key="AcRailBackground" Color="#27313F" />
+    <!-- Text drawn on the chrome. AppearanceService recomputes this from the chrome's own luminance at startup, so a
+         light chrome gets dark text instead of the M8.4 failure where a hardcoded light foreground met a dark panel. -->
+    <SolidColorBrush x:Key="AcOnChrome" Color="#F2F5FA" />
+    <SolidColorBrush x:Key="AcSuccess" Color="#4CC38A" />
     <!-- Danger has two jobs with opposite requirements, and one brush could not do both.
          As a badge FILL it needs white text to pass: #F04E4E gave 3.56:1, #C62F2F gives 5.46:1.
          As TEXT it sits on the page or a row and needs to be light: #F04E4E measured 4.63:1 on the page but only
          3.87:1 on a row, which is where it is actually used. SystemFillColorCriticalBrush is the platform's own
          critical colour and follows the theme, so the light theme gets a dark red rather than a washed-out pink. -->
-    <SolidColorBrush x:Key="YlDangerFill" Color="#C62F2F" />
-    <SolidColorBrush x:Key="YlDanger" Color="#F04E4E" />
+    <SolidColorBrush x:Key="AcDangerFill" Color="#C62F2F" />
+    <SolidColorBrush x:Key="AcDanger" Color="#F04E4E" />
     <!-- Text levels, measured rather than assumed. WPF-UI's own TextFillColor*Brush resolve far dimmer than their
          names suggest in 3.0.5 — secondary rendered as #868686 (5.1:1) and even primary came out #999999 inside a
          button, which is how the whole app ended up grey-on-grey. These two are ours, and AppearanceService swaps
          them when the theme changes. Dark values here; see AppearanceService for light.
          Dark:  primary #FFFFFF = 16.5:1, secondary #C8C8C8 = 9.9:1 on the page.
          Light: primary #1A1A1A = 16.9:1, secondary #4A4A4A = 8.6:1 on white. -->
-    <SolidColorBrush x:Key="YlTextPrimary" Color="#FFFFFF" />
-    <SolidColorBrush x:Key="YlTextSecondary" Color="#C8C8C8" />
-    <FontFamily x:Key="YlMono">Cascadia Mono, Consolas</FontFamily>
+    <SolidColorBrush x:Key="AcTextPrimary" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="AcTextSecondary" Color="#C8C8C8" />
+    <FontFamily x:Key="AcMono">Cascadia Mono, Consolas</FontFamily>
 
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     <conv:NullToCollapsedConverter x:Key="NullToCollapsed" />
@@ -51,7 +54,7 @@
             <!-- Nothing would match. This used to drop the whole chip to 0.4 opacity, which took its label to
                  2.79:1 — unreadable, in order to say "not worth reading". The zero says that by itself. -->
             <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+                <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -61,7 +64,7 @@
         <Setter Property="HorizontalContentAlignment" Value="Stretch" />
         <!-- Without this a row inherits the button's dimmed foreground, and the name ends up darker than the sign-in
              name beneath it — the hierarchy upside down. -->
-        <Setter Property="Foreground" Value="{DynamicResource YlTextPrimary}" />
+        <Setter Property="Foreground" Value="{DynamicResource AcTextPrimary}" />
         <Setter Property="Padding" Value="10,7" />
         <Setter Property="Margin" Value="0,0,0,2" />
         <Setter Property="Background" Value="{DynamicResource ControlFillColorDefaultBrush}" />

@@ -1,12 +1,15 @@
 # 08 — Entra app registration (one per tenant)
 
 The console signs in through an app registration in the tenant it manages. **One registration per tenant**, created by
-a script, and it belongs to that tenant — not to YeomanLabs.
+a script, and it belongs to that tenant — not to whoever deployed the console.
 
-That choice is deliberate (DECISIONS.md, 2026-09-09). The alternative was one multi-tenant app owned by YeomanLabs
-that every client consents to, which is less setup and means YeomanLabs owns an object holding `User.ReadWrite.All`
-and `BitlockerKey.Read.All` against every client directory. A per-tenant registration survives a security review, and
-revoking one client's access is deleting one object in their own tenant.
+That choice is deliberate (DECISIONS.md, 2026-09-09). The alternative was one multi-tenant app owned by the deployer
+that every client consents to, which is less setup and means one party owns an object holding `User.ReadWrite.All`
+and `BitlockerKey.Read.All` against every client directory at once. A per-tenant registration survives a security
+review, and revoking one client's access is deleting one object in their own tenant.
+
+If the deployment is branded (see **Branding** in the README), pass `-Name` so the registration matches what the
+console calls itself — an admin looking at their app registrations should recognise it.
 
 ## The short version
 

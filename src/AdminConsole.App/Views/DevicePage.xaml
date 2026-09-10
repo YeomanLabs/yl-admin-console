@@ -12,7 +12,7 @@
                 <ColumnDefinition Width="170" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Label}" VerticalAlignment="Center" />
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Label}" VerticalAlignment="Center" />
             <TextBlock x:Name="Value" Grid.Column="1" Text="{Binding Display}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             <Button x:Name="Mono" Grid.Column="1" Style="{StaticResource CopyableMono}" Content="{Binding Value}" FontSize="12" Visibility="Collapsed"
                     Command="{Binding DataContext.CopyCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CommandParameter="{Binding Value}"
@@ -43,7 +43,7 @@
                     <ui:SymbolIcon Symbol="Person24" FontSize="16" Margin="0,0,10,0" VerticalAlignment="Center" />
                     <StackPanel>
                         <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding UserPrincipalName}" FontFamily="{StaticResource YlMono}" FontSize="11" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding UserPrincipalName}" FontFamily="{StaticResource AcMono}" FontSize="11" />
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -59,7 +59,7 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="1" Text="{Binding PlatformType}" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Column="1" Text="{Binding PlatformType}" FontSize="11" Margin="0,0,10,0" VerticalAlignment="Center" />
                 <Border x:Name="StateChip" Grid.Column="2" Style="{StaticResource Chip}" Margin="0">
                     <TextBlock x:Name="StateLabel" Text="{Binding State}" FontSize="11" />
                 </Border>
@@ -70,7 +70,7 @@
                         <StackPanel Orientation="Horizontal" Height="24">
                             <ui:SymbolIcon Symbol="ErrorCircle24" FontSize="12" Foreground="{DynamicResource SystemFillColorCriticalBrush}" Margin="0,0,6,0" VerticalAlignment="Center" />
                             <TextBlock Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" />
-                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ErrorDescription}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"
+                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ErrorDescription}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center"
                                        Visibility="{Binding ErrorDescription, Converter={StaticResource NullToCollapsed}}" />
                         </StackPanel>
                     </DataTemplate>
@@ -79,8 +79,8 @@
         </StackPanel>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsCompliant}" Value="True">
-                <Setter TargetName="StateChip" Property="BorderBrush" Value="{StaticResource YlSuccess}" />
-                <Setter TargetName="StateLabel" Property="Foreground" Value="{StaticResource YlSuccess}" />
+                <Setter TargetName="StateChip" Property="BorderBrush" Value="{StaticResource AcSuccess}" />
+                <Setter TargetName="StateLabel" Property="Foreground" Value="{StaticResource AcSuccess}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding NeedsReason}" Value="True">
                 <Setter TargetName="StateChip" Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
@@ -104,15 +104,15 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Border Width="48" Height="48" CornerRadius="8" Background="{StaticResource YlRailBackground}" TextElement.Foreground="{StaticResource YlOnNavy}"
-                        BorderBrush="{StaticResource YlCoral}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
+                <Border Width="48" Height="48" CornerRadius="8" Background="{DynamicResource AcRailBackground}" TextElement.Foreground="{DynamicResource AcOnChrome}"
+                        BorderBrush="{DynamicResource AcAccent}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
                     <ui:SymbolIcon Symbol="Laptop24" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
 
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="{Binding Title}" FontSize="24" FontWeight="SemiBold" />
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Subtitle}" VerticalAlignment="Center" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Subtitle}" VerticalAlignment="Center" />
                         <Button Style="{StaticResource CopyableMono}" Content="{Binding Device.SerialNumber}" Margin="8,0,0,0"
                                 Command="{Binding CopyCommand}" CommandParameter="{Binding Device.SerialNumber}" AutomationProperties.Name="Copy serial number" />
                     </StackPanel>
@@ -142,9 +142,9 @@
                         <ui:Button Content="Wipe…" Appearance="Danger" Command="{Binding WipeCommand}" IsEnabled="{Binding CanRunActions}"
                                    ToolTip="{Binding ActionsDisabledReason, TargetNullValue='Factory-reset the device'}" ToolTipService.ShowOnDisabled="True" />
                     </StackPanel>
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActionsDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="340"
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ActionsDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="340"
                                Visibility="{Binding ActionsDisabledReason, Converter={StaticResource NullToCollapsed}}" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding TimingText}" FontSize="11" HorizontalAlignment="Right" Margin="0,2,0,0" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding TimingText}" FontSize="11" HorizontalAlignment="Right" Margin="0,2,0,0" />
                 </StackPanel>
             </Grid>
 
@@ -178,11 +178,11 @@
                     <!-- People -->
                     <TextBlock Text="People" Style="{StaticResource SectionTitle}" />
                     <TextBlock Text="{Binding PeopleCaption}" Style="{StaticResource Caption}" Margin="0,0,0,6" Visibility="{Binding PeopleCaption, Converter={StaticResource NullToCollapsed}}" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Primary user" FontSize="11" Margin="0,0,0,4" Visibility="{Binding PrimaryUser, Converter={StaticResource NullToCollapsed}}" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Primary user" FontSize="11" Margin="0,0,0,4" Visibility="{Binding PrimaryUser, Converter={StaticResource NullToCollapsed}}" />
                     <ContentControl Content="{Binding PrimaryUser}" ContentTemplate="{StaticResource PersonCard}" HorizontalAlignment="Left"
                                     Visibility="{Binding PrimaryUser, Converter={StaticResource NullToCollapsed}}" />
                     <StackPanel Visibility="{Binding OtherUsers.Count, Converter={StaticResource NonZeroToVisible}}">
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Other registered users" FontSize="11" Margin="0,6,0,4" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Other registered users" FontSize="11" Margin="0,6,0,4" />
                         <ItemsControl ItemsSource="{Binding OtherUsers}" ItemTemplate="{StaticResource PersonCard}">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -207,13 +207,13 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="BitLocker recovery keys" VerticalAlignment="Center" Margin="0,0,0,8" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="BitLocker recovery keys" VerticalAlignment="Center" Margin="0,0,0,8" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,8">
                             <ui:Button Content="Reveal" Icon="{ui:SymbolIcon Key24}" Command="{Binding RevealBitLockerCommand}" IsEnabled="{Binding CanRevealBitLocker}"
                                        ToolTip="{Binding BitLockerReason, TargetNullValue='Reveal and copy the recovery keys; every reveal is logged'}" ToolTipService.ShowOnDisabled="True" />
                             <TextBlock Text="{Binding BitLockerReason}" Style="{StaticResource Caption}" Margin="10,0,0,0" VerticalAlignment="Center" />
                         </StackPanel>
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="1" Text="LAPS password" VerticalAlignment="Center" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Row="1" Text="LAPS password" VerticalAlignment="Center" />
                         <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
                             <ui:Button Content="Reveal" Icon="{ui:SymbolIcon Key24}" Command="{Binding RevealLapsCommand}" IsEnabled="{Binding CanRevealLaps}"
                                        ToolTip="{Binding LapsReason, TargetNullValue='Reveal and copy the local admin password; every reveal is logged'}" ToolTipService.ShowOnDisabled="True" />

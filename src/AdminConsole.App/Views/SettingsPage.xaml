@@ -12,7 +12,7 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <ui:SymbolIcon x:Name="Icon" Symbol="CheckmarkCircle24" FontSize="16" Foreground="{StaticResource YlSuccess}" VerticalAlignment="Top" Margin="0,2,0,0" />
+            <ui:SymbolIcon x:Name="Icon" Symbol="CheckmarkCircle24" FontSize="16" Foreground="{StaticResource AcSuccess}" VerticalAlignment="Top" Margin="0,2,0,0" />
 
             <StackPanel Grid.Column="1">
                 <StackPanel Orientation="Horizontal">
@@ -22,7 +22,7 @@
                         <TextBlock Text="Sensitive" FontSize="11" />
                     </Border>
                 </StackPanel>
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ScopeList}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ScopeList}" FontFamily="{StaticResource AcMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding Reason}" Style="{StaticResource Caption}" Visibility="{Binding Reason, Converter={StaticResource NullToCollapsed}}" />
             </StackPanel>
 
@@ -36,7 +36,7 @@
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding NeedsConsent}" Value="True">
                 <Setter TargetName="Icon" Property="Symbol" Value="LockClosed24" />
-                <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+                <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding HasRoleWarning}" Value="True">
                 <Setter TargetName="Icon" Property="Symbol" Value="Warning24" />
@@ -63,19 +63,19 @@
                         <RowDefinition Height="26" />
                         <RowDefinition Height="Auto" />
                     </Grid.RowDefinitions>
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Signed in as" VerticalAlignment="Center" />
-                    <TextBlock Grid.Column="1" Text="{Binding AccountName}" FontFamily="{StaticResource YlMono}" FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="1" Text="Tenant" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Signed in as" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding AccountName}" FontFamily="{StaticResource AcMono}" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Row="1" Text="Tenant" VerticalAlignment="Center" />
                     <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding TenantName}" VerticalAlignment="Center" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="2" Text="Licence" VerticalAlignment="Center" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Row="2" Text="Licence" VerticalAlignment="Center" />
                     <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LicenseText}" VerticalAlignment="Center" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="3" Text="Directory roles" Margin="0,4,0,0" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Row="3" Text="Directory roles" Margin="0,4,0,0" />
                     <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RolesText}" TextWrapping="Wrap" Margin="0,4,0,0" />
                 </Grid>
 
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                     <ui:Button Content="Sign out" Command="{Binding SignOutCommand}" AutomationProperties.Name="Sign out" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Removes the saved token from this machine" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Removes the saved token from this machine" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" />
                 </StackPanel>
 
                 <!-- Sync (UX §12) -->
@@ -113,7 +113,7 @@
                 <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
                     <ui:Button Content="Rebuild index" Command="{Binding RebuildIndexCommand}" IsEnabled="{Binding IsRebuilding, Converter={StaticResource InverseBool}}"
                                AutomationProperties.Name="Rebuild the local index" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Discards the cache and reads this tenant again" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Discards the cache and reads this tenant again" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" />
                 </StackPanel>
 
                 <!-- Appearance (UX §12) -->
@@ -148,16 +148,62 @@
                             Message="{Binding ConsentError}" />
                 <ItemsControl ItemsSource="{Binding Permissions}" ItemTemplate="{StaticResource PermissionRowTemplate}" />
 
+                <!-- Branding (M11.4): what this installation calls itself and what it is painted with. -->
+                <TextBlock Text="Branding" Style="{StaticResource SectionTitle}" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,10"
+                           Text="What this installation calls itself and what it is painted with. Set it once per deployment so a client console carries their name, not ours." />
+
+                <TextBlock Text="Product name" Style="{StaticResource FactLabel}" />
+                <ui:TextBox Text="{Binding ProductName, UpdateSourceTrigger=PropertyChanged}" MaxWidth="380" HorizontalAlignment="Left"
+                            AutomationProperties.Name="Product name" />
+
+                <TextBlock Text="Tagline" Style="{StaticResource FactLabel}" />
+                <ui:TextBox Text="{Binding Tagline, UpdateSourceTrigger=PropertyChanged}" MaxWidth="380" HorizontalAlignment="Left"
+                            AutomationProperties.Name="Tagline shown on the sign-in page" />
+
+                <TextBlock Text="Chrome colour" Style="{StaticResource FactLabel}" />
+                <StackPanel Orientation="Horizontal">
+                    <ui:TextBox Text="{Binding ChromeColor, UpdateSourceTrigger=PropertyChanged}" Width="140"
+                                FontFamily="{StaticResource AcMono}" AutomationProperties.Name="Chrome colour" />
+                    <Border Width="28" Height="28" CornerRadius="4" Margin="8,0,0,0" VerticalAlignment="Center"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                            Background="{Binding ChromeColor}" />
+                </StackPanel>
+                <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" Margin="0,4,0,0"
+                           Text="{Binding ChromeColorError}"
+                           Visibility="{Binding ChromeColorError, Converter={StaticResource NullToCollapsed}}" />
+
+                <TextBlock Text="Accent colour" Style="{StaticResource FactLabel}" />
+                <StackPanel Orientation="Horizontal">
+                    <ui:TextBox Text="{Binding AccentColor, UpdateSourceTrigger=PropertyChanged}" Width="140"
+                                FontFamily="{StaticResource AcMono}" AutomationProperties.Name="Accent colour" />
+                    <Border Width="28" Height="28" CornerRadius="4" Margin="8,0,0,0" VerticalAlignment="Center"
+                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                            Background="{Binding AccentColor}" />
+                </StackPanel>
+                <TextBlock Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" Margin="0,4,0,0"
+                           Text="{Binding AccentColorError}"
+                           Visibility="{Binding AccentColorError, Converter={StaticResource NullToCollapsed}}" />
+
+                <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                    <ui:Button Content="Save branding" Command="{Binding SaveBrandingCommand}" Margin="0,0,8,0"
+                               AutomationProperties.Name="Save the branding" />
+                    <ui:Button Content="Reset to default" Command="{Binding ResetBrandingCommand}"
+                               AutomationProperties.Name="Reset the branding to the default" />
+                </StackPanel>
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="11" Margin="0,8,0,0" TextWrapping="Wrap"
+                           Text="{Binding BrandingPath, StringFormat=Stored in {0}. Deploy that file with an install to brand it without anyone opening Settings.}" />
+
                 <!-- Diagnostics (UX §12) -->
                 <TextBlock Text="Diagnostics" Style="{StaticResource SectionTitle}" />
                 <TextBlock Text="Logs" Style="{StaticResource FactLabel}" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding LogsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding LogsPath}" FontFamily="{StaticResource AcMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Cache" Style="{StaticResource FactLabel}" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CachePath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding CachePath}" FontFamily="{StaticResource AcMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Activity log" Style="{StaticResource FactLabel}" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActionsPath}" FontFamily="{StaticResource YlMono}" FontSize="11" TextWrapping="Wrap" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ActionsPath}" FontFamily="{StaticResource AcMono}" FontSize="11" TextWrapping="Wrap" />
                 <TextBlock Text="Cache size" Style="{StaticResource FactLabel}" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding CacheSizeText}" FontSize="12" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding CacheSizeText}" FontSize="12" />
                 <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
                     <ui:Button Content="Open logs folder" Margin="0,0,8,0" Command="{Binding OpenLogsFolderCommand}" AutomationProperties.Name="Open the logs folder" />
                     <ui:Button Content="Open cache folder" Margin="0,0,8,0" Command="{Binding OpenCacheFolderCommand}" AutomationProperties.Name="Open the cache folder" />

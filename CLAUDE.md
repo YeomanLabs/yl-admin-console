@@ -1,8 +1,11 @@
-# CLAUDE.md — YeomanLabs Admin Console
+# CLAUDE.md — Admin Console
 
 You are building a Windows desktop admin console that unifies Entra ID, Intune, (later) on-prem AD, and (later) Exchange Online into one fast, search-first UI. Read `docs/00-README.md` first, then the doc it points you to for the current task.
 
-**"Admin Console" is a working name.** Do not invent branding, taglines, or a logo. Use `AdminConsole` as the namespace/assembly name until told otherwise.
+**The product is white-label (M11).** It ships branded to nobody: namespace and assembly `AdminConsole`, a neutral
+slate-and-blue palette, and `%LOCALAPPDATA%\AdminConsole` on disk. Product name, tagline and the two colours come
+from `branding.json` per installation, so a deployment can carry a client's identity. Do not hardcode a company
+name, a colour or a logo anywhere — if something needs to differ per deployment, it belongs in `Branding`.
 
 ## Non-negotiables
 

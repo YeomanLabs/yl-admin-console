@@ -204,3 +204,20 @@ everything comes across, that an existing destination is never overwritten, and 
 
 The general rule this earns: a test may not call a method whose behaviour depends on an ambient machine path. If the
 only way to test something is to run it for real, the paths are the wrong shape — pass them in.
+
+## M11 — Two colours and a name, and nothing else
+
+Branding is `productName`, `tagline`, `chromeColor`, `accentColor`. No logo slot, no font override, no per-surface
+colour list.
+
+The temptation with white-labelling is to expose everything, and every field exposed is a way for a deployment to
+produce something unreadable. The contrast work in M9.6 and `docs/ACCESSIBILITY.md` only holds because the palette is
+small enough to reason about: two configurable colours, and everything else derived from them.
+
+Derived means computed, not configured. The rail is the chrome shifted towards the nearer end. Text on the chrome is
+light or dark according to the chrome's own luminance — which makes the M8.4 bug *structurally impossible* rather than
+merely fixed: that failure was a hardcoded light foreground meeting a panel that had gone light, and there is now no
+hardcoded foreground to be wrong.
+
+Anything unpaintable falls back to the shipped default. `branding.json` is hand-editable by design, so a typo is a
+question of when, and a typo must not produce a window somebody cannot read their way out of.

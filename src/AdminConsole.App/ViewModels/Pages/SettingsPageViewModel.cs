@@ -38,11 +38,13 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
         ToastService toasts,
         IDialogService dialogs,
         UserSettingsStore settingsStore,
+        BrandingStore brandingStore,
         SyncOptions syncOptions,
         IServiceProvider services,
         ILogger<SettingsPageViewModel> logger)
     {
         _consent = consent;
+        _brandingStore = brandingStore;
         _checker = checker;
         _tenant = tenant;
         _toasts = toasts;
@@ -52,6 +54,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
         _services = services;
         _logger = logger;
         LoadSettings();
+        LoadBranding();
 
         Permissions = Capabilities.All.Select(c => new PermissionRow(c, _checker.Check(c), GrantAsync)).ToList();
         _tenant.Changed += (_, _) => RefreshPermissions();
@@ -252,6 +255,81 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
             Theme = Theme,
             Density = Density,
         });
+    }
+
+    // ---- Branding (M11.4) -------------------------------------------------------------------------------------------
+
+    private readonly BrandingStore _brandingStore;
+
+    /// <summary>
+    /// What this installation calls itself and what it is painted with. Editable here rather than only in the file,
+    /// because the person setting up a client console should not have to be told where %LOCALAPPDATA% is.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveBrandingCommand))]
+    private string _productName = string.Empty;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SaveBrandingCommand))]
+    private string _tagline = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ChromeColorError))]
+    [NotifyCanExecuteChangedFor(nameof(SaveBrandingCommand))]
+    private string _chromeColor = string.Empty;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AccentColorError))]
+    [NotifyCanExecuteChangedFor(nameof(SaveBrandingCommand))]
+    private string _accentColor = string.Empty;
+
+    public string BrandingPath => _brandingStore.FilePath;
+
+    public string? ChromeColorError => ColorError(ChromeColor);
+
+    public string? AccentColorError => ColorError(AccentColor);
+
+    private static string? ColorError(string value) =>
+        string.IsNullOrWhiteSpace(value) || Branding.LooksLikeColor(value)
+            ? null
+            : "A hex colour, like #1F2733.";
+
+    public bool CanSaveBranding =>
+        !string.IsNullOrWhiteSpace(ProductName)
+        && Branding.LooksLikeColor(ChromeColor)
+        && Branding.LooksLikeColor(AccentColor);
+
+    private void LoadBranding()
+    {
+        var branding = _brandingStore.Load();
+        ProductName = branding.ProductName;
+        Tagline = branding.Tagline;
+        ChromeColor = branding.ChromeColor;
+        AccentColor = branding.AccentColor;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanSaveBranding))]
+    private void SaveBranding()
+    {
+        _brandingStore.Save(new Branding
+        {
+            ProductName = ProductName,
+            Tagline = Tagline,
+            ChromeColor = ChromeColor,
+            AccentColor = AccentColor,
+        });
+
+        // The colours are applied at startup, before any window exists, so they cannot be swapped under a live one
+        // without repainting every open page. Saying so beats a half-restyled window.
+        _toasts.Show("Branding saved. Restart the console to see it.");
+    }
+
+    [RelayCommand]
+    private void ResetBranding()
+    {
+        _brandingStore.Reset();
+        LoadBranding();
+        _toasts.Show("Branding reset. Restart the console to see it.");
     }
 
     // ---- Diagnostics (UX §12) ---------------------------------------------------------------------------------------

@@ -16,8 +16,8 @@
         </Border>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsGood}" Value="True">
-                <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource YlSuccess}" />
-                <Setter TargetName="Label" Property="Foreground" Value="{StaticResource YlSuccess}" />
+                <Setter TargetName="Chip" Property="BorderBrush" Value="{StaticResource AcSuccess}" />
+                <Setter TargetName="Label" Property="Foreground" Value="{StaticResource AcSuccess}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding IsWarning}" Value="True">
                 <Setter TargetName="Chip" Property="BorderBrush" Value="#E0A030" />
@@ -57,11 +57,11 @@
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="4,1" />
         <Setter Property="Cursor" Value="Hand" />
-        <Setter Property="FontFamily" Value="{StaticResource YlMono}" />
+        <Setter Property="FontFamily" Value="{StaticResource AcMono}" />
         <!-- Inherited, not fixed: this style is used on the page surface and on the navy sidebar, which need
              opposite foregrounds once the light theme is in play. -->
         <Setter Property="Foreground" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
-        <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+        <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
         <Setter Property="HorizontalAlignment" Value="Left" />
         <Setter Property="ToolTip" Value="Click to copy" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
@@ -87,7 +87,7 @@
 
     <Style x:Key="FactLabel" TargetType="TextBlock">
         <Setter Property="FontSize" Value="11" />
-        <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+        <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
         <Setter Property="Margin" Value="0,10,0,1" />
     </Style>
 
@@ -104,7 +104,7 @@
 
     <Style x:Key="Caption" TargetType="TextBlock">
         <Setter Property="FontSize" Value="11" />
-        <Setter Property="Foreground" Value="{DynamicResource YlTextSecondary}" />
+        <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
         <Setter Property="TextWrapping" Value="Wrap" />
     </Style>
 
@@ -119,7 +119,7 @@
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
-            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Label}" VerticalAlignment="Center" />
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Label}" VerticalAlignment="Center" />
 
             <!-- Editable -->
             <ui:TextBox x:Name="Editor" Grid.Column="1" VerticalAlignment="Center"
@@ -131,14 +131,14 @@
                         Visibility="{Binding IsEditable, Converter={StaticResource BoolToVisibility}}" />
 
             <!-- Read-only (hybrid) -->
-            <TextBlock Foreground="{DynamicResource YlTextSecondary}" x:Name="ReadOnlyValue" Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center"
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" x:Name="ReadOnlyValue" Grid.Column="1" Text="{Binding Value}" VerticalAlignment="Center"
                        TextTrimming="CharacterEllipsis"
                        Visibility="{Binding IsReadOnly, Converter={StaticResource BoolToVisibility}}" />
 
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
                 <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14"
                                  Visibility="{Binding IsSaving, Converter={StaticResource BoolToVisibility}}" />
-                <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="14" Foreground="{StaticResource YlSuccess}"
+                <ui:SymbolIcon Symbol="CheckmarkCircle24" FontSize="14" Foreground="{StaticResource AcSuccess}"
                                Visibility="{Binding JustSaved, Converter={StaticResource BoolToVisibility}}" />
                 <ui:SymbolIcon Symbol="LockClosed24" FontSize="12" Opacity="0.75" ToolTip="{Binding ReadOnlyReason}"
                                Visibility="{Binding IsReadOnly, Converter={StaticResource BoolToVisibility}}" />
@@ -152,9 +152,9 @@
         </Grid>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsMono}" Value="True">
-                <Setter TargetName="Editor" Property="FontFamily" Value="{StaticResource YlMono}" />
+                <Setter TargetName="Editor" Property="FontFamily" Value="{StaticResource AcMono}" />
                 <Setter TargetName="Editor" Property="FontSize" Value="12" />
-                <Setter TargetName="ReadOnlyValue" Property="FontFamily" Value="{StaticResource YlMono}" />
+                <Setter TargetName="ReadOnlyValue" Property="FontFamily" Value="{StaticResource AcMono}" />
                 <Setter TargetName="ReadOnlyValue" Property="FontSize" Value="12" />
             </DataTrigger>
             <DataTrigger Binding="{Binding IsSaving}" Value="True">
@@ -176,7 +176,7 @@
                       AutomationProperties.Name="{Binding Name}" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding PartNumber}" FontFamily="{StaticResource YlMono}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding PartNumber}" FontFamily="{StaticResource AcMono}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
                 <Border Style="{StaticResource Chip}" Visibility="{Binding IsGroupAssigned, Converter={StaticResource BoolToVisibility}}" ToolTip="{Binding Caption}">
                     <TextBlock Text="Group" FontSize="11" />
                 </Border>
@@ -187,7 +187,7 @@
                 <TextBlock Text="{Binding BlockedReason}" Style="{StaticResource Caption}" Margin="8,0,0,0" VerticalAlignment="Center"
                            Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
-            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding SeatsText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Column="2" Text="{Binding SeatsText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
         </Grid>
     </DataTemplate>
 
@@ -212,7 +212,7 @@
                 <TextBlock Text="{Binding BlockedReason}" Style="{StaticResource Caption}" Margin="8,0,0,0" VerticalAlignment="Center"
                            Visibility="{Binding HasBlockedReason, Converter={StaticResource BoolToVisibility}}" />
             </StackPanel>
-            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding MembersText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Column="2" Text="{Binding MembersText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
             <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
                 <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibility}}" />
                 <ui:Button Icon="{ui:SymbolIcon Dismiss24}" Appearance="Transparent" Padding="6,2" Command="{Binding RemoveCommand}"
@@ -244,8 +244,8 @@
             <ui:SymbolIcon Symbol="Key24" FontSize="14" Opacity="0.75" VerticalAlignment="Center" />
             <TextBlock Grid.Column="1" Text="{Binding KindLabel}" VerticalAlignment="Center" />
             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="{Binding DisplayName}" FontFamily="{StaticResource YlMono}" FontSize="12" VerticalAlignment="Center" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Detail}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}" />
+                <TextBlock Text="{Binding DisplayName}" FontFamily="{StaticResource AcMono}" FontSize="12" VerticalAlignment="Center" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Detail}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding Detail, Converter={StaticResource NullToCollapsed}}" />
             </StackPanel>
             <ui:Button Grid.Column="3" Icon="{ui:SymbolIcon Delete24}" Appearance="Transparent" Padding="6,2"
                        Command="{Binding DeleteCommand}" IsEnabled="{Binding CanDelete}"
@@ -267,9 +267,9 @@
                         <ui:SymbolIcon Symbol="Laptop24" FontSize="16" Margin="0,0,8,0" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="220" />
                     </StackPanel>
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ModelText}" FontSize="12" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OsText}" FontSize="12" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Serial}" FontFamily="{StaticResource YlMono}" FontSize="11" Margin="0,2,0,0" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ModelText}" FontSize="12" Margin="0,4,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding OsText}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Serial}" FontFamily="{StaticResource AcMono}" FontSize="11" Margin="0,2,0,0" />
                     <WrapPanel Margin="0,8,0,0">
                         <Border x:Name="ComplianceChip" Style="{StaticResource Chip}" Margin="0,0,6,4">
                             <TextBlock x:Name="ComplianceLabel" Text="{Binding ComplianceText}" FontSize="11" />
@@ -282,16 +282,16 @@
                         </Border>
                     </WrapPanel>
                     <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding LastSyncText}" FontSize="11" />
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text=" · live" FontSize="11" Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibility}}" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding LastSyncText}" FontSize="11" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text=" · live" FontSize="11" Visibility="{Binding IsLive, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                 </StackPanel>
             </Border>
         </Button>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding ComplianceTone}" Value="Good">
-                <Setter TargetName="ComplianceChip" Property="BorderBrush" Value="{StaticResource YlSuccess}" />
-                <Setter TargetName="ComplianceLabel" Property="Foreground" Value="{StaticResource YlSuccess}" />
+                <Setter TargetName="ComplianceChip" Property="BorderBrush" Value="{StaticResource AcSuccess}" />
+                <Setter TargetName="ComplianceLabel" Property="Foreground" Value="{StaticResource AcSuccess}" />
             </DataTrigger>
             <DataTrigger Binding="{Binding ComplianceTone}" Value="Danger">
                 <Setter TargetName="ComplianceChip" Property="BorderBrush" Value="{DynamicResource SystemFillColorCriticalBrush}" />
@@ -311,12 +311,12 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActivityDateTime.LocalDateTime, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontFamily="{StaticResource YlMono}" FontSize="12" VerticalAlignment="Center" />
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ActivityDateTime.LocalDateTime, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}" FontFamily="{StaticResource AcMono}" FontSize="12" VerticalAlignment="Center" />
             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock x:Name="Activity" Text="{Binding Activity}" VerticalAlignment="Center" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ResultReason}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding ResultReason, Converter={StaticResource NullToCollapsed}}" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ResultReason}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" Visibility="{Binding ResultReason, Converter={StaticResource NullToCollapsed}}" />
             </StackPanel>
-            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding InitiatedBy}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Column="2" Text="{Binding InitiatedBy}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0" />
         </Grid>
         <DataTemplate.Triggers>
             <DataTrigger Binding="{Binding IsFailure}" Value="True">
@@ -347,8 +347,8 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <Border Width="48" Height="48" CornerRadius="24" Background="{StaticResource YlRailBackground}"
-                            BorderBrush="{StaticResource YlCoral}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
+                    <Border Width="48" Height="48" CornerRadius="24" Background="{DynamicResource AcRailBackground}"
+                            BorderBrush="{DynamicResource AcAccent}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
                         <TextBlock Text="{Binding Initials}" FontSize="18" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
 
@@ -384,7 +384,7 @@
                             <ui:Button Icon="{ui:SymbolIcon MoreHorizontal24}" IsEnabled="False" ToolTip="More actions" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="More actions" />
                             <ui:Button Icon="{ui:SymbolIcon PanelRight24}" Command="{Binding ToggleSidebarCommand}" ToolTip="Toggle quick facts" AutomationProperties.Name="Toggle quick facts" Margin="8,0,0,0" />
                         </StackPanel>
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding ActionsDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="320"
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding ActionsDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" TextWrapping="Wrap" MaxWidth="320"
                                    Visibility="{Binding ActionsDisabledReason, Converter={StaticResource NullToCollapsed}}" />
                     </StackPanel>
                 </Grid>
@@ -503,8 +503,8 @@
                                                     <ui:SymbolIcon Symbol="Desktop24" FontSize="14" Opacity="0.75" VerticalAlignment="Center" />
                                                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                         <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center" />
-                                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding OperatingSystem}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
-                                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding TrustType}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding OperatingSystem}" FontSize="12" Margin="8,0,0,0" VerticalAlignment="Center" />
+                                                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding TrustType}" FontSize="11" Margin="8,0,0,0" VerticalAlignment="Center" />
                                                     </StackPanel>
                                                 </Grid>
                                             </DataTemplate>
@@ -539,11 +539,11 @@
                                                                 <RowDefinition Height="28" />
                                                                 <RowDefinition Height="28" />
                                                             </Grid.RowDefinitions>
-                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Last interactive" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Last interactive" VerticalAlignment="Center" />
                                                             <TextBlock Grid.Column="1" Text="{Binding LastInteractiveText}" VerticalAlignment="Center" />
-                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="1" Text="Last non-interactive" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Row="1" Text="Last non-interactive" VerticalAlignment="Center" />
                                                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastNonInteractiveText}" VerticalAlignment="Center" />
-                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="2" Text="Last successful" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Row="2" Text="Last successful" VerticalAlignment="Center" />
                                                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LastSuccessfulText}" VerticalAlignment="Center" />
                                                         </Grid>
 
@@ -557,9 +557,9 @@
                                                                 <RowDefinition Height="28" />
                                                                 <RowDefinition Height="28" />
                                                             </Grid.RowDefinitions>
-                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="Created" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Created" VerticalAlignment="Center" />
                                                             <TextBlock Grid.Column="1" Text="{Binding CreatedText}" VerticalAlignment="Center" />
-                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Row="1" Text="Last password change" VerticalAlignment="Center" />
+                                                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Row="1" Text="Last password change" VerticalAlignment="Center" />
                                                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastPasswordChangeText}" VerticalAlignment="Center" />
                                                         </Grid>
 
@@ -590,8 +590,8 @@
             </Grid>
 
             <!-- Sidebar (UX §4): 280 px quick facts, collapsible -->
-            <Border Grid.Column="1" Width="280" Background="{StaticResource YlRailBackground}" Padding="16,16,16,8"
-                    TextElement.Foreground="{StaticResource YlOnNavy}"
+            <Border Grid.Column="1" Width="280" Background="{DynamicResource AcRailBackground}" Padding="16,16,16,8"
+                    TextElement.Foreground="{DynamicResource AcOnChrome}"
                     Visibility="{Binding IsSidebarOpen, Converter={StaticResource BoolToVisibility}}">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel>
@@ -626,7 +626,7 @@
                         <TextBlock Style="{StaticResource FactValue}" Text="{Binding DirectReportsText}" />
 
                         <TextBlock Style="{StaticResource FactLabel}" Text="Loaded" />
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Style="{StaticResource FactValue}" Text="{Binding TimingText}" FontSize="12" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Style="{StaticResource FactValue}" Text="{Binding TimingText}" FontSize="12" />
                     </StackPanel>
                 </ScrollViewer>
             </Border>

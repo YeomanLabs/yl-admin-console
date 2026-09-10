@@ -1,4 +1,4 @@
-﻿# YeomanLabs Admin Console
+# Admin Console
 
 A Windows desktop console that puts Entra ID and Intune behind one search box.
 
@@ -88,7 +88,7 @@ two sensitive ones only when you click a reveal button.
 
 ## Where it keeps things
 
-Everything is under `%LOCALAPPDATA%\YeomanLabs\AdminConsole`:
+Everything is under `%LOCALAPPDATA%\AdminConsole`:
 
 | Path | What |
 |---|---|
@@ -97,11 +97,55 @@ Everything is under `%LOCALAPPDATA%\YeomanLabs\AdminConsole`:
 | `templates\users\*.json` | User templates. Hand-editable. |
 | `templates\offboarding\*.json` | Offboarding profiles. Hand-editable. |
 | `settings.json` | Sync intervals, theme, density. |
+| `branding.json` | Product name, tagline and colours. Absent means the neutral default. |
 | `tenant.json` | Which app registration this installation signs in with. |
 | `logs\*.log` | Application logs. Object IDs and error text, never tokens or passwords. |
 | `msal.cache` | The token cache, protected by DPAPI. |
 
 ![Offboarding preview](docs/images/offboard-preview.png)
+
+## Branding it
+
+The console ships branded to nobody: it calls itself **Admin Console** and paints itself slate and blue. One file
+changes that, so a deployment can carry whoever's identity it should — a client's, a consultancy's, or an internal IT
+team's.
+
+Either fill it in from **Settings → Branding** in the app, or drop the file in yourself:
+
+`%LOCALAPPDATA%\AdminConsole\branding.json`
+
+```json
+{
+  "productName": "Contoso IT Console",
+  "tagline": "Contoso identity and devices, in one place.",
+  "chromeColor": "#2B1B4D",
+  "accentColor": "#C08CFF"
+}
+```
+
+| Field | Where it shows | If you leave it out |
+|---|---|---|
+| `productName` | Title bar, sign-in page, Settings | `Admin Console` |
+| `tagline` | One line under the name on the sign-in page | The default line |
+| `chromeColor` | Title bar, navigation rail, status bar, side panels | `#1F2733` |
+| `accentColor` | Primary buttons, the active nav item, focus rings, the figures on Home | `#58A6FF` |
+
+Colours are applied when the app starts, so **restart to see a change**. Everything derived from those two — the
+rail's shade, and whether text on the chrome comes out light or dark — is computed rather than configured, so a pale
+chrome gets dark text instead of becoming unreadable. A value that is not a hex colour is ignored in favour of the
+default; a typo cannot leave you with a window you can't read your way out of.
+
+**Deploying it branded.** `branding.json` sits beside the cache, not in the install directory, so ship it with the
+profile or drop it in during setup and nobody has to open Settings at all. If you are also creating the app
+registration, pass a matching `-Name` so it is recognisable in the tenant's app list:
+
+```powershell
+.\scripts\New-AppRegistration.ps1 -Name "Contoso IT Console" -WriteConfig
+```
+
+**What is not brandable.** There is no logo slot and no font override. Two colours and a name cover what a console
+needs to feel like the organisation's own; more surface than that is more ways to make it unreadable, and the contrast
+work recorded in `docs/ACCESSIBILITY.md` only holds because the palette is small.
 
 ## Keyboard
 

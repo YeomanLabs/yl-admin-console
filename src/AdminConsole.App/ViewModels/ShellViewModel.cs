@@ -10,6 +10,7 @@ using AdminConsole.App.Services;
 using AdminConsole.App.ViewModels.Dialogs;
 using AdminConsole.App.ViewModels.Pages;
 using AdminConsole.App.ViewModels.Palette;
+using AdminConsole.Core;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Graph;
@@ -60,6 +61,12 @@ public sealed partial class ShellViewModel : ObservableObject
         Tabs.CollectionChanged += OnTabsChanged;
         _tenant.Changed += (_, _) => RunOnUi(RefreshTenantHeader);
     }
+
+    /// <summary>What this installation calls itself (M11.4). The title bar and sign-in page bind to it, so a client
+    /// console carries the client's name rather than ours.</summary>
+    public string ProductName => _services.GetRequiredService<BrandingStore>().Load().ProductName;
+
+    public string Tagline => _services.GetRequiredService<BrandingStore>().Load().Tagline;
 
     /// <summary>UX §10 toasts, owned by <see cref="ToastService"/>; the window binds the bottom-right stack to this.</summary>
     public ObservableCollection<ToastItem> Toasts { get; }

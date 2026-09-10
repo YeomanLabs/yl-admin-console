@@ -18,7 +18,7 @@
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
             <!-- Without this a result row inherits the button's dimmed foreground and the name comes out darker than
                  the sign-in name beside it — the one word you are actually reading, hardest to read. -->
-            <Setter Property="Foreground" Value="{DynamicResource YlTextPrimary}" />
+            <Setter Property="Foreground" Value="{DynamicResource AcTextPrimary}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FocusVisualStyle" Value="{x:Null}" />
             <Setter Property="Focusable" Value="False" />
@@ -97,7 +97,7 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type pal:PaletteGroup}">
                                     <StackPanel Margin="0,0,0,6">
-                                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" Margin="10,6,0,2" />
+                                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Title}" FontSize="11" FontWeight="SemiBold" Margin="10,6,0,2" />
                                         <ItemsControl ItemsSource="{Binding Rows}">
                                             <ItemsControl.ItemTemplate>
                                                 <DataTemplate DataType="{x:Type pal:PaletteRow}">
@@ -113,8 +113,8 @@
                                                             </Grid.ColumnDefinitions>
                                                             <ui:SymbolIcon Symbol="{Binding Symbol}" FontSize="16" Opacity="0.8" />
                                                             <TextBlock Grid.Column="1" Text="{Binding Primary}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320" />
-                                                            <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding Secondary}" VerticalAlignment="Center" Margin="12,0,0,0"
-                                                                       FontFamily="{StaticResource YlMono}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Column="2" Text="{Binding Secondary}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                                                       FontFamily="{StaticResource AcMono}" FontSize="12" TextTrimming="CharacterEllipsis" />
                                                             <ItemsControl Grid.Column="3" ItemsSource="{Binding Badges}" VerticalAlignment="Center">
                                                                 <ItemsControl.ItemsPanel>
                                                                     <ItemsPanelTemplate>
@@ -141,10 +141,10 @@
                     </ScrollViewer>
 
                     <DockPanel Margin="12,6,12,10">
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" DockPanel.Dock="Right" Text="↑↓ move · Enter open · Ctrl+Enter new tab · Esc close" FontSize="11" VerticalAlignment="Center" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" DockPanel.Dock="Right" Text="↑↓ move · Enter open · Ctrl+Enter new tab · Esc close" FontSize="11" VerticalAlignment="Center" />
                         <!-- The rows are not focusable by design, so this is what a screen reader reads as the -->
                         <!-- selection moves. AutomationProperties.LiveSetting makes it announce on change.        -->
-                        <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding FooterText}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding FooterText}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
                                    AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding FooterText}" />
                     </DockPanel>
                 </StackPanel>

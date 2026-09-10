@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Creates the Entra app registration the YeomanLabs Admin Console signs in with, in whichever tenant you connect to.
+    Creates the Entra app registration the Admin Console signs in with, in whichever tenant you connect to.
 
 .DESCRIPTION
     Replaces the manual click-through in docs/08-APP-REGISTRATION.md. It creates a public-client registration, adds the
@@ -14,7 +14,7 @@
     which is enough to prove the permission list is valid before anything is written.
 
 .PARAMETER Name
-    Display name for the registration. Defaults to "YeomanLabs Admin Console".
+    Display name for the registration. Defaults to "Admin Console". Use -Name to match a branded deployment.
 
 .PARAMETER TenantId
     Tenant to create it in — a GUID or a domain like contoso.onmicrosoft.com. Omit to be prompted at sign-in.
@@ -52,7 +52,7 @@
 #>
 [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'High')]
 param(
-    [string]$Name = 'YeomanLabs Admin Console',
+    [string]$Name = 'Admin Console',
     [string]$TenantId,
     [switch]$SingleTenant,
     [switch]$NoConsent,

@@ -17,7 +17,7 @@
                 </Grid.ColumnDefinitions>
                 <ui:SymbolIcon x:Name="Icon" Symbol="Person24" FontSize="14" Opacity="0.75" VerticalAlignment="Center" />
                 <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                <TextBlock Foreground="{DynamicResource YlTextSecondary}" Grid.Column="2" Text="{Binding UserPrincipalName}" FontFamily="{StaticResource YlMono}" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Grid.Column="2" Text="{Binding UserPrincipalName}" FontFamily="{StaticResource AcMono}" FontSize="11" VerticalAlignment="Center" Margin="12,0,0,0" />
             </Grid>
         </Button>
         <DataTemplate.Triggers>
@@ -48,8 +48,8 @@
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <Border Width="48" Height="48" CornerRadius="8" Background="{StaticResource YlRailBackground}" TextElement.Foreground="{StaticResource YlOnNavy}"
-                        BorderBrush="{StaticResource YlCoral}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
+                <Border Width="48" Height="48" CornerRadius="8" Background="{DynamicResource AcRailBackground}" TextElement.Foreground="{DynamicResource AcOnChrome}"
+                        BorderBrush="{DynamicResource AcAccent}" BorderThickness="2" VerticalAlignment="Top" Margin="0,2,14,0">
                     <ui:SymbolIcon Symbol="PeopleTeam24" FontSize="22" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
 
@@ -58,7 +58,7 @@
                     <Button Style="{StaticResource CopyableMono}" Content="{Binding Group.Mail}" Margin="-4,2,0,0"
                             Command="{Binding CopyCommand}" CommandParameter="{Binding Group.Mail}" AutomationProperties.Name="Copy group mail"
                             Visibility="{Binding Group.Mail, Converter={StaticResource NullToCollapsed}}" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding Group.Description}" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left" Margin="0,2,0,0"
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Group.Description}" TextWrapping="Wrap" MaxWidth="640" HorizontalAlignment="Left" Margin="0,2,0,0"
                                Visibility="{Binding Group.Description, Converter={StaticResource NullToCollapsed}}" />
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                         <ItemsControl ItemsSource="{Binding Badges}" ItemTemplate="{StaticResource HeaderBadge}">
@@ -78,8 +78,8 @@
                 <StackPanel Grid.Column="2" VerticalAlignment="Top" Margin="16,0,0,0">
                     <ui:Button Content="Add member…" IsEnabled="False" HorizontalAlignment="Right"
                                ToolTip="{Binding MembershipDisabledReason}" ToolTipService.ShowOnDisabled="True" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding MembershipDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" MaxWidth="280" TextWrapping="Wrap" TextAlignment="Right" />
-                    <TextBlock Foreground="{DynamicResource YlTextSecondary}" Text="{Binding TimingText}" FontSize="11" HorizontalAlignment="Right" Margin="0,2,0,0" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding MembershipDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" MaxWidth="280" TextWrapping="Wrap" TextAlignment="Right" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding TimingText}" FontSize="11" HorizontalAlignment="Right" Margin="0,2,0,0" />
                 </StackPanel>
             </Grid>
 
@@ -90,7 +90,7 @@
                         <TextBlock Text="Membership rule" Style="{StaticResource SectionTitle}" />
                         <Border Padding="10,8" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
                                 BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1" HorizontalAlignment="Left" MaxWidth="720">
-                            <TextBlock Text="{Binding MembershipRule}" FontFamily="{StaticResource YlMono}" FontSize="12" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding MembershipRule}" FontFamily="{StaticResource AcMono}" FontSize="12" TextWrapping="Wrap" />
                         </Border>
                     </StackPanel>
 
