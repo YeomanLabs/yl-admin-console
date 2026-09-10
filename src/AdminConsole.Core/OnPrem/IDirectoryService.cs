@@ -27,18 +27,21 @@ public interface IDirectoryService
     /// <summary>The AD user behind an Entra one, found from its <c>onPremisesImmutableId</c>.</summary>
     Task<OnPremUser?> GetUserByImmutableIdAsync(string immutableId, CancellationToken ct);
 
-    Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, CancellationToken ct);
+    /// <param name="searchBaseDn">Restricts the search to one OU and everything under it. Null searches the domain.</param>
+    Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, string? searchBaseDn, CancellationToken ct);
 
     Task<OnPremGroup?> GetGroupAsync(Guid objectGuid, CancellationToken ct);
 
-    Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, CancellationToken ct);
+    /// <param name="searchBaseDn">Restricts the search to one OU and everything under it. Null searches the domain.</param>
+    Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, string? searchBaseDn, CancellationToken ct);
 
     /// <summary>Direct members of a group, resolved enough to draw a row for each.</summary>
     Task<IReadOnlyList<OnPremMember>> GetGroupMembersAsync(Guid objectGuid, CancellationToken ct);
 
     Task<OnPremComputer?> GetComputerAsync(Guid objectGuid, CancellationToken ct);
 
-    Task<IReadOnlyList<OnPremComputer>> SearchComputersAsync(string text, int limit, CancellationToken ct);
+    /// <param name="searchBaseDn">Restricts the search to one OU and everything under it. Null searches the domain.</param>
+    Task<IReadOnlyList<OnPremComputer>> SearchComputersAsync(string text, int limit, string? searchBaseDn, CancellationToken ct);
 
     /// <summary>Every OU in the domain, flat. The tree is assembled from distinguished names by the caller.</summary>
     Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct);

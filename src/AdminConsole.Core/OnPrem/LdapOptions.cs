@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 
 namespace AdminConsole.Core.OnPrem;
 
@@ -13,6 +13,13 @@ public sealed class LdapOptions
     /// Empty means on-prem features stay off.
     /// </summary>
     public string Domain { get; set; } = string.Empty;
+
+    /// <summary>
+    /// A specific domain controller, bypassing DNS SRV discovery. Normally empty — serverless binding is better,
+    /// because it survives a DC being retired. It is needed when the machine cannot resolve the domain through DNS
+    /// (a workstation outside the forest, or a lab), and when troubleshooting one controller in particular.
+    /// </summary>
+    public string Server { get; set; } = string.Empty;
 
     public int Port { get; set; } = 389;
 

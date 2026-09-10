@@ -1,4 +1,4 @@
-using System.DirectoryServices.Protocols;
+﻿using System.DirectoryServices.Protocols;
 using System.Net;
 using Microsoft.Extensions.Logging;
 
@@ -99,10 +99,17 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
             // Serverless binding: handing the LDAP client a domain name rather than a hostname lets Windows locate a
             // domain controller through DNS SRV and site topology. Naming a specific DC would be a single point of
             // failure and would go stale the first time one is retired.
-            var identifier = new LdapDirectoryIdentifier(_options.Domain, _options.Port, fullyQualifiedDnsHostName: false, connectionless: false);
+            // A named server is used verbatim; otherwise the domain goes in and Windows finds a controller itself.
+            var hasServer = !string.IsNullOrWhiteSpace(_options.Server);
+            var target = hasServer ? _options.Server : _options.Domain;
+            var identifier = new LdapDirectoryIdentifier(target, _options.Port, fullyQualifiedDnsHostName: hasServer, connectionless: false);
             var connection = new LdapConnection(identifier)
             {
-                AuthType = _options.Credential is null ? AuthType.Negotiate : AuthType.Basic,
+                // Negotiate whether or not credentials were supplied. The first version used Basic when a credential
+                // was present, which a real domain controller refuses outright over an unprotected connection —
+                // and Basic would send the password in the clear even where it were accepted. Explicit credentials
+                // are a Kerberos/NTLM identity to bind as, not a different mechanism.
+                AuthType = AuthType.Negotiate,
                 Timeout = _options.Timeout,
             };
             connection.SessionOptions.ProtocolVersion = 3;
@@ -112,9 +119,11 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
             {
                 connection.SessionOptions.SecureSocketLayer = true;
             }
-            else if (_options.Credential is null)
+            else
             {
-                // Signing and sealing, so the traffic is protected and unicodePwd is accepted on 389.
+                // Signing and sealing, so the traffic is protected and unicodePwd is accepted on 389. This applies
+                // with explicit credentials as well: the protection is a property of the connection, not of whose
+                // identity is bound over it.
                 connection.SessionOptions.Signing = true;
                 connection.SessionOptions.Sealing = true;
             }
@@ -135,7 +144,7 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
                 IsConnected = true,
                 DomainName = _options.Domain,
                 RootDn = root.DefaultNamingContext,
-                DomainController = root.DnsHostName,
+                DomainController = root.DnsHostName ?? target,
                 BoundAs = _options.Credential?.UserName ?? WindowsIdentityName(),
             };
 
@@ -190,16 +199,16 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
         return GetUserAsync(guid, ct);
     }
 
-    public Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, CancellationToken ct) =>
+    public Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
         SearchAsync(Contains(UserFilter, text, "sAMAccountName", "displayName", "userPrincipalName", "mail"),
-            UserAttributes, ReadUser, limit, ct);
+            UserAttributes, ReadUser, limit, ct, searchBaseDn);
 
     public Task<OnPremGroup?> GetGroupAsync(Guid objectGuid, CancellationToken ct) =>
         FindOneAsync($"(&{GroupFilter}(objectGUID={LdapAttributes.GuidFilter(objectGuid)}))", GroupAttributes, ReadGroup, ct);
 
-    public Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, CancellationToken ct) =>
+    public Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
         SearchAsync(Contains(GroupFilter, text, "sAMAccountName", "displayName", "description"),
-            GroupAttributes, ReadGroup, limit, ct);
+            GroupAttributes, ReadGroup, limit, ct, searchBaseDn);
 
     public async Task<IReadOnlyList<OnPremMember>> GetGroupMembersAsync(Guid objectGuid, CancellationToken ct)
     {
@@ -238,9 +247,9 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
     public Task<OnPremComputer?> GetComputerAsync(Guid objectGuid, CancellationToken ct) =>
         FindOneAsync($"(&{ComputerFilter}(objectGUID={LdapAttributes.GuidFilter(objectGuid)}))", ComputerAttributes, ReadComputer, ct);
 
-    public Task<IReadOnlyList<OnPremComputer>> SearchComputersAsync(string text, int limit, CancellationToken ct) =>
+    public Task<IReadOnlyList<OnPremComputer>> SearchComputersAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
         SearchAsync(Contains(ComputerFilter, text, "name", "dNSHostName", "description"),
-            ComputerAttributes, ReadComputer, limit, ct);
+            ComputerAttributes, ReadComputer, limit, ct, searchBaseDn);
 
     public Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct) =>
         SearchAsync(OuFilter, OuAttributes, ReadOu, 5000, ct);
@@ -417,12 +426,12 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
         return results.Count == 0 ? null : results[0];
     }
 
-    private async Task<IReadOnlyList<T>> SearchAsync<T>(string filter, string[] attributes, Func<SearchResultEntry, T> read, int limit, CancellationToken ct)
+    private async Task<IReadOnlyList<T>> SearchAsync<T>(string filter, string[] attributes, Func<SearchResultEntry, T> read, int limit, CancellationToken ct, string? searchBaseDn = null)
     {
         try
         {
             var connection = await EnsureConnectedAsync(ct).ConfigureAwait(false);
-            var request = new SearchRequest(_status.RootDn, filter, SearchScope.Subtree, attributes) { SizeLimit = limit };
+            var request = new SearchRequest(searchBaseDn ?? _status.RootDn, filter, SearchScope.Subtree, attributes) { SizeLimit = limit };
 
             var response = await Task.Run(() => (SearchResponse)connection.SendRequest(request), ct).ConfigureAwait(false);
             var results = new List<T>(response.Entries.Count);

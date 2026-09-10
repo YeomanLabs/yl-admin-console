@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Xunit;
 using AdminConsole.Core.OnPrem;
 
@@ -15,6 +15,26 @@ namespace AdminConsole.Core.Tests.OnPrem;
 public sealed class FakeDirectoryServiceTests
 {
     private static readonly CancellationToken Ct = CancellationToken.None;
+
+    [Fact]
+    public async Task SearchingWithinAnOu_IncludesEverythingBeneathIt()
+    {
+        // An LDAP subtree search covers the base and its descendants, which is what an admin means by "in Sales".
+        // Restricting to direct children would hide people the moment somebody adds a sub-OU.
+        var ad = new FakeDirectoryService();
+        var lab = ad.AddOu("Lab");
+        var users = ad.AddOu("Users", lab.DistinguishedName);
+        var sales = ad.AddOu("Sales", users.DistinguishedName);
+        ad.AddUser("in.sales", sales.DistinguishedName);
+        ad.AddUser("in.users", users.DistinguishedName);
+        ad.AddUser("elsewhere", lab.DistinguishedName);
+
+        var underUsers = await ad.SearchUsersAsync("", 50, users.DistinguishedName, Ct);
+
+        underUsers.Select(u => u.SamAccountName).Should().BeEquivalentTo(["in.users", "in.sales"]);
+        (await ad.SearchUsersAsync("", 50, sales.DistinguishedName, Ct)).Should().ContainSingle();
+        (await ad.SearchUsersAsync("", 50, null, Ct)).Should().HaveCount(3, "no base means the whole domain");
+    }
 
     private static (FakeDirectoryService Ad, OnPremOu Lab, OnPremOu Disabled) Lab()
     {
@@ -320,8 +340,8 @@ public sealed class FakeDirectoryServiceTests
         ad.AddUser("alan.turing", displayName: "Alan Turing");
         ad.AddUser("grace.hopper", displayName: "Grace Hopper");
 
-        (await ad.SearchUsersAsync("lovelace", 10, Ct)).Should().ContainSingle();
-        (await ad.SearchUsersAsync("a", 2, Ct)).Should().HaveCount(2, "the limit is honoured");
-        (await ad.SearchUsersAsync("", 10, Ct)).Should().HaveCount(3, "empty means everyone");
+        (await ad.SearchUsersAsync("lovelace", 10, null, Ct)).Should().ContainSingle();
+        (await ad.SearchUsersAsync("a", 2, null, Ct)).Should().HaveCount(2, "the limit is honoured");
+        (await ad.SearchUsersAsync("", 10, null, Ct)).Should().HaveCount(3, "empty means everyone");
     }
 }

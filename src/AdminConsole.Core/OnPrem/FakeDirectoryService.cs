@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 
 namespace AdminConsole.Core.OnPrem;
 
@@ -126,11 +126,11 @@ public sealed class FakeDirectoryService : IDirectoryService
         return Task.FromResult(Get<OnPremUser>(guid));
     }
 
-    public Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, CancellationToken ct) =>
+    public Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<OnPremUser>>(
         [
             .. All<OnPremUser>()
-                .Where(u => Matches(text, u.SamAccountName, u.DisplayName, u.UserPrincipalName, u.Mail))
+                .Where(u => Matches(text, u.SamAccountName, u.DisplayName, u.UserPrincipalName, u.Mail) && Under(u.DistinguishedName, searchBaseDn))
                 .OrderBy(u => u.Primary, StringComparer.OrdinalIgnoreCase)
                 .Take(limit)
         ]);
@@ -138,11 +138,11 @@ public sealed class FakeDirectoryService : IDirectoryService
     public Task<OnPremGroup?> GetGroupAsync(Guid objectGuid, CancellationToken ct) =>
         Task.FromResult(Get<OnPremGroup>(objectGuid));
 
-    public Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, CancellationToken ct) =>
+    public Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<OnPremGroup>>(
         [
             .. All<OnPremGroup>()
-                .Where(g => Matches(text, g.SamAccountName, g.DisplayName, g.Description))
+                .Where(g => Matches(text, g.SamAccountName, g.DisplayName, g.Description) && Under(g.DistinguishedName, searchBaseDn))
                 .OrderBy(g => g.Primary, StringComparer.OrdinalIgnoreCase)
                 .Take(limit)
         ]);
@@ -172,11 +172,11 @@ public sealed class FakeDirectoryService : IDirectoryService
     public Task<OnPremComputer?> GetComputerAsync(Guid objectGuid, CancellationToken ct) =>
         Task.FromResult(Get<OnPremComputer>(objectGuid));
 
-    public Task<IReadOnlyList<OnPremComputer>> SearchComputersAsync(string text, int limit, CancellationToken ct) =>
+    public Task<IReadOnlyList<OnPremComputer>> SearchComputersAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<OnPremComputer>>(
         [
             .. All<OnPremComputer>()
-                .Where(c => Matches(text, c.Name, c.DnsHostName, c.Description))
+                .Where(c => Matches(text, c.Name, c.DnsHostName, c.Description) && Under(c.DistinguishedName, searchBaseDn))
                 .OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase)
                 .Take(limit)
         ]);
@@ -435,6 +435,12 @@ public sealed class FakeDirectoryService : IDirectoryService
         OnPremOu o => o with { DistinguishedName = dn, Name = newName ?? o.Name },
         _ => value,
     };
+
+    /// <summary>An LDAP subtree search: the base itself and everything beneath it.</summary>
+    private static bool Under(string dn, string? baseDn) =>
+        string.IsNullOrWhiteSpace(baseDn)
+        || string.Equals(dn, baseDn, StringComparison.OrdinalIgnoreCase)
+        || DistinguishedNames.IsUnder(dn, baseDn);
 
     private static bool Matches(string text, params string?[] fields) =>
         string.IsNullOrWhiteSpace(text)
