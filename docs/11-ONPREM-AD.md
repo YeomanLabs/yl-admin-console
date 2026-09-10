@@ -209,3 +209,36 @@ thing that wrote it proves nothing.
    source badge, or on-prem browsing lives only on a Domain page. The first is more useful and more work.
 3. **Multiple domains and forests.** Out of scope for 12.x, but `IDirectoryService` should not assume one domain, or
    retrofitting it will be painful.
+
+## 10. Turning it on for an installation (M12.4)
+
+On-prem is off until a domain is named. The `OnPrem` section of `appsettings.json` — or `appsettings.local.json`,
+which is gitignored — carries it:
+
+```json
+{
+  "OnPrem": {
+    "Domain": "corp.example.com"
+  }
+}
+```
+
+`Domain` alone is what a domain-joined machine wants: the LDAP client is handed the domain rather than a hostname, so
+Windows finds a controller through DNS SRV and site topology, the bind is the admin's own Kerberos ticket, and a
+retired DC strands nobody.
+
+`Server` names one controller directly, which is needed only where the machine cannot resolve the domain — a
+workstation outside the forest, or the lab — and when troubleshooting one DC in particular. `Credential`
+(`UserName`, `Password`, `Domain`) exists for the same reason and should never be how a client deployment runs: it
+puts a password on disk, and the whole point of non-negotiable 4 is that AD enforces what the signed-in admin has
+actually been delegated.
+
+With nothing configured, the Domain page says so and every mastered field on a synced user keeps the reason it had
+before. Nothing else in the console changes.
+
+### What the console asks the directory before offering an edit
+
+`allowedAttributesEffective` on the target object, which the DC constructs per object and per caller. It answers both
+"is this attribute in the forest's schema" and "has this admin been delegated it", and it is the only way to answer
+either without attempting the write. A field that fails it stays greyed with that reason rather than accepting a
+value and refusing it a moment later.

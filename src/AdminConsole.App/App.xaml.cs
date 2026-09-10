@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Interop;
@@ -23,6 +23,7 @@ using AdminConsole.Core.Licensing;
 using AdminConsole.Core.Groups;
 using AdminConsole.Core.Search;
 using AdminConsole.Core.Sync;
+using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Offboarding;
 using AdminConsole.Core.Offboarding.Steps;
 using AdminConsole.Core.Templates;
@@ -135,6 +136,14 @@ public sealed partial class App : Application
         services.AddSingleton(ctx.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions());
         services.AddSingleton(ctx.Configuration.GetSection(SyncOptions.SectionName).Get<SyncOptions>() ?? new SyncOptions());
 
+        // M12: on-prem AD. Empty by default, which is the cloud-only case — LdapDirectoryService reports "no domain
+        // configured" and every on-prem feature stays greyed with that reason rather than failing at a timeout.
+        // Singleton because it owns one bound LDAP connection for the life of the app.
+        services.AddSingleton(ctx.Configuration.GetSection(LdapOptions.SectionName).Get<LdapOptions>() ?? new LdapOptions());
+        services.AddSingleton<IDirectoryService>(sp => new LdapDirectoryService(
+            sp.GetRequiredService<LdapOptions>(),
+            sp.GetRequiredService<ILogger<LdapDirectoryService>>()));
+
         // M10.1: which registration this installation uses comes from %LOCALAPPDATA%, with appsettings.json as the
         // fallback. A client installation can be pointed at their own registration without editing a file under
         // Program Files that the next update would overwrite anyway.
@@ -219,6 +228,7 @@ public sealed partial class App : Application
         services.AddTransient<SettingsPageViewModel>();
         services.AddTransient<TemplatesPageViewModel>();
         services.AddTransient<ActivityPageViewModel>();
+        services.AddTransient<DomainPageViewModel>();
     }
 
     private void HookGlobalExceptionHandlers()

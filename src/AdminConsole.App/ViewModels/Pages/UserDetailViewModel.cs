@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text.Json;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -13,6 +13,7 @@ using AdminConsole.Core.Groups;
 using AdminConsole.Core.Licensing;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
+using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Users;
 using AdminConsole.Core.Writes;
 
@@ -26,9 +27,9 @@ namespace AdminConsole.App.ViewModels.Pages;
 public sealed partial class UserDetailViewModel : ObservableObject, IPageViewModel, IRefreshable, IDisposable
 {
     private const int ActivityTabIndex = 3;
-    private const string HybridCaption = "Mastered in on-prem AD — edit in AD until Phase 2";
 
     private readonly UserService _users;
+    private readonly IDirectoryService _directory;
     private readonly CacheDb _db;
     private readonly TenantContext _tenant;
     private readonly PermissionChecker _permissions;
@@ -44,9 +45,10 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, IDirectoryService directory, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, ILogger<UserDetailViewModel> logger)
     {
         _users = users;
+        _directory = directory;
         _db = db;
         _tenant = tenant;
         _permissions = permissions;
@@ -254,7 +256,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         {
             var ro = User!.IsReadOnly(prop);
             return new EditableField(label, prop, ReadField(e, prop, array), SaveFieldAsync, mono, array, ro,
-                ro ? HybridCaption : null, placeholder);
+                ro ? HybridUnlock.Checking : null, placeholder);
         }
 
         IdentitySections =
@@ -296,6 +298,159 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
                 F("Preferred language", "preferredLanguage", placeholder: "e.g. en-GB"),
             ]),
         ];
+
+        // Rows are built read-only and may unlock once the on-prem probe has run, so whatever it last concluded is
+        // reapplied here rather than being lost every time the sheet is rebuilt.
+        ApplyOnPremState();
+    }
+
+    // ---- the hybrid unlock (M12.4) ---------------------------------------------------------------------------------
+
+    /// <summary>The AD object behind a synced user, once found. Null while unknown, unreachable, or cloud-only.</summary>
+    private OnPremUser? _onPrem;
+
+    private DirectoryStatus _domainStatus = DirectoryStatus.NotConfigured;
+
+    /// <summary>What AD says this admin may write on this object. Null means it did not say, so nothing is assumed.</summary>
+    private IReadOnlySet<string>? _writable;
+
+    private bool _onPremProbed;
+
+    /// <summary>
+    /// Finds the AD object behind a synced user so its mastered attributes can be edited here instead of in ADUC.
+    /// </summary>
+    /// <remarks>
+    /// The join is <c>onPremisesImmutableId</c>, which is the base64 of the AD <c>objectGUID</c> — the only identifier
+    /// that survives a rename or a move on either side. Matching on UPN or display name would silently target the
+    /// wrong object the first time someone married or a name was reused.
+    ///
+    /// Being off the corporate network is the normal state of a laptop, so failing to reach a DC is not an error: the
+    /// fields stay read-only and say why, which is what they did before this existed.
+    /// </remarks>
+    private async Task ProbeOnPremAsync(CancellationToken ct)
+    {
+        if (User is null || !User.OnPremisesSyncEnabled) return;
+
+        string? immutableId;
+        using (var raw = User.ParseRaw())
+        {
+            immutableId = raw.RootElement.GetString("onPremisesImmutableId");
+        }
+
+        try
+        {
+            _domainStatus = await _directory.GetStatusAsync(ct);
+            _onPrem = _domainStatus.IsConnected && !string.IsNullOrEmpty(immutableId)
+                ? await _directory.GetUserByImmutableIdAsync(immutableId, ct)
+                : null;
+
+            _writable = _onPrem is null ? null : await _directory.GetWritableAttributesAsync(_onPrem.ObjectGuid, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "On-prem lookup for {UserId} failed", Id);
+            _domainStatus = DirectoryStatus.Unreachable(ex.Message);
+            _onPrem = null;
+        }
+
+        _onPremProbed = true;
+        ApplyOnPremState();
+    }
+
+    /// <summary>Puts every mastered field into the state the probe found, and captions the sheet to match.</summary>
+    private void ApplyOnPremState()
+    {
+        if (User is null || !User.OnPremisesSyncEnabled) return;
+
+        var mastered = IdentitySections.SelectMany(s => s.Fields).Where(f => User.IsReadOnly(f.PropertyName)).ToList();
+        if (mastered.Count == 0) return;
+
+        IdentityCaption = HybridUnlock.ForSheet(_domainStatus, _onPrem, _onPremProbed);
+        if (!_onPremProbed) return;
+
+        foreach (var field in mastered)
+        {
+            var state = HybridUnlock.ForField(field.PropertyName, _domainStatus, _onPrem is not null, _writable);
+            if (state.CanEdit) field.UnlockForOnPrem(state.Caption);
+            else field.KeepLocked(state.Caption);
+        }
+    }
+
+    /// <summary>
+    /// Writes one mastered attribute to AD (M12.4). The value will not come back from Graph until Entra Connect has
+    /// run, so the field is told to hold what was written and show the waiting caption rather than a done tick.
+    /// </summary>
+    private async Task<WriteOutcome> SaveToDirectoryAsync(EditableField field, object? value)
+    {
+        var translation = OnPremAttributeMap.Translate(field.PropertyName, value);
+        if (!translation.CanWrite)
+        {
+            return new WriteOutcome { Success = false, Summary = "Not saved", FriendlyError = translation.Refusal };
+        }
+
+        var outcome = await _directory.SetAttributesAsync(
+            _onPrem!.ObjectGuid,
+            new Dictionary<string, string?> { [translation.LdapName!] = translation.Value },
+            CancellationToken.None);
+
+        if (!outcome.Success)
+        {
+            return new WriteOutcome { Success = false, Summary = outcome.Summary, FriendlyError = outcome.FriendlyError };
+        }
+
+        if (outcome.WasNoOp) return WriteOutcome.NoOp(outcome.Summary);
+
+        var summary = translation.Value is null
+            ? $"Cleared {field.Label.ToLowerInvariant()} in AD on {UserLabel}"
+            : $"Set {field.Label.ToLowerInvariant()} to {translation.Value} in AD on {UserLabel}";
+
+        var actionId = _actions.Record(new ActionRecord
+        {
+            Actor = _tenant.SignedInUpn,
+            TenantId = _tenant.TenantId,
+            TargetType = ObjectType.User,
+            // The AD object's GUID, not the Entra id: this row records a change to the on-prem object, and the GUID
+            // is what still identifies it if the account is later resynced or the cloud object is rebuilt.
+            TargetId = _onPrem.ObjectGuid.ToString(),
+            TargetName = UserLabel,
+            Action = "onprem.user.setAttribute",
+            RequestSummary = $"LDAP modify {translation.LdapName} on {_onPrem.DistinguishedName} via {_domainStatus.DomainController}",
+            Outcome = ActionOutcome.Success,
+            Message = summary,
+        });
+
+        // Undo writes the previous value straight back to AD. It is the value this sheet last agreed with the
+        // directory, which is the same basis the Graph path's undo uses.
+        var previous = field.CommittedValue;
+        field.MarkAwaitingSync("Saved in AD — the cloud copy updates at the next Entra Connect sync");
+        return new WriteOutcome
+        {
+            Success = true,
+            Summary = summary,
+            ActionId = actionId,
+            Undo = ct => UndoDirectoryAsync(field, previous, ct),
+        };
+    }
+
+    private async Task<WriteOutcome> UndoDirectoryAsync(EditableField field, string previous, CancellationToken ct)
+    {
+        var translation = OnPremAttributeMap.Translate(field.PropertyName, previous.Length == 0 ? null : previous);
+        var outcome = await _directory.SetAttributesAsync(
+            _onPrem!.ObjectGuid,
+            new Dictionary<string, string?> { [translation.LdapName!] = translation.Value },
+            ct);
+
+        if (!outcome.Success)
+        {
+            return new WriteOutcome { Success = false, Summary = outcome.Summary, FriendlyError = outcome.FriendlyError };
+        }
+
+        field.MarkAwaitingSync("Put back in AD — the cloud copy updates at the next Entra Connect sync", previous);
+        return new WriteOutcome { Success = true, Summary = $"Put {field.Label.ToLowerInvariant()} back in AD" };
     }
 
     private static string? ReadField(JsonElement e, string prop, bool array)
@@ -315,6 +470,13 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     /// </summary>
     private async Task<WriteOutcome> SaveFieldAsync(string propertyName, object? value)
     {
+        // A mastered attribute on a synced account belongs to AD, so it goes to AD. Sending it to Graph would either
+        // be rejected or — worse — accepted and then overwritten at the next sync.
+        if (FieldFor(propertyName) is { WritesToOnPrem: true } onPremField && _onPrem is not null)
+        {
+            return await SaveToDirectoryAsync(onPremField, value);
+        }
+
         var permission = _permissions.Check(Capabilities.EditUser);
         if (permission.NeedsConsent)
         {
@@ -352,6 +514,10 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         RefreshFromCache();
         _toasts.Show(back.Success ? back.Summary : back.FriendlyError ?? "Undo failed");
     }
+
+    private EditableField? FieldFor(string propertyName) =>
+        IdentitySections.SelectMany(s => s.Fields)
+            .FirstOrDefault(f => string.Equals(f.PropertyName, propertyName, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Re-reads the written-through cache row so the header, badges and fields all reflect the new value.</summary>
     private void RefreshFromCache()
@@ -851,6 +1017,10 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         RecomputeActivity();
         var cacheMs = sw.Elapsed.TotalMilliseconds;
 
+        // Whether AD is reachable is asked alongside the Graph batch, not before it: an unreachable DC times out, and
+        // waiting on that would hold up the whole page for a question that only affects one tab.
+        var probe = ProbeOnPremAsync(cts.Token);
+
         // 2. Live — one $batch; the UI stays interactive with skeletons on the live tabs.
         IsHydrating = true;
         HydrateError = null;
@@ -878,6 +1048,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
             // 3. Live device compliance (doc 01: live fields refreshed in background within 2 s).
             await RefreshDeviceStatesAsync(cts.Token);
+            await probe;
         }
         catch (OperationCanceledException)
         {

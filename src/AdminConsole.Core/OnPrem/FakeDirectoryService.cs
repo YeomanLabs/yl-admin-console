@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 
 namespace AdminConsole.Core.OnPrem;
 
@@ -184,6 +184,17 @@ public sealed class FakeDirectoryService : IDirectoryService
     public Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<OnPremOu>>(
             [.. All<OnPremOu>().OrderBy(o => o.DistinguishedName, StringComparer.OrdinalIgnoreCase)]);
+
+    /// <summary>
+    /// What a caller may write, standing in for the directory's <c>allowedAttributesEffective</c>. Everything by
+    /// default; narrow it to model a forest without the Exchange schema, or an admin without a delegation. Null
+    /// models a directory that does not answer the question at all.
+    /// </summary>
+    public HashSet<string>? WritableAttributes { get; set; } =
+        OnPremAttributeMap.GraphToLdap.Values.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    public Task<IReadOnlySet<string>?> GetWritableAttributesAsync(Guid objectGuid, CancellationToken ct) =>
+        Task.FromResult<IReadOnlySet<string>?>(WritableAttributes);
 
     public Task<DirectoryOutcome> SetAttributesAsync(Guid objectGuid, IReadOnlyDictionary<string, string?> attributes, CancellationToken ct)
     {

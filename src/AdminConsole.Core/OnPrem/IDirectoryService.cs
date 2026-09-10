@@ -1,4 +1,4 @@
-﻿namespace AdminConsole.Core.OnPrem;
+namespace AdminConsole.Core.OnPrem;
 
 /// <summary>
 /// Everything the console does to on-prem Active Directory (M12.1), in the console's vocabulary rather than LDAP's.
@@ -45,6 +45,19 @@ public interface IDirectoryService
 
     /// <summary>Every OU in the domain, flat. The tree is assembled from distinguished names by the caller.</summary>
     Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Which attributes the signed-in admin may actually write on this object, from the directory's own
+    /// <c>allowedAttributesEffective</c>.
+    /// </summary>
+    /// <remarks>
+    /// It answers two different questions at once, and both matter before a field is offered as editable: whether
+    /// this forest's schema has the attribute at all — <c>mailNickname</c> does not exist without the Exchange
+    /// extension — and whether this admin has been delegated the right to write it. Asking first is the difference
+    /// between a greyed field with a reason and a field that accepts a value and then refuses it.
+    /// </remarks>
+    /// <returns>Null when the directory did not answer, which means unknown rather than none.</returns>
+    Task<IReadOnlySet<string>?> GetWritableAttributesAsync(Guid objectGuid, CancellationToken ct);
 
     // ---- writes --------------------------------------------------------------------------------------------------
 

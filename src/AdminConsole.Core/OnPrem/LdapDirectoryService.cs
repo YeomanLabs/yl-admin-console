@@ -1,4 +1,4 @@
-﻿using System.DirectoryServices.Protocols;
+using System.DirectoryServices.Protocols;
 using System.Net;
 using Microsoft.Extensions.Logging;
 
@@ -76,6 +76,14 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
         }
         catch (Exception ex) when (ex is LdapException or DirectoryOperationException or InvalidOperationException)
         {
+            // "No domain is configured" and "the configured domain did not answer" are different situations to be in,
+            // and the page says whichever it is. Reporting an unconfigured install as unreachable would send an
+            // admin looking for a network fault that does not exist.
+            if (!_status.IsConnected && _status.Reason is not null && string.IsNullOrWhiteSpace(_options.Domain))
+            {
+                return _status;
+            }
+
             _logger.LogWarning(ex, "No domain controller reachable");
             return DirectoryStatus.Unreachable(ex.Message);
         }
@@ -254,6 +262,22 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
     public Task<IReadOnlyList<OnPremOu>> GetOrganisationalUnitsAsync(CancellationToken ct) =>
         SearchAsync(OuFilter, OuAttributes, ReadOu, 5000, ct);
 
+    public async Task<IReadOnlySet<string>?> GetWritableAttributesAsync(Guid objectGuid, CancellationToken ct)
+    {
+        var dn = await ResolveDnAsync(objectGuid, ct).ConfigureAwait(false);
+        if (dn is null) return null;
+
+        // allowedAttributesEffective is constructed by the DC per object and per caller, so it is not returned by a
+        // normal search and has to be asked for by name against that one entry.
+        var entry = await ReadByDnAsync(dn, ["allowedAttributesEffective"], ct).ConfigureAwait(false);
+        if (entry is null) return null;
+
+        var names = LdapAttributes.Strings(entry, "allowedAttributesEffective");
+        if (names.Count == 0) return null;
+
+        return names.ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
     // ---- writes --------------------------------------------------------------------------------------------------
 
     public async Task<DirectoryOutcome> SetAttributesAsync(Guid objectGuid, IReadOnlyDictionary<string, string?> attributes, CancellationToken ct)
@@ -283,8 +307,16 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
             request.Modifications.Add(modification);
         }
 
+        // NoSuchAttribute is benign for a delete and never for a replace, and the result code alone cannot tell the
+        // two situations apart: a real DC answers 16 both for "that attribute is already absent" and for "this
+        // schema has no such attribute at all" — the second being what a forest without the Exchange extension says
+        // about mailNickname. Treating 16 as benign for every request reported a write that never happened as a
+        // successful no-op, so the operation is what decides. A delete that returns 16 has the end state it wanted;
+        // a replace that returns 16 wrote nothing and must say so.
+        var benign = attributes.Values.All(string.IsNullOrEmpty) ? new[] { DirectoryErrorText.NoSuchAttribute } : [];
+
         return await SendAsync(request, $"Updated {attributes.Count} attribute{(attributes.Count == 1 ? string.Empty : "s")}", "that object", ct,
-            DirectoryErrorText.NoSuchAttribute).ConfigureAwait(false);
+            benign).ConfigureAwait(false);
     }
 
     public async Task<DirectoryOutcome> SetEnabledAsync(Guid objectGuid, bool enabled, CancellationToken ct)

@@ -1,4 +1,4 @@
-﻿# Decisions log
+# Decisions log
 
 Append-only. Format: `YYYY-MM-DD · <area> · <decision> · <why> · <alternatives rejected>`
 
@@ -248,3 +248,35 @@ resetting a password nothing they can act on. Both positions are read now.
 That one nearly escaped: the harness assertion was `FriendlyError.Contains("policy")`, and the *generic* message
 happens to contain the word "policy" too. It passed for the wrong reason, and only reading the actual printed message
 caught it. An assertion loose enough to pass on the fallback text is not testing the thing it names.
+
+## M12.4 — a field never unlocks into a write that cannot work
+
+`allowedAttributesEffective` is read per object and per admin before any on-prem-mastered field is offered as
+editable. It answers two questions in one query — is the attribute in this forest's schema, and has this admin been
+delegated it — and it is the only way to answer either without attempting the write.
+
+The alternative was to unlock all twenty and let the failure explain itself. That breaks CLAUDE.md's second
+non-negotiable in the way that annoys people most: the control accepts a value, the admin moves on, and the refusal
+arrives after they have stopped looking. `mailNickname` is the concrete case — it does not exist in a forest without
+the Exchange schema extension, which is most labs and some real forests.
+
+When the directory does not answer, the set is null and the field unlocks anyway. Locking everything on the strength
+of a missing answer would remove the feature from a domain where it would have worked, and the write's own refusal
+still carries a real reason.
+
+## M12.4 — LDAP result code 16 means two different things, and only the operation separates them
+
+A real DC returns `NoSuchAttribute` both for "that attribute is already absent" and for "this schema has no such
+attribute". Treating 16 as a benign no-op for every modify — which is what clearing an absent attribute needed —
+reported a write that never happened as a success. The operation decides instead: a delete that returns 16 reached
+the end state it wanted; a replace that returns 16 wrote nothing.
+
+The message follows the leading Win32 code rather than the LDAP one, which is where AD actually distinguishes them:
+`00000057` for a schema gap, `00002076` for an attribute simply not set on the object.
+
+## M12.4 — a value written on-prem is held in the field until the cloud agrees
+
+Graph keeps returning the old value until Entra Connect runs, so a refresh between the write and the sync would reset
+the field and look exactly like the edit had been lost. The field holds what was written under a waiting caption
+instead of a done tick, and the caption clears itself the moment the cloud reports the same value — which is doc 01's
+"never wonder did that sync yet", made literal.

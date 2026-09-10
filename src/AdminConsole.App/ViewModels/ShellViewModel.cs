@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -55,6 +55,9 @@ public sealed partial class ShellViewModel : ObservableObject
             new NavItem("devices", "Devices", SymbolRegular.Laptop24, 4, typeof(DevicesPageViewModel)),
             new NavItem("templates", "Templates", SymbolRegular.DocumentBulletList24, 5, typeof(TemplatesPageViewModel)),
             new NavItem("activity", "Activity log", SymbolRegular.History24, 6, typeof(ActivityPageViewModel)),
+            // M12.3: on-prem AD. It sits below the cloud pages because most tenants have no domain, and the page
+            // says so plainly rather than looking broken.
+            new NavItem("domain", "Domain", SymbolRegular.Server24, 7, typeof(DomainPageViewModel)),
         ];
         SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(SettingsPageViewModel));
 
@@ -139,6 +142,7 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
         if (page is SettingsPageViewModel settings) settings.SignedOut = ReturnToSignIn;
         if (page is ActivityPageViewModel activity) activity.OpenObject = OpenObjectFromPage;
+        if (page is DomainPageViewModel domain) domain.Start();
 
         // The list pages (M9.2-9.4) open the object a row points at, and start their first read only once the shell
         // has finished building them.

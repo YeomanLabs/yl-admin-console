@@ -1,4 +1,4 @@
-﻿namespace AdminConsole.Core.OnPrem;
+namespace AdminConsole.Core.OnPrem;
 
 /// <summary>
 /// Turns an LDAP failure into a sentence an admin can act on (M12.1), the way <c>GraphErrorText</c> does for Graph.
@@ -60,7 +60,7 @@ public static class DirectoryErrorText
             NotAllowedOnNonLeaf => "That container still holds objects. Empty it, or move what is in it, before deleting it.",
             ObjectClassViolation => "Active Directory rejected the object as incomplete — a required attribute is missing.",
             AttributeOrValueExists => "That value is already set. Nothing needed changing.",
-            NoSuchAttribute => "That value was not there to remove.",
+            NoSuchAttribute => "Active Directory has no such attribute on that object.",
             ConstraintViolation => "Active Directory rejected the value. It may be too long, the wrong format, or already in use.",
             InsufficientAccessRights => $"Your account has not been delegated permission to do that to {subject}. Rights in AD are granted per container, so having them elsewhere does not help here.",
             InvalidCredentials => "Active Directory refused the sign-in. Your Windows session may have expired — sign out and back in.",
@@ -132,6 +132,12 @@ public static class DirectoryErrorText
         "701" => "That account has expired.",
         "773" => "The password must be changed before the account can be used.",
         "775" => "That account is locked out. Unlock it before trying again.",
+        // Modify refusals. AD answers "no such attribute" (LDAP 16) to two different situations, and only the leading
+        // code separates them: 0x57 when the attribute is not in this forest's schema at all — mailNickname without
+        // the Exchange extension — and 0x2076 when it is simply not set on this object. Left undistinguished, a
+        // schema gap was reported as "that value was not there to remove", which sends an admin looking for a value.
+        "57" => "Active Directory would not accept that attribute. It may not exist in this forest's schema — mailNickname, for instance, needs the Exchange schema extension — or the value may be the wrong type for it.",
+        "2076" => "That value was not there to remove.",
         // Password-set refusals, which are the ones an admin most often meets.
         "52d" => "The password does not meet the domain's policy — usually its length, complexity, or how recently it was last changed.",
         "56" => "The new password matches one the domain remembers. The password history policy forbids reuse.",
