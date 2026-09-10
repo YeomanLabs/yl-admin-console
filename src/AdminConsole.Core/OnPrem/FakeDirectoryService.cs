@@ -136,7 +136,7 @@ public sealed class FakeDirectoryService : IDirectoryService
         ]);
 
     public Task<OnPremGroup?> GetGroupAsync(Guid objectGuid, CancellationToken ct) =>
-        Task.FromResult(Get<OnPremGroup>(objectGuid));
+        Task.FromResult(Get<OnPremGroup>(objectGuid) is { } g ? WithMemberOf(g) : null);
 
     public Task<IReadOnlyList<OnPremGroup>> SearchGroupsAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
         Task.FromResult<IReadOnlyList<OnPremGroup>>(
@@ -145,7 +145,14 @@ public sealed class FakeDirectoryService : IDirectoryService
                 .Where(g => Matches(text, g.SamAccountName, g.DisplayName, g.Description) && Under(g.DistinguishedName, searchBaseDn))
                 .OrderBy(g => g.Primary, StringComparer.OrdinalIgnoreCase)
                 .Take(limit)
+                .Select(WithMemberOf)
         ]);
+
+    /// <summary>
+    /// Fills in <c>memberOf</c> the way a domain controller does: derived from who holds the distinguished name,
+    /// not stored on the object. A fake that left it empty would let code pass here and fail against a real DC.
+    /// </summary>
+    private OnPremGroup WithMemberOf(OnPremGroup group) => group with { MemberOfDns = MemberOf(group.DistinguishedName) };
 
     public Task<IReadOnlyList<OnPremMember>> GetGroupMembersAsync(Guid objectGuid, CancellationToken ct)
     {
@@ -160,7 +167,7 @@ public sealed class FakeDirectoryService : IDirectoryService
             members.Add(entry.Value switch
             {
                 OnPremUser u => new OnPremMember { ObjectGuid = u.ObjectGuid, DistinguishedName = u.DistinguishedName, Name = u.Primary, Kind = OnPremMemberKind.User, SamAccountName = u.SamAccountName, Enabled = u.Enabled },
-                OnPremGroup g => new OnPremMember { ObjectGuid = g.ObjectGuid, DistinguishedName = g.DistinguishedName, Name = g.Primary, Kind = OnPremMemberKind.Group, SamAccountName = g.SamAccountName },
+                OnPremGroup g => new OnPremMember { ObjectGuid = g.ObjectGuid, DistinguishedName = g.DistinguishedName, Name = g.Primary, Kind = OnPremMemberKind.Group, SamAccountName = g.SamAccountName, Scope = g.Scope },
                 OnPremComputer c => new OnPremMember { ObjectGuid = c.ObjectGuid, DistinguishedName = c.DistinguishedName, Name = c.Name, Kind = OnPremMemberKind.Computer, SamAccountName = c.SamAccountName, Enabled = c.Enabled },
                 _ => new OnPremMember { ObjectGuid = Guid.Empty, DistinguishedName = dn, Name = DistinguishedNames.LeafName(dn) ?? dn, Kind = OnPremMemberKind.Other },
             });
@@ -335,7 +342,19 @@ public sealed class FakeDirectoryService : IDirectoryService
             return Task.FromResult(DirectoryOutcome.Failed("Add to group", DirectoryErrorText.NoSuchObject, null, "that member"));
         }
 
-        if (groupGuid == memberGuid) return Task.FromResult(DirectoryOutcome.Refused("Add to group", "A group cannot be a member of itself."));
+        // A loop is warned about and not refused: a real domain controller accepts a group inside itself and accepts
+        // a two- or three-group loop, so refusing here would make this fake stricter than the thing it stands in for.
+        var warning = GroupRules.CycleWarning(WithMemberOf(group), memberGuid, member.Dn);
+
+        // What a group may contain depends on its scope. A fake that accepts anything teaches the calling code that
+        // anything is accepted, and the calling code then meets a real domain controller.
+        var kind = member.Value is OnPremGroup ? OnPremMemberKind.Group
+            : member.Value is OnPremComputer ? OnPremMemberKind.Computer
+            : OnPremMemberKind.User;
+        if (GroupRules.Nesting(group.Scope, kind, (member.Value as OnPremGroup)?.Scope) is { } nesting)
+        {
+            return Task.FromResult(DirectoryOutcome.Refused("Add to group", nesting));
+        }
 
         if (group.MemberDns.Contains(member.Dn, StringComparer.OrdinalIgnoreCase))
         {
@@ -343,8 +362,52 @@ public sealed class FakeDirectoryService : IDirectoryService
         }
 
         Replace(groupGuid, group.DistinguishedName, group with { MemberDns = [.. group.MemberDns, member.Dn] });
-        return Task.FromResult(DirectoryOutcome.Ok($"Added to {group.Primary}"));
+        return Task.FromResult(DirectoryOutcome.Ok($"Added to {group.Primary}", warning: warning));
     }
+
+    public Task<DirectoryOutcome> SetGroupTypeAsync(Guid groupGuid, GroupScope scope, GroupCategory category, CancellationToken ct)
+    {
+        const string what = "Change group type";
+
+        if (Get<OnPremGroup>(groupGuid) is not { } group)
+        {
+            return Task.FromResult(DirectoryOutcome.Failed(what, DirectoryErrorText.NoSuchObject, null, "that group"));
+        }
+
+        if (group.Scope == scope && group.Category == category)
+        {
+            return Task.FromResult(DirectoryOutcome.NoOp($"{group.Primary} is already a {group.ScopeText.ToLowerInvariant()}"));
+        }
+
+        if (GroupRules.Protected(group) is { } builtIn) return Task.FromResult(DirectoryOutcome.Refused(what, builtIn));
+
+        var members = group.MemberDns
+            .Select(dn => _objects.Values.FirstOrDefault(e => string.Equals(e.Dn, dn, StringComparison.OrdinalIgnoreCase))?.Value as OnPremGroup)
+            .Where(g => g is not null)
+            .ToList();
+
+        var refusal = GroupRules.ScopeChange(
+            group.Scope,
+            scope,
+            isMemberOfGlobalGroup: MemberOf(group.DistinguishedName)
+                .Select(dn => _objects.Values.FirstOrDefault(e => string.Equals(e.Dn, dn, StringComparison.OrdinalIgnoreCase))?.Value as OnPremGroup)
+                .Any(g => g?.Scope == GroupScope.Global),
+            containsDomainLocalGroup: members.Any(g => g!.Scope == GroupScope.DomainLocal),
+            containsUniversalGroup: members.Any(g => g!.Scope == GroupScope.Universal));
+
+        if (refusal is not null) return Task.FromResult(DirectoryOutcome.Refused(what, refusal));
+
+        Replace(groupGuid, group.DistinguishedName, group with { Scope = scope, Category = category });
+        return Task.FromResult(DirectoryOutcome.Ok($"{group.Primary} is now a {OnPremGroup.Describe(scope, category).ToLowerInvariant()}"));
+    }
+
+    /// <summary>The groups holding this distinguished name, derived rather than stored — as AD's memberOf is.</summary>
+    private IReadOnlyList<string> MemberOf(string dn) =>
+    [
+        .. All<OnPremGroup>()
+            .Where(g => g.MemberDns.Contains(dn, StringComparer.OrdinalIgnoreCase))
+            .Select(g => g.DistinguishedName),
+    ];
 
     public Task<DirectoryOutcome> RemoveFromGroupAsync(Guid groupGuid, Guid memberGuid, CancellationToken ct)
     {

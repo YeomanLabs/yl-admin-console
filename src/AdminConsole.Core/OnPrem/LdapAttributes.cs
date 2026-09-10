@@ -140,22 +140,41 @@ public static class LdapAttributes
     public static byte[] EncodePassword(string password) =>
         Encoding.Unicode.GetBytes($"\"{password}\"");
 
+    private const int GroupGlobal = 0x00000002;
+    private const int GroupDomainLocal = 0x00000004;
+    private const int GroupUniversal = 0x00000008;
+    private const int GroupSecurityEnabled = unchecked((int)0x80000000);
+
     /// <summary>Splits AD's <c>groupType</c> bit field into the two things a person actually thinks about.</summary>
     public static (GroupScope Scope, GroupCategory Category) GroupType(int groupType)
     {
-        const int global = 0x00000002;
-        const int domainLocal = 0x00000004;
-        const int universal = 0x00000008;
-        const int securityEnabled = unchecked((int)0x80000000);
-
-        var scope = (groupType & universal) != 0 ? GroupScope.Universal
-            : (groupType & domainLocal) != 0 ? GroupScope.DomainLocal
+        var scope = (groupType & GroupUniversal) != 0 ? GroupScope.Universal
+            : (groupType & GroupDomainLocal) != 0 ? GroupScope.DomainLocal
             : GroupScope.Global;
 
         // Deliberately not "groupType < 0": the sign bit is the security flag, and relying on that is the kind of
         // cleverness that stops being true the first time anyone touches it.
-        var category = (groupType & securityEnabled) != 0 ? GroupCategory.Security : GroupCategory.Distribution;
-        _ = global;
+        var category = (groupType & GroupSecurityEnabled) != 0 ? GroupCategory.Security : GroupCategory.Distribution;
         return (scope, category);
+    }
+
+    /// <summary>
+    /// Composes the <c>groupType</c> value for a scope and category (M12.5), which is what a conversion writes.
+    /// </summary>
+    /// <remarks>
+    /// Exactly one scope bit is set. Carrying the old value forward and flipping bits would leave two scope bits set
+    /// on any conversion, which AD rejects — so the value is built from nothing each time. Nothing else lives in
+    /// this attribute, so there is no other state to preserve.
+    /// </remarks>
+    public static int GroupTypeValue(GroupScope scope, GroupCategory category)
+    {
+        var value = scope switch
+        {
+            GroupScope.DomainLocal => GroupDomainLocal,
+            GroupScope.Universal => GroupUniversal,
+            _ => GroupGlobal,
+        };
+
+        return category == GroupCategory.Security ? value | GroupSecurityEnabled : value;
     }
 }

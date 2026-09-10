@@ -280,3 +280,27 @@ Graph keeps returning the old value until Entra Connect runs, so a refresh betwe
 the field and look exactly like the edit had been lost. The field holds what was written under a waiting caption
 instead of a done tick, and the caption clears itself the moment the cloud reports the same value — which is doc 01's
 "never wonder did that sync yet", made literal.
+
+## M12.5 — Active Directory does not prevent circular group nesting
+
+Tried against a real domain controller: a group added to itself, a two-group loop and a three-group loop were all
+accepted, with no error and no warning. The widely repeated claim that AD blocks circular nesting is not what AD
+does.
+
+The console had been refusing all three. That is the one thing a pre-check must never be — stricter than the
+directory it is a window onto. It blocks work that is permitted, and the admin has no way to tell whether the rule
+was AD's or ours. Every other rule in `GroupRules` was confirmed refused by the directory before being written down;
+this one was belief, and belief is what the lab is for.
+
+It is now a warning on a write that goes through, carried on `DirectoryOutcome.Warning`. Nothing breaks — token
+evaluation does not follow loops — but the nesting stops meaning anything, and it is almost always a mis-click. The
+fake was enforcing the same phantom rule, which is the "a fake that says yes teaches the calling code to assume yes"
+trap pointing the other way: a fake that says no teaches the calling code that no is possible.
+
+## M12.5 — scope and category are written together, because they are one attribute
+
+`groupType` carries both. A conversion that wrote the scope bits without carrying the category through would turn a
+security group into a distribution one, which grants nothing — every permission held through that group would stop
+working, silently, and be noticed days later by whoever lost access. `SetGroupTypeAsync` therefore takes both, and
+the value is built from nothing each time rather than by flipping bits on the old one, since two scope bits set at
+once is rejected.

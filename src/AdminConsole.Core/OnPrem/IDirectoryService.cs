@@ -84,6 +84,17 @@ public interface IDirectoryService
 
     Task<DirectoryOutcome> RemoveFromGroupAsync(Guid groupGuid, Guid memberGuid, CancellationToken ct);
 
+    /// <summary>
+    /// Changes a group's scope and category, which AD stores together in the <c>groupType</c> bit field (M12.5).
+    /// </summary>
+    /// <remarks>
+    /// One call for both because they are one attribute: writing scope without carrying the category through would
+    /// silently convert a security group to a distribution one and take away every permission granted through it.
+    /// The refusals AD makes here are checked in advance by <see cref="GroupRules"/>, because "the server is
+    /// unwilling to perform" does not tell an admin which of three different rules they have met.
+    /// </remarks>
+    Task<DirectoryOutcome> SetGroupTypeAsync(Guid groupGuid, GroupScope scope, GroupCategory category, CancellationToken ct);
+
     /// <summary>Deletes an object. Refuses a non-empty container and a protected one, with a reason rather than a code.</summary>
     Task<DirectoryOutcome> DeleteAsync(Guid objectGuid, CancellationToken ct);
 }

@@ -1,4 +1,4 @@
-﻿namespace AdminConsole.Core.OnPrem;
+namespace AdminConsole.Core.OnPrem;
 
 /// <summary>An Active Directory group (M12.1).</summary>
 public sealed record OnPremGroup
@@ -17,6 +17,13 @@ public sealed record OnPremGroup
     public IReadOnlyList<string> MemberDns { get; init; } = [];
 
     /// <summary>
+    /// The groups this one is a member of. Needed to answer whether it can become universal (M12.5): a universal
+    /// group may not be a member of a global one, and AD refuses the conversion without saying which membership
+    /// is in the way.
+    /// </summary>
+    public IReadOnlyList<string> MemberOfDns { get; init; } = [];
+
+    /// <summary>
     /// True for the groups AD will not let anyone delete or rename — Domain Users, Domain Admins and the rest.
     /// Worth knowing before offering a button that cannot work.
     /// </summary>
@@ -29,9 +36,12 @@ public sealed record OnPremGroup
     public string? ParentOuDn => DistinguishedNames.Parent(DistinguishedName);
 
     /// <summary>How the console says it: "Global security group", "Universal distribution group".</summary>
-    public string ScopeText => $"{Scope switch
+    public string ScopeText => Describe(Scope, Category);
+
+    /// <summary>The same phrasing for a scope and category this group does not have yet (M12.5).</summary>
+    public static string Describe(GroupScope scope, GroupCategory category) => $"{scope switch
     {
         GroupScope.DomainLocal => "Domain local",
         var s => s.ToString(),
-    }} {Category.ToString().ToLowerInvariant()} group";
+    }} {category.ToString().ToLowerInvariant()} group";
 }

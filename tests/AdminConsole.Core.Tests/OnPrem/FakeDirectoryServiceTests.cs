@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Xunit;
 using AdminConsole.Core.OnPrem;
 
@@ -236,14 +236,34 @@ public sealed class FakeDirectoryServiceTests
     }
 
     [Fact]
-    public async Task AGroupCannotBeAMemberOfItself()
+    public async Task AGroupInsideItself_IsAllowedAndWarnedAbout_BecauseThatIsWhatADDoes()
     {
+        // This test used to assert a refusal, on the strength of the widely repeated claim that AD prevents circular
+        // nesting. Tried against a real domain controller, every loop was accepted without complaint — a group inside
+        // itself, a two-group loop, a three-group loop. The fake was enforcing a rule the thing it stands in for does
+        // not have, which is the same failure as a fake that accepts everything, pointing the other way.
         var ad = new FakeDirectoryService();
         var g = ad.AddGroup("Lab-Engineering");
 
         var outcome = await ad.AddToGroupAsync(g.ObjectGuid, g.ObjectGuid, Ct);
 
-        outcome.Success.Should().BeFalse();
+        outcome.Success.Should().BeTrue();
+        outcome.Warning.Should().Contain("member of itself");
+    }
+
+    [Fact]
+    public async Task ATwoGroupLoop_IsAllowedAndWarnedAbout()
+    {
+        var ad = new FakeDirectoryService();
+        var a = ad.AddGroup("Lab-A");
+        var b = ad.AddGroup("Lab-B");
+
+        (await ad.AddToGroupAsync(a.ObjectGuid, b.ObjectGuid, Ct)).Warning.Should().BeNull();
+
+        var loop = await ad.AddToGroupAsync(b.ObjectGuid, a.ObjectGuid, Ct);
+
+        loop.Success.Should().BeTrue();
+        loop.Warning.Should().Contain("loop");
     }
 
     [Fact]

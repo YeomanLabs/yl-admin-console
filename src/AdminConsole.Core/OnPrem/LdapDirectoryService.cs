@@ -51,7 +51,7 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
     private static readonly string[] GroupAttributes =
     [
         "objectGUID", "distinguishedName", "sAMAccountName", "displayName", "description", "mail",
-        "groupType", "member", "isCriticalSystemObject",
+        "groupType", "member", "memberOf", "isCriticalSystemObject",
     ];
 
     private static readonly string[] ComputerAttributes =
@@ -227,7 +227,7 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
         foreach (var dn in group.MemberDns)
         {
             ct.ThrowIfCancellationRequested();
-            var entry = await ReadByDnAsync(dn, ["objectGUID", "distinguishedName", "objectClass", "sAMAccountName", "displayName", "name", "userAccountControl"], ct).ConfigureAwait(false);
+            var entry = await ReadByDnAsync(dn, ["objectGUID", "distinguishedName", "objectClass", "sAMAccountName", "displayName", "name", "userAccountControl", "groupType"], ct).ConfigureAwait(false);
             if (entry is null) continue;
 
             var classes = LdapAttributes.Strings(entry, "objectClass");
@@ -246,6 +246,7 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
                 SamAccountName = LdapAttributes.String(entry, "sAMAccountName"),
                 Kind = kind,
                 Enabled = kind == OnPremMemberKind.Group || !AccountFlags.IsDisabled(uac),
+                Scope = kind == OnPremMemberKind.Group ? LdapAttributes.GroupType(LdapAttributes.Int(entry, "groupType")).Scope : null,
             });
         }
 
@@ -423,9 +424,83 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
             }
         }
 
+        // What may go in a group depends on the group's scope, and AD answers a breach of that with
+        // "unwilling to perform" — true, unhelpful, and identical to half a dozen other refusals.
+        string? warning = null;
+        if (operation == DirectoryAttributeOperation.Add)
+        {
+            // A loop is allowed by the directory, so it is said out loud rather than refused.
+            warning = GroupRules.CycleWarning(group, memberGuid, memberDn);
+
+            var candidate = await ReadRawAsync(memberGuid, ["objectClass", "groupType"], ct).ConfigureAwait(false);
+            if (candidate is not null)
+            {
+                var classes = LdapAttributes.Strings(candidate, "objectClass");
+                var kind = classes.Contains("group", StringComparer.OrdinalIgnoreCase) ? OnPremMemberKind.Group : OnPremMemberKind.User;
+                var scope = kind == OnPremMemberKind.Group
+                    ? LdapAttributes.GroupType(LdapAttributes.Int(candidate, "groupType")).Scope
+                    : (GroupScope?)null;
+
+                if (GroupRules.Nesting(group.Scope, kind, scope) is { } nesting)
+                {
+                    return DirectoryOutcome.Refused($"{verb} group", nesting);
+                }
+            }
+        }
+
         var request = new ModifyRequest(group.DistinguishedName, operation, "member", memberDn);
-        return await SendAsync(request, $"{verb} {group.Primary}", "that group", ct,
+        var outcome = await SendAsync(request, $"{verb} {group.Primary}", "that group", ct,
             DirectoryErrorText.EntryAlreadyExists, DirectoryErrorText.NoSuchAttribute).ConfigureAwait(false);
+
+        return outcome.Success && warning is not null ? outcome with { Warning = warning } : outcome;
+    }
+
+    public async Task<DirectoryOutcome> SetGroupTypeAsync(Guid groupGuid, GroupScope scope, GroupCategory category, CancellationToken ct)
+    {
+        const string what = "Change group type";
+
+        var group = await GetGroupAsync(groupGuid, ct).ConfigureAwait(false);
+        if (group is null) return DirectoryOutcome.Failed(what, DirectoryErrorText.NoSuchObject, null, "that group");
+
+        if (group.Scope == scope && group.Category == category)
+        {
+            return DirectoryOutcome.NoOp($"{group.Primary} is already a {group.ScopeText.ToLowerInvariant()}");
+        }
+
+        if (GroupRules.Protected(group) is { } builtIn) return DirectoryOutcome.Refused(what, builtIn);
+
+        // The scope rules depend on what the group holds, so the members are read once and asked about here rather
+        // than being guessed at.
+        var members = await GetGroupMembersAsync(groupGuid, ct).ConfigureAwait(false);
+        var refusal = GroupRules.ScopeChange(
+            group.Scope,
+            scope,
+            isMemberOfGlobalGroup: await IsMemberOfGlobalGroupAsync(group, ct).ConfigureAwait(false),
+            containsDomainLocalGroup: members.Any(m => m.Scope == GroupScope.DomainLocal),
+            containsUniversalGroup: members.Any(m => m.Scope == GroupScope.Universal));
+
+        if (refusal is not null) return DirectoryOutcome.Refused(what, refusal);
+
+        var modification = new DirectoryAttributeModification { Name = "groupType", Operation = DirectoryAttributeOperation.Replace };
+        modification.Add(LdapAttributes.GroupTypeValue(scope, category).ToString());
+        var request = new ModifyRequest(group.DistinguishedName);
+        request.Modifications.Add(modification);
+
+        var summary = $"{group.Primary} is now a {OnPremGroup.Describe(scope, category).ToLowerInvariant()}";
+        return await SendAsync(request, summary, "that group", ct).ConfigureAwait(false);
+    }
+
+    /// <summary>Whether any group this one belongs to is global — the one thing that blocks becoming universal.</summary>
+    private async Task<bool> IsMemberOfGlobalGroupAsync(OnPremGroup group, CancellationToken ct)
+    {
+        foreach (var dn in group.MemberOfDns)
+        {
+            var entry = await ReadByDnAsync(dn, ["groupType"], ct).ConfigureAwait(false);
+            if (entry is null) continue;
+            if (LdapAttributes.GroupType(LdapAttributes.Int(entry, "groupType")).Scope == GroupScope.Global) return true;
+        }
+
+        return false;
     }
 
     public async Task<DirectoryOutcome> DeleteAsync(Guid objectGuid, CancellationToken ct)
@@ -596,6 +671,7 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
             Scope = scope,
             Category = category,
             MemberDns = LdapAttributes.Strings(e, "member"),
+            MemberOfDns = LdapAttributes.Strings(e, "memberOf"),
             IsCritical = string.Equals(LdapAttributes.String(e, "isCriticalSystemObject"), "TRUE", StringComparison.OrdinalIgnoreCase),
         };
     }
