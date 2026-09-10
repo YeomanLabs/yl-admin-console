@@ -237,9 +237,10 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         if (User is null) return;
         using var raw = User.ParseRaw();
         var e = raw.RootElement;
-        IdentityCaption = User.OnPremisesSyncEnabled
-            ? "This account is synced from on-prem AD. Greyed fields are mastered there and must be edited in AD."
-            : null;
+        // A cloud-only account has nothing to say here. A synced one gets its caption from ApplyOnPremState, which
+        // knows whether the probe has run and what it found; setting it here as well would mean writing a sentence
+        // that is only true before the probe finishes.
+        if (!User.OnPremisesSyncEnabled) IdentityCaption = null;
 
         // Rebuilding on every refresh would throw away half-typed text, so update in place once the rows exist.
         if (IdentitySections.Count > 0)
@@ -249,6 +250,11 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
                 if (!field.IsSaving) field.Reset(ReadField(e, field.PropertyName, field.IsArray));
             }
 
+            // Reapplied here too, and this is the part that was missing: returning early left the caption at
+            // whatever was written above, so a sheet whose fields the probe had already unlocked went on claiming
+            // they were read-only. Correct on first load, wrong on every refresh after it - which is the version an
+            // admin actually reads, because hydration triggers one a second later.
+            ApplyOnPremState();
             return;
         }
 
