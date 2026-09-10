@@ -267,12 +267,24 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
             // Clearing means deleting the attribute. An empty string is a value, and AD rejects it for most
             // attributes — exactly the trap Graph sprang with department accepting "" for officeLocation and not for
             // department.
-            request.Modifications.Add(string.IsNullOrEmpty(value)
-                ? new DirectoryAttributeModification { Name = name, Operation = DirectoryAttributeOperation.Delete }
-                : new DirectoryAttributeModification { Name = name, Operation = DirectoryAttributeOperation.Replace, [0] = value });
+            // Add, never the [0] indexer: the setter replaces an existing element and the collection starts empty,
+            // so an object initialiser using [0] compiles and then throws at runtime on the first write.
+            var modification = new DirectoryAttributeModification { Name = name };
+            if (string.IsNullOrEmpty(value))
+            {
+                modification.Operation = DirectoryAttributeOperation.Delete;
+            }
+            else
+            {
+                modification.Operation = DirectoryAttributeOperation.Replace;
+                modification.Add(value);
+            }
+
+            request.Modifications.Add(modification);
         }
 
-        return await SendAsync(request, $"Updated {attributes.Count} attribute{(attributes.Count == 1 ? string.Empty : "s")}", "that object", ct).ConfigureAwait(false);
+        return await SendAsync(request, $"Updated {attributes.Count} attribute{(attributes.Count == 1 ? string.Empty : "s")}", "that object", ct,
+            DirectoryErrorText.NoSuchAttribute).ConfigureAwait(false);
     }
 
     public async Task<DirectoryOutcome> SetEnabledAsync(Guid objectGuid, bool enabled, CancellationToken ct)
@@ -306,12 +318,13 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
         if (dn is null) return DirectoryOutcome.Failed("Set password", DirectoryErrorText.NoSuchObject, null, "that user");
 
         var request = new ModifyRequest(dn);
-        request.Modifications.Add(new DirectoryAttributeModification
+        var change = new DirectoryAttributeModification
         {
             Name = "unicodePwd",
             Operation = DirectoryAttributeOperation.Replace,
-            [0] = LdapAttributes.EncodePassword(password),
-        });
+        };
+        change.Add(LdapAttributes.EncodePassword(password));
+        request.Modifications.Add(change);
 
         var outcome = await SendAsync(request, "Set the password", "that user", ct).ConfigureAwait(false);
         if (!outcome.Success || !mustChangeAtNextLogon) return outcome;
@@ -379,7 +392,8 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
         }
 
         var request = new ModifyRequest(group.DistinguishedName, operation, "member", memberDn);
-        return await SendAsync(request, $"{verb} {group.Primary}", "that group", ct).ConfigureAwait(false);
+        return await SendAsync(request, $"{verb} {group.Primary}", "that group", ct,
+            DirectoryErrorText.EntryAlreadyExists, DirectoryErrorText.NoSuchAttribute).ConfigureAwait(false);
     }
 
     public async Task<DirectoryOutcome> DeleteAsync(Guid objectGuid, CancellationToken ct)
@@ -399,13 +413,24 @@ public sealed class LdapDirectoryService : IDirectoryService, IDisposable
 
     // ---- plumbing ------------------------------------------------------------------------------------------------
 
-    private async Task<DirectoryOutcome> SendAsync(DirectoryRequest request, string summary, string what, CancellationToken ct)
+    /// <summary>
+    /// Sends a request. <paramref name="alreadyDone"/> lists result codes that mean the directory is already in the
+    /// state being asked for — AD reports those as errors, and the console should not.
+    /// </summary>
+    private async Task<DirectoryOutcome> SendAsync(DirectoryRequest request, string summary, string what, CancellationToken ct,
+        params int[] alreadyDone)
     {
         try
         {
             var connection = await EnsureConnectedAsync(ct).ConfigureAwait(false);
             await Task.Run(() => connection.SendRequest(request), ct).ConfigureAwait(false);
             return DirectoryOutcome.Ok(summary);
+        }
+        catch (DirectoryOperationException ex) when (alreadyDone.Contains((int)(ex.Response?.ResultCode ?? ResultCode.Other)))
+        {
+            // Clearing an attribute that is already absent, or adding a member who is already in the group. Both are
+            // the wanted state, and both come back from a real DC as failures.
+            return DirectoryOutcome.NoOp($"{summary} — nothing needed changing");
         }
         catch (DirectoryOperationException ex)
         {

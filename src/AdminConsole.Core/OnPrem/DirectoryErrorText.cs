@@ -82,7 +82,13 @@ public static class DirectoryErrorText
         if (string.IsNullOrWhiteSpace(diagnostic)) return null;
 
         var marker = diagnostic.IndexOf("data ", StringComparison.OrdinalIgnoreCase);
-        if (marker < 0) return null;
+        if (marker < 0 || IsZeroAt(diagnostic, marker + 5))
+        {
+            // A password refusal arrives as "0000052D: SvcErr: ... data 0" — the code that explains it is the eight
+            // hex digits at the front, and the "data" field is zero. Reading only after "data " gets nothing useful
+            // and falls back to "the server refused", which tells an admin resetting a password precisely nothing.
+            return LeadingCode(diagnostic);
+        }
 
         var start = marker + 5;
         var end = start;
@@ -92,6 +98,26 @@ public static class DirectoryErrorText
         return diagnostic[start..end].TrimStart('0').ToLowerInvariant() is { Length: > 0 } trimmed
             ? trimmed
             : "0";
+    }
+
+    /// <summary>The eight hex digits AD puts before the first colon, e.g. <c>0000052D</c>.</summary>
+    private static string? LeadingCode(string diagnostic)
+    {
+        var colon = diagnostic.IndexOf(':');
+        if (colon <= 0) return null;
+
+        var head = diagnostic[..colon].Trim();
+        if (head.Length is < 4 or > 8 || !head.All(Uri.IsHexDigit)) return null;
+
+        var trimmed = head.TrimStart('0').ToLowerInvariant();
+        return trimmed.Length == 0 ? null : trimmed;
+    }
+
+    private static bool IsZeroAt(string diagnostic, int index)
+    {
+        var end = index;
+        while (end < diagnostic.Length && Uri.IsHexDigit(diagnostic[end])) end++;
+        return end > index && diagnostic[index..end].TrimStart('0').Length == 0;
     }
 
     private static string? FromSubCode(string sub) => sub switch

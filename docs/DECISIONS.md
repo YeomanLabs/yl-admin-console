@@ -221,3 +221,30 @@ hardcoded foreground to be wrong.
 
 Anything unpaintable falls back to the shipped default. `branding.json` is hand-editable by design, so a typo is a
 question of when, and a typo must not produce a window somebody cannot read their way out of.
+
+## M12.4 — What the fake got right and the domain controller did differently
+
+`FakeDirectoryService` was written to refuse what a real DC refuses, and it does. What it could not anticipate is the
+opposite case: things AD reports as **errors** which are actually the state being asked for.
+
+- **Clearing an attribute that is already absent** returns `NoSuchAttribute` (16). The fake returned a no-op. Left
+  alone, "clear this field" would have failed whenever the field was already empty — which is most of the time.
+- **Adding someone already in a group** returns `EntryAlreadyExists` (68). The fake returned a no-op. Left alone,
+  re-running an offboarding step or clicking twice would have shown a failure for something that was true.
+
+Both are now named result codes that `SendAsync` converts into no-ops.
+
+The third finding is about the error text, and it is the one worth remembering. A password refused by policy comes
+back as:
+
+```
+0000052D: SvcErr: DSID-031A1260, problem 5003 (WILL_NOT_PERFORM), data 0
+```
+
+The `data` field is **zero**. The code that explains it is the eight hex digits at the *front*. The parser only read
+after `data `, so it fell through to the generic "the domain controller refused the operation" — which tells an admin
+resetting a password nothing they can act on. Both positions are read now.
+
+That one nearly escaped: the harness assertion was `FriendlyError.Contains("policy")`, and the *generic* message
+happens to contain the word "policy" too. It passed for the wrong reason, and only reading the actual printed message
+caught it. An assertion loose enough to pass on the fallback text is not testing the thing it names.
