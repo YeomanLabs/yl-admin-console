@@ -40,7 +40,7 @@ fresh Server 2022 none of the keys exist at all — TLS 1.2 works implicitly, so
 the point the prerequisite check stops you. Set on DC01:
 
 - `SCHANNEL\Protocols\TLS 1.2\{Client,Server}` → `Enabled=1`, `DisabledByDefault=0`
-- `.NETFramework4.0.30319` → `SystemDefaultTlsVersions=1`, `SchUseStrongCrypto=1`, in **both** the native and the
+- `.NETFramework\v4.0.30319` → `SystemDefaultTlsVersions=1`, `SchUseStrongCrypto=1`, in **both** the native and the
   `WOW6432Node` hive, because parts of the wizard are 32-bit
 
 TLS 1.0 and 1.1 are deliberately left alone. The check asks whether 1.2 is on, not whether the old ones are off, and
@@ -87,7 +87,19 @@ Choices, in order:
 5. Connect to Azure AD — **this is your step.** Sign in as a Global Administrator of YeomanLabs Consulting.
 6. Connect your directories — forest `adlab.test`, **Add Directory** → *Create new AD account* →
    `ADLAB\Administrator` / the lab password. **Next**.
-   *A real deployment would use a least-privilege account here rather than a domain admin. This is a lab.*
+
+   This one needs **Enterprise Admin**, not just Domain Admin, and `ADLAB\Administrator` is both — it is in Domain
+   Admins, Enterprise Admins and Schema Admins. The reason is that the wizard creates an `MSOL_<hex>` service account
+   in the forest and grants it replicate-directory-changes plus write access on the sync scope, which is a
+   forest-level operation. The credential is used once and not stored: the `MSOL_` account is what runs the sync
+   afterwards, with a random password Entra Connect manages itself.
+
+   *A client deployment should not do it this way.* Pre-create a least-privilege account, run
+   `Set-ADSyncRestrictedPermissions` against it, and hand that over instead, so no Enterprise Admin credential ever
+   goes near the wizard. It is overkill for a disposable lab and wrong for anything else.
+
+   Do not confuse this with step 5, which is the **Entra ID** Global Administrator. Different directory, different
+   account.
 7. Azure AD sign-in configuration — it will warn that `adlab.test` is not verified. **That warning is expected and
    is a guardrail**: it means these accounts get `.onmicrosoft.com` addresses and cannot take over anything on
    `yeomanlabs.co`. Tick *Continue without matching all UPN suffixes to verified domains*. **Next**.
