@@ -471,3 +471,8 @@ it is parked disabled and shared again so no clock runs. What this cannot exerci
 (`remove-licenses` previews "No licences are assigned"); that step is unchanged since M6 and the mailbox steps' order
 ahead of it is pinned by a unit test. The AD half waits for the lab DC.
 
+*Later the same day:* a spare E3 was added, and the AD half ran on a licensed synced user with a real mailbox, which
+also exercised the licence step. The leaver mailbox trick above is still how a gate gets a mailbox when no seat is free.
+A gate that moves a synced account into an out-of-scope OU must run inside one Entra Connect interval: read
+`organization.onPremisesLastSyncDateTime`, start right after a cycle, and check it has not moved before the restore.
+
