@@ -43,12 +43,16 @@ public sealed class TemplateService
     public static string DirectoryFor(string tenantId, bool adoptShared)
     {
         var dir = Path.Combine(DefaultDirectory, tenantId);
-        if (!Directory.Exists(dir))
+        Directory.CreateDirectory(dir);
+        if (adoptShared && Directory.Exists(DefaultDirectory))
         {
-            Directory.CreateDirectory(dir);
-            if (adoptShared && Directory.Exists(DefaultDirectory))
+            // The names first, then the moves: moving files out of a folder while it is being enumerated skips some,
+            // which left a template behind on the first run of this code. And on every start, not only the first, so
+            // one stranded that way — or saved there by an older build — is picked up. Nothing is overwritten.
+            foreach (var file in Directory.GetFiles(DefaultDirectory, "*.json"))
             {
-                foreach (var file in Directory.EnumerateFiles(DefaultDirectory, "*.json")) File.Move(file, Path.Combine(dir, Path.GetFileName(file)));
+                var target = Path.Combine(dir, Path.GetFileName(file));
+                if (!File.Exists(target)) File.Move(file, target);
             }
         }
 
