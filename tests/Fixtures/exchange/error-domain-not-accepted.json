@@ -1,0 +1,23 @@
+{
+  "error": {
+    "code": "BadRequest",
+    "message": "Error executing cmdlet",
+    "details": [
+      {
+        "code": "Client",
+        "message": "ExD48BF8|Microsoft.Exchange.Configuration.ObjectModel.NotAcceptedDomainException|You can't use the domain not-our-domain.example because it's not an accepted domain for your organization.",
+        "target": ""
+      }
+    ],
+    "innererror": {
+      "message": "Error executing cmdlet",
+      "type": "Microsoft.Exchange.Admin.OData.Core.ODataServiceException",
+      "internalexception": {
+        "message": "Exception of type 'Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException' was thrown.",
+        "type": "Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException"
+      }
+    },
+    "adminapi.warnings@odata.type": "#Collection(String)",
+    "@adminapi.warnings": []
+  }
+}

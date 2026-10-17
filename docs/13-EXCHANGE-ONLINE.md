@@ -223,7 +223,28 @@ Exchange scope. MSAL caches each audience separately. Granted-scope checks for E
 - **`Set-Mailbox -Type Shared` does not remove a licence**, and removing the licence first deletes the mailbox after the
   30-day grace period. Offboarding orders convert-to-shared before licence removal (doc 06), and the preview says why.
 - **Litigation hold needs a licence that includes it** (Exchange Online Plan 2, or the archiving add-on). A shared
-  mailbox under 50 GB without a licence cannot be held. Say so before the click.
+  mailbox under 50 GB without a licence cannot be held. Say so before the click. Exchange's refusal is a
+  `RecipientTaskException` naming the licence, mapped to a sentence. **Archive is not enforced the same way:** on
+  2026-10-17 `Enable-Mailbox -Archive` on an unlicensed shared mailbox succeeded, so the console states the licensing
+  terms in the confirm rather than expecting Exchange to refuse.
+- **Two writes to one mailbox seconds apart can be applied out of order, and the earlier can win (M14 gate).** A primary
+  address set and then undone within a few seconds read back as undone once, then flipped back to the first write
+  and stayed there. A controlled test: writes 5 s apart flipped between the two values for about 25 s; 15 s apart,
+  the second held from the first read. A single write after the mailbox had settled held for over a minute. Two rules
+  follow, both in `ExchangeService`: **a write to a mailbox waits until 15 s after the previous write to it**
+  (`SettleGap`, Undo included, and the tab says so), and **a write is confirmed only by two agreeing reads in a row**,
+  never one. An earlier probe saw the same thing on `EmailAddresses`: an alias removed in a quick burst of address
+  writes came back.
+- **No no-ops are reported.** `Set-Mailbox` with the value already in place answers 200 with no warning, so every write
+  reads first and returns a no-op itself, which keeps the action log honest.
+- **Exchange names, not ids, in the recipient lists.** `GrantSendOnBehalfTo`, `ForwardingAddress` and the delivery
+  restriction lists come back as names (`AndrewYeoman`). The tab resolves them with one `Get-Recipient -Filter
+  "Name -eq '…' -or …"` per 20 names; every write accepts an Entra object id.
+- **`-PrimarySmtpAddress` answers 403 through this endpoint**, with an empty body. `-WindowsEmailAddress` sets the
+  primary, and the old one stays as an alias; an upper-case `SMTP:` add of an existing alias does not promote it.
+- **Folder-permission rows carry only a display name** (`User: "Andrew Yeoman"`), so an existing row is changed by that
+  name and a new grant is made by object id. Two recipients with the same display name would be ambiguous; Exchange
+  says so and the console maps it.
 
 ---
 

@@ -9,6 +9,10 @@ public static class ExchangeErrorText
 {
     public const string RoleHint = "Exchange Administrator, Exchange Recipient Administrator or Global Administrator can do this";
 
+    /// <summary>The Details expander body (UX §7): status, code, exception type, ids, raw body.</summary>
+    public static string Details(ExchangeException ex) =>
+        $"HTTP {ex.StatusCode} {ex.ErrorCode} {ex.ExceptionType}\ncmdlet: {ex.Cmdlet ?? "n/a"}\nrequest-id: {ex.RequestId ?? "n/a"}\ntrace: {ex.TraceId ?? "n/a"}\n{ex.Timestamp:u}\n\n{ex.RawBody}";
+
     public static string Friendly(ExchangeException ex)
     {
         if (ex.IsNetwork) return "Can't reach Exchange Online. Check the network connection and try again.";
@@ -45,6 +49,20 @@ public static class ExchangeErrorText
             case "CmdletProxyNotAvailableException":
                 return "Exchange sent the request to a server that doesn't hold this mailbox. This is a bug in the console's routing, not something you did.";
 
+            case "ProxyAddressExistsException":
+                return Owner(text) is { } owner
+                    ? $"That address is already used by {owner}. An address can belong to only one recipient."
+                    : "That address is already used by another recipient. An address can belong to only one.";
+
+            case "NotAcceptedDomainException":
+                return "That domain isn't one this tenant accepts mail for. Use one of the tenant's own domains.";
+
+            case "DataValidationException" when text.Contains("no primary SMTP address", StringComparison.OrdinalIgnoreCase):
+                return "That's the primary address. Make another address primary first, then remove this one.";
+
+            case "RecipientTaskException" when text.Contains("license", StringComparison.OrdinalIgnoreCase):
+                return "This mailbox's licence doesn't include that feature. Litigation hold needs Exchange Online Plan 2 or the Exchange Online Archiving add-on.";
+
             case "AmbiguousParameterSetException":
             case "ParameterBindingException":
             case "ParameterBindingValidationException":
@@ -58,5 +76,15 @@ public static class ExchangeErrorText
         }
 
         return text.Length == 0 ? $"Exchange Online refused the request (HTTP {ex.StatusCode})." : text;
+    }
+
+    /// <summary>The recipient Exchange names in a ProxyAddressExistsException: '…proxy addresses or LegacyExchangeDN of "YeomanLabs Info".'</summary>
+    private static string? Owner(string text)
+    {
+        var marker = text.IndexOf(" of \"", StringComparison.Ordinal);
+        if (marker < 0) return null;
+        var start = marker + 5;
+        var end = text.IndexOf('"', start);
+        return end > start ? text[start..end] : null;
     }
 }

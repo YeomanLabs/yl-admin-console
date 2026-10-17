@@ -1,0 +1,23 @@
+{
+  "error": {
+    "code": "Conflict",
+    "message": "Error executing cmdlet",
+    "details": [
+      {
+        "code": "Client",
+        "message": "Ex1472D1|Microsoft.Exchange.Configuration.ObjectModel.ProxyAddressExistsException|The proxy address \"smtp:info@contoso.com\" is already being used by the proxy addresses or LegacyExchangeDN of \"Contoso Info\". Please choose another proxy address.",
+        "target": "Admin Console Test"
+      }
+    ],
+    "innererror": {
+      "message": "Error executing cmdlet",
+      "type": "Microsoft.Exchange.Admin.OData.Core.ODataServiceException",
+      "internalexception": {
+        "message": "Exception of type 'Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException' was thrown.",
+        "type": "Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException"
+      }
+    },
+    "adminapi.warnings@odata.type": "#Collection(String)",
+    "@adminapi.warnings": []
+  }
+}

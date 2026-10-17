@@ -416,3 +416,22 @@ present. Keying on the error code alone would turn a real query bug (a mistyped 
 cycle; keying on nothing left an install that sat unused for a month unable ever to refresh, which is what the dev
 install was until today. A proactive check on `last_delta_sync` was considered and not added: it would duplicate the
 service's own rule, and the service is the authority on when a link expires.
+
+## 2026-10-17 — M14: what the mailbox writes rely on, and what they deliberately do not do
+
+- **Address uniqueness is Exchange's to enforce, not a pre-check's.** Plan item 14.1 said to check an address is free
+  before adding it, by M7's rule. Exchange enforces uniqueness atomically at the write and its refusal
+  (`ProxyAddressExistsException`, 409) names the recipient that holds the address, which the console turns into a
+  sentence. A separate check would be a race and an extra round trip, and could only ever agree with the write.
+  `CheckAddressAsync` exists, with M7's three answers, for anything that needs to know before it writes.
+- **Synced mailboxes: the AD-mastered settings are greyed, not routed to AD yet.** Doc 13 §3 says addresses, hiding,
+  Send on Behalf and forwarding on a synced mailbox belong in AD. Building that path needs an Exchange schema in the
+  forest to test against, and neither YeomanLabs (no synced mailbox) nor the lab (no Exchange schema) has one, so it
+  would ship unproven. Those controls say why they are unavailable instead. Logged in the backlog.
+- **One write at a time per mailbox, 15 s apart, confirmed by two reads.** See doc 13 §5 for the measurements.
+- **Undo of a Full Access removal restores it with automapping on.** `Get-MailboxPermission` does not report whether
+  the grant was automapped, so the undo uses Exchange's default rather than guessing.
+- **Archive, auto-expanding archive and folder renaming are not undoable**, and their confirms say so: disabling an
+  archive starts a 30-day countdown to deleting it, auto-expanding cannot be turned off, and renamed folders are not
+  renamed back.
+

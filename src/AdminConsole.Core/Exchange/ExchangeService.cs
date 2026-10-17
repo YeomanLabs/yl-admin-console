@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using AdminConsole.Core.Auth;
+using AdminConsole.Core.Cache;
 
 namespace AdminConsole.Core.Exchange;
 
@@ -16,14 +17,19 @@ public sealed partial class ExchangeService
 
     private readonly ExchangeClient _client;
     private readonly TenantContext _tenant;
+    private readonly ActionLog _actions;
     private readonly ILogger<ExchangeService> _logger;
 
-    public ExchangeService(ExchangeClient client, TenantContext tenant, ILogger<ExchangeService> logger)
+    public ExchangeService(ExchangeClient client, TenantContext tenant, ActionLog actions, ILogger<ExchangeService> logger)
     {
         _client = client;
         _tenant = tenant;
+        _actions = actions;
         _logger = logger;
     }
+
+    /// <summary>The wait between read-backs that confirm a write; tests make it instant.</summary>
+    public Func<TimeSpan, CancellationToken, Task> Delay { get; init; } = Task.Delay;
 
     /// <summary>
     /// Whether this install may call Exchange at all: the permission is granted. Whether the admin holds an Exchange role

@@ -112,3 +112,11 @@ Seen while gating M13.5: at a 1280-wide window with the quick-facts panel open, 
 row and Activity · Mailbox on a second, with the selected tab drawn as a wide box. It predates M13 — the disabled Mailbox
 tab occupied the same slot — and it is how WPF-UI's TabControl lays out headers that do not fit. **To close:** fixed-width
 headers or a horizontally scrolling strip, checked at 1280 and at Compact density.
+
+### 2026-10-17 — Synced mailboxes: AD-mastered Exchange settings are greyed, not written to AD
+Addresses, hiding from address lists, Send on Behalf and forwarding on a dir-synced mailbox are mastered in AD
+(doc 13 §3), and the Mailbox tab greys them with that reason. The route through `IDirectoryService` to `proxyAddresses`,
+`msExchHideFromAddressLists`, `publicDelegates` and `altRecipient` is designed and not built, because nothing here can
+prove it: YeomanLabs has no synced mailbox and the lab forest has no Exchange schema. **To close:** a lab forest with the
+Exchange schema extended, one synced mailbox, then build and gate it the way M12.4 gated the hybrid unlock.
+

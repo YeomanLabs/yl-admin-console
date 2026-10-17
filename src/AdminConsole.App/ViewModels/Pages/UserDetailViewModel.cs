@@ -49,6 +49,8 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     public UserDetailViewModel(UserService users, IDirectoryService directory, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, MailboxTabViewModel mailbox, ILogger<UserDetailViewModel> logger)
     {
         Mailbox = mailbox;
+        // The picker is wired onto this page by the shell after construction, so read it at the moment of the pick.
+        Mailbox.PickPerson = (prompt, onPicked) => PickPerson?.Invoke(prompt, onPicked);
         _users = users;
         _directory = directory;
         _db = db;

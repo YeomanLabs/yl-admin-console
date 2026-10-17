@@ -3,6 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 using AdminConsole.Core.Auth;
+using AdminConsole.Core.Cache;
 using AdminConsole.Core.Exchange;
 using AdminConsole.Core.Tests.Fakes;
 
@@ -73,7 +74,7 @@ public sealed class MailboxSummaryTests
     public void IsAvailable_OnlyOnceTheExchangeScopeIsGranted()
     {
         var tenant = new TenantContext();
-        var sut = new ExchangeService(Client(new FakeHttpHandler(), tenant), tenant, NullLogger<ExchangeService>.Instance);
+        var sut = new ExchangeService(Client(new FakeHttpHandler(), tenant), tenant, ActionLog.OpenInMemory(), NullLogger<ExchangeService>.Instance);
 
         sut.IsAvailable.Should().BeFalse("nothing is loaded");
         tenant.Update(new TenantContextSnapshot { TenantId = "t-1", SignedInUpn = "a@contoso.com", GrantedScopes = [.. Scopes.Read] });
@@ -82,7 +83,8 @@ public sealed class MailboxSummaryTests
         sut.IsAvailable.Should().BeTrue();
     }
 
-    internal static ExchangeService Service(FakeHttpHandler handler, bool granted = true)
+    internal static ExchangeService Service(FakeHttpHandler handler, bool granted = true, ActionLog? actions = null,
+        TimeProvider? time = null, List<TimeSpan>? delays = null)
     {
         var tenant = new TenantContext();
         tenant.Update(new TenantContextSnapshot
@@ -91,7 +93,11 @@ public sealed class MailboxSummaryTests
             SignedInUpn = "admin@contoso.com",
             GrantedScopes = granted ? [.. Scopes.Read, Scopes.ExchangeManage] : [.. Scopes.Read],
         });
-        return new ExchangeService(Client(handler, tenant), tenant, NullLogger<ExchangeService>.Instance);
+        return new ExchangeService(Client(handler, tenant), tenant, actions ?? ActionLog.OpenInMemory(), NullLogger<ExchangeService>.Instance)
+        {
+            Delay = (d, _) => { delays?.Add(d); return Task.CompletedTask; },
+            Time = time ?? TimeProvider.System,
+        };
     }
 
     private static ExchangeClient Client(FakeHttpHandler handler, TenantContext tenant) => new(

@@ -1,0 +1,23 @@
+{
+  "error": {
+    "code": "BadRequest",
+    "message": "Error executing cmdlet",
+    "details": [
+      {
+        "code": "Context",
+        "message": "ExC71195|Microsoft.Exchange.Data.DataValidationException|There is no primary SMTP address.",
+        "target": "Admin Console Test"
+      }
+    ],
+    "innererror": {
+      "message": "Error executing cmdlet",
+      "type": "Microsoft.Exchange.Admin.OData.Core.ODataServiceException",
+      "internalexception": {
+        "message": "Exception of type 'Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException' was thrown.",
+        "type": "Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException"
+      }
+    },
+    "adminapi.warnings@odata.type": "#Collection(String)",
+    "@adminapi.warnings": []
+  }
+}

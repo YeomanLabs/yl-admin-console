@@ -1,3 +1,4 @@
+using AdminConsole.Core.Exchange;
 using AdminConsole.Core.Graph;
 
 namespace AdminConsole.Core.Writes;
@@ -18,6 +19,12 @@ public sealed record WriteOutcome
 
     public GraphException? Error { get; init; }
 
+    /// <summary>The Exchange error behind a failed mailbox write (doc 13); null for Graph writes.</summary>
+    public ExchangeException? ExchangeError { get; init; }
+
+    /// <summary>Something Exchange said about a write that succeeded — shown, never dropped (doc 13 §1).</summary>
+    public string? Warning { get; init; }
+
     /// <summary>Row id in <c>actions.db</c>; 0 when nothing was logged.</summary>
     public long ActionId { get; init; }
 
@@ -29,7 +36,9 @@ public sealed record WriteOutcome
 
     public bool CanUndo => Success && Undo is not null;
 
-    public string? Details => Error is null ? null : GraphErrorText.Details(Error);
+    public string? Details => Error is not null ? GraphErrorText.Details(Error)
+        : ExchangeError is not null ? ExchangeErrorText.Details(ExchangeError)
+        : null;
 
     public static WriteOutcome Failed(string summary, GraphException ex, long actionId, string? roleHint = null) => new()
     {
@@ -37,6 +46,15 @@ public sealed record WriteOutcome
         Summary = summary,
         FriendlyError = GraphErrorText.Friendly(ex, roleHint),
         Error = ex,
+        ActionId = actionId,
+    };
+
+    public static WriteOutcome FailedExchange(string summary, ExchangeException ex, long actionId) => new()
+    {
+        Success = false,
+        Summary = summary,
+        FriendlyError = ExchangeErrorText.Friendly(ex),
+        ExchangeError = ex,
         ActionId = actionId,
     };
 
