@@ -8,8 +8,9 @@
 ## Dependency injection
 `App.xaml.cs` builds a `Host` with `Host.CreateDefaultBuilder()`:
 - `appsettings.json` + `appsettings.local.json` (optional) bound to `AuthOptions`, `SyncOptions`.
-- Singletons: `AuthService`, `GraphClient`, `CacheDb`, `DeltaSyncService`, `SearchService`, `LicenseService`, `TemplateService`, `OffboardingRunner`, `TenantContext`, `ActionLog`.
-- Transient: every ViewModel. Views are created by XAML with `DataContext` set by a `ViewModelLocator`-free pattern: the shell VM exposes child VMs; navigation is `ContentControl` + `DataTemplate` per VM type.
+- App-wide singletons: the shell and window, toasts, dialogs, `ActionLog` (rows carry their tenant), the file stores (settings, branding, `tenant.json`, snapshots, pending creates, reports, offboarding profiles), the shared `HttpClient`, and `TenantSessionFactory`.
+- **Per tenant (M20):** everything else — `TenantContext`, `AuthService`, `GraphClient`, the Exchange and SharePoint clients, `CacheDb`, `DeltaSyncService`, `SearchService`, every Core service and every page ViewModel — lives in a `TenantSession`, a container of its own built by `App.ConfigureTenantServices` for one tenant profile. The app-wide singletons are passed into it, so there is still one of each. Each tab holds the session it was opened in; the shell's title bar, sync pill, status bar and palette follow the selected tab. Each session runs its own sync loop (there is no hosted service any more).
+- Transient: every ViewModel (resolved from the tab's session). Views are created by XAML with `DataContext` set by a `ViewModelLocator`-free pattern: the shell VM exposes child VMs; navigation is `ContentControl` + `DataTemplate` per VM type.
 - `ILogger` → file sink in `%LOCALAPPDATA%\YeomanLabs\AdminConsole\logs\` rolling daily, plus Debug output. Keep it to `Microsoft.Extensions.Logging` + a 40-line file logger provider; do not add Serilog in Phase 1.
 
 ## Paths
@@ -61,4 +62,4 @@
 ## Extension seams for later phases
 - `IDirectorySource` — Phase 2 adds `OnPremAdSource` alongside `EntraSource`; the User 360 merges by `onPremisesImmutableId` ↔ `ms-DS-ConsistencyGuid`.
 - `IOffboardingStep.RequiredCapability` — `Graph`, `Exchange`, `OnPremAd`. Runner skips steps whose capability isn't connected, with the grey reason.
-- `TenantContext` is a class, not a static — Phase 3 makes it a per-tab instance.
+- `TenantContext` is a class, not a static — Phase 3 makes it a per-tab instance. Done in M20: one per `TenantSession`.

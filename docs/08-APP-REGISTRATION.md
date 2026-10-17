@@ -165,6 +165,20 @@ showing the unverified warning. A per-tenant registration created by the tenant'
 - **Microsoft Graph — `Files.Read.All` (delegated).** The OneDrive export. Asked for at the first export, not at sign-in.
 - Existing registrations: `New-AppRegistration.ps1 -Update` adds both and extends the admin consent.
 
+## More than one tenant (M20)
+
+The registration the script creates is multi-tenant, so one installation can open several tenants: the title bar's
+tenant name is the switcher, and "Add a tenant…" asks for the tenant's id or one of its domains. The registration must
+be consented in that tenant first — run the script there with `-Update` (it finds the existing service principal or
+creates one), or have that tenant's Global Administrator open
+
+```
+https://login.microsoftonline.com/{tenant}/adminconsent?client_id={client id}
+```
+
+Each tenant is signed in with its own account (a partner admin may use one account for several); the console remembers
+which, and pins every token to that tenant's authority.
+
 ## PIM (M18.2)
 
 **Microsoft Graph, delegated — asked for the first time the admin opens Settings › My roles**

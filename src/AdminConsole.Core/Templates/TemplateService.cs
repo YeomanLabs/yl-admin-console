@@ -36,6 +36,25 @@ public sealed class TemplateService
 
     public static string DefaultDirectory => Path.Combine(AppPaths.TemplatesDirectory, "users");
 
+    /// <summary>
+    /// One tenant's templates (M20): a template names groups and licences by id, which mean nothing in another
+    /// directory. The first tenant adopts the templates saved before M20, which were all made in it.
+    /// </summary>
+    public static string DirectoryFor(string tenantId, bool adoptShared)
+    {
+        var dir = Path.Combine(DefaultDirectory, tenantId);
+        if (!Directory.Exists(dir))
+        {
+            Directory.CreateDirectory(dir);
+            if (adoptShared && Directory.Exists(DefaultDirectory))
+            {
+                foreach (var file in Directory.EnumerateFiles(DefaultDirectory, "*.json")) File.Move(file, Path.Combine(dir, Path.GetFileName(file)));
+            }
+        }
+
+        return dir;
+    }
+
     /// <summary>Reads the AD half of a synced user when snapshotting (M17.1); null leaves templates cloud-only.</summary>
     public OnPrem.IDirectoryService? ActiveDirectory { get; init; }
 

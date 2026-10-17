@@ -21,9 +21,12 @@ public sealed partial class ActivityPageViewModel : ObservableObject, IPageViewM
     private readonly ToastService _toasts;
     private readonly ILogger<ActivityPageViewModel> _logger;
 
-    public ActivityPageViewModel(ActionLog actions, ToastService toasts, ILogger<ActivityPageViewModel> logger)
+    private readonly AdminConsole.Core.Auth.TenantContext _tenant;
+
+    public ActivityPageViewModel(ActionLog actions, AdminConsole.Core.Auth.TenantContext tenant, ToastService toasts, ILogger<ActivityPageViewModel> logger)
     {
         _actions = actions;
+        _tenant = tenant;
         _toasts = toasts;
         _logger = logger;
         Reload();
@@ -104,6 +107,8 @@ public sealed partial class ActivityPageViewModel : ObservableObject, IPageViewM
                 _ => null,
             },
             ActionPrefix = Kind == "Licences" ? "license." : null,
+            // M20: this tab's tenant only; the log itself is shared by every tenant the installation has opened.
+            TenantId = _tenant.IsLoaded ? _tenant.TenantId : null,
             Outcome = Outcome switch
             {
                 "Success" => ActionOutcome.Success,

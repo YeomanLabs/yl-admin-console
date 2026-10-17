@@ -552,3 +552,25 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   with active subscriptions made "assigned" exceed "seats".
 - **Quiet means no sign-in for 90 days by any route** (interactive, non-interactive or successful), on an account older
   than that. Without P1 the report says quiet cannot be judged rather than calling everyone quiet.
+
+## 2026-10-17 — M20: several tenants, several domains
+
+- **A tenant is a container, not a parameter.** Threading a tenant id through forty services would have left every
+  one of them able to mix tenants by mistake. Instead each tenant gets a `TenantSession` with its own copies of
+  everything tenant-shaped, built from the same registrations the single tenant used, and a tab can only reach its own.
+  The app-wide services (window, dialogs, toasts, the action log, the stores) are passed in, so there is still one of each.
+- **Shared rather than per tenant:** the action log (rows carry their tenant; Activity filters to the tab's), user
+  settings, branding, and offboarding profiles (options, not people). **Per tenant:** caches, snapshots, pending
+  creates, reports — which already were — and now templates, whose group and licence ids mean nothing elsewhere.
+- **One registration for every tenant.** The script makes it multi-tenant; adding a tenant needs only its id or domain,
+  and its admin's consent. A profile can still carry its own client id for a tenant that insists on its own.
+- **The authority is pinned to the tenant once known**, and the account last used for that tenant is the one taken from
+  the token cache. A partner admin's one account reaches several tenants; asking `organizations` would hand back
+  whichever tenant the account is homed in.
+- **Signing out signs out one tenant.** It used to clear every account in the token cache, which was right while there
+  was only one.
+- **The migrated profile has a fixed id.** The first build gave the pre-M20 profile a new id on every read, so the save
+  after sign-in added a second copy. Found in the live run; the stray copy was removed from the test machine's file.
+- **Several domains go through a router, and cross-domain operations are refused, not attempted.** A move to another
+  domain and a cross-domain membership by GUID are different AD operations from the ones the console sends.
+- **The gate waits for a second test tenant.** Testing is confined to YeomanLabs; the owner provides the second one.

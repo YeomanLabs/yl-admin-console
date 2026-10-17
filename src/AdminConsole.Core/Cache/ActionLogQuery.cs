@@ -14,6 +14,9 @@ public sealed record ActionLogQuery
 
     public ActionOutcome? Outcome { get; init; }
     public string? CorrelationId { get; init; }
+
+    /// <summary>M20: one tenant's rows. The log is shared by every tenant the installation opens.</summary>
+    public string? TenantId { get; init; }
     public DateTimeOffset? Since { get; init; }
     public DateTimeOffset? Until { get; init; }
 

@@ -21,7 +21,25 @@ public sealed partial class WorkspaceTab : ObservableObject
     [ObservableProperty]
     private bool _isSelected;
 
+    /// <summary>
+    /// The tenant this tab was opened in (M20.2). Everything shown in the tab — and every write made from it — goes to
+    /// this tenant, whichever tenant the switcher shows when another tab is selected.
+    /// </summary>
+    public Services.TenantSession? Session { get; init; }
+
+    /// <summary>The tenant's name on the tab, shown only while more than one tenant is open.</summary>
+    [ObservableProperty]
+    private string? _tenantLabel;
+
+    public bool ShowTenant => TenantLabel is not null;
+
+    partial void OnTenantLabelChanged(string? value) => OnPropertyChanged(nameof(ShowTenant));
+
+    public string AccessibleName => TenantLabel is null ? Title : $"{Title}, {TenantLabel}";
+
     public string Title => (CurrentPage as IPageViewModel)?.Title ?? "New tab";
+
+    partial void OnCurrentPageChanged(object? value) => OnPropertyChanged(nameof(AccessibleName));
 
     public bool CanGoBack => _back.Count > 0;
 

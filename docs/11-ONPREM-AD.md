@@ -208,7 +208,9 @@ thing that wrote it proves nothing.
 2. **AD-only objects in the palette.** A user who exists only in AD has no Entra id. Either the palette gains a
    source badge, or on-prem browsing lives only on a Domain page. The first is more useful and more work.
 3. **Multiple domains and forests.** Out of scope for 12.x, but `IDirectoryService` should not assume one domain, or
-   retrofitting it will be painful.
+   retrofitting it will be painful. *Answered in M20.3:* a tenant profile lists its domains, and `DirectoryRouter`
+   puts several behind the one interface — reads merged, writes to the object's own domain, cross-domain moves and
+   memberships refused with the reason (they are ADMT / `-TargetServer` operations, not LDAP modifies).
 
 ## 10. Turning it on for an installation (M12.4)
 

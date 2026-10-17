@@ -52,7 +52,9 @@ public sealed class AuthService : IAuthService
                 var builder = pca.AcquireTokenInteractive(scopes);
                 builder = account is not null
                     ? builder.WithAccount(account)
-                    : builder.WithAccount(PublicClientApplication.OperatingSystemAccount);
+                    : _options.PickAccount
+                        ? builder.WithPrompt(Prompt.SelectAccount)
+                        : builder.WithAccount(PublicClientApplication.OperatingSystemAccount);
                 result = await builder.ExecuteAsync(ct).ConfigureAwait(false);
             }
             catch (MsalException msal)
@@ -215,13 +217,15 @@ public sealed class AuthService : IAuthService
         }
     }
 
+    /// <summary>
+    /// Signs this tenant's account out. Only this one: since M20 the token cache can hold the accounts of other tenants
+    /// open in other tabs, and signing out of one must not sign the admin out of all of them.
+    /// </summary>
     public async Task SignOutAsync(CancellationToken ct)
     {
         var pca = await GetPcaAsync(ct).ConfigureAwait(false);
-        foreach (var account in await pca.GetAccountsAsync().ConfigureAwait(false))
-        {
-            await pca.RemoveAsync(account).ConfigureAwait(false);
-        }
+        var account = await ResolveAccountAsync(pca, ct).ConfigureAwait(false);
+        if (account is not null) await pca.RemoveAsync(account).ConfigureAwait(false);
 
         _account = null;
         if (CurrentAccount is not null)
@@ -256,8 +260,27 @@ public sealed class AuthService : IAuthService
         if (_account is not null) return _account;
         ct.ThrowIfCancellationRequested();
         var accounts = await pca.GetAccountsAsync().ConfigureAwait(false);
-        _account = accounts.FirstOrDefault();
+        _account = ChooseAccount(accounts, _options.AccountId, _options.TenantId, _options.PickAccount);
         return _account;
+    }
+
+    /// <summary>
+    /// Which cached account this tenant uses (M20): the one it was last opened with; else one homed in this tenant;
+    /// else, for a profile that has never been signed in to, none (so the prompt asks) — or, for the single-tenant case
+    /// that predates profiles, the only account there is.
+    /// </summary>
+    internal static IAccount? ChooseAccount(IEnumerable<IAccount> accounts, string? accountId, string? tenantId, bool pickAccount)
+    {
+        var list = accounts.ToList();
+        if (accountId is { Length: > 0 } && list.FirstOrDefault(a => a.HomeAccountId?.Identifier == accountId) is { } byId) return byId;
+        if (tenantId is { Length: > 0 } && list.FirstOrDefault(a => string.Equals(a.HomeAccountId?.TenantId, tenantId, StringComparison.OrdinalIgnoreCase)) is { } byTenant)
+        {
+            return byTenant;
+        }
+
+        // A partner admin's account is homed in their own tenant, not the customer's: with a known account id it was
+        // found above; without one, a second profile must ask rather than guess.
+        return pickAccount ? null : list.FirstOrDefault();
     }
 
     private async Task<IPublicClientApplication> GetPcaAsync(CancellationToken ct)

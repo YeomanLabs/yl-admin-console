@@ -32,22 +32,31 @@ namespace AdminConsole.App.ViewModels;
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
-    private readonly IServiceProvider _services;
-    private readonly IAuthService _auth;
-    private readonly TenantContext _tenant;
-    private readonly TenantContextLoader _tenantLoader;
+    private readonly IServiceProvider _root;
+    private readonly TenantSessionFactory _factory;
+    private readonly TenantConfigStore _profiles;
     private readonly ILogger<ShellViewModel> _logger;
-    private ISyncStatus? _sync;
+
+    // M20.2: every open tenant, and the one the selected tab belongs to. Everything below that used to be a single
+    // app-wide service is now the active session's, so the code that uses it did not have to change.
+    private readonly List<TenantSession> _sessions = [];
+    private readonly TenantContext _noTenant = new();
+    private TenantSession? _session;
+
+    private IServiceProvider _services => _session?.Services ?? _root;
+    private IAuthService _auth => _session!.Auth;
+    private TenantContext _tenant => _session?.Tenant ?? _noTenant;
+    private TenantContextLoader _tenantLoader => _session!.Loader;
+    private ISyncStatus? _sync => _session?.Sync;
     private SignInPageViewModel? _signInPage;
     private bool _scopesExplained;
     private int _statusMessageVersion;
 
-    public ShellViewModel(IServiceProvider services, IAuthService auth, TenantContext tenant, TenantContextLoader tenantLoader, ToastService toasts, DialogService dialogs, ILogger<ShellViewModel> logger)
+    public ShellViewModel(IServiceProvider services, TenantSessionFactory factory, TenantConfigStore profiles, ToastService toasts, DialogService dialogs, ILogger<ShellViewModel> logger)
     {
-        _services = services;
-        _auth = auth;
-        _tenant = tenant;
-        _tenantLoader = tenantLoader;
+        _root = services;
+        _factory = factory;
+        _profiles = profiles;
         _logger = logger;
         Toasts = toasts.Items;
         Dialogs = dialogs;
@@ -68,7 +77,6 @@ public sealed partial class ShellViewModel : ObservableObject
         SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(SettingsPageViewModel));
 
         Tabs.CollectionChanged += OnTabsChanged;
-        _tenant.Changed += (_, _) => RunOnUi(RefreshTenantHeader);
     }
 
     /// <summary>What this installation calls itself (M11.4). The title bar and sign-in page bind to it, so a client
@@ -231,6 +239,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         foreach (var t in Tabs) t.IsSelected = ReferenceEquals(t, value);
         if (value is null) return;
+        if (value.Session is { } session && !ReferenceEquals(session, _session)) ShowSession(session);
         CurrentPage = value.CurrentPage;
         HighlightRail(value.Nav);
     }
@@ -249,8 +258,9 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Ctrl+Enter in the palette (M3.5) and Ctrl+T: a fresh tab. Home when no page is given.</summary>
     public WorkspaceTab OpenTab(object? page = null, NavItem? nav = null)
     {
-        var tab = new WorkspaceTab();
+        var tab = new WorkspaceTab { Session = _session };
         Tabs.Add(tab);
+        RefreshTabLabels();
         if (page is null)
         {
             nav = NavItems[0];
@@ -304,6 +314,7 @@ public sealed partial class ShellViewModel : ObservableObject
         var index = Tabs.IndexOf(tab);
         Tabs.Remove(tab);
         tab.DisposeAll();
+        RefreshTabLabels();
         if (ReferenceEquals(SelectedTab, tab) || SelectedTab is null)
         {
             SelectedTab = Tabs[Math.Min(index, Tabs.Count - 1)];
@@ -732,12 +743,15 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         // M10.2: an installation that does not know which registration to use cannot sign in, and failing inside MSAL
         // tells the person in front of it nothing they can act on. Ask first.
-        if (!_services.GetRequiredService<TenantConfigStore>().Load().IsConfigured)
+        var profiles = _profiles.LoadProfiles();
+        if (profiles.Default is not { IsConfigured: true } profile)
         {
             _logger.LogInformation("No app registration configured; showing setup");
-            CurrentPage = new SetupPageViewModel(_services.GetRequiredService<TenantConfigStore>(), RestartAfterSetup);
+            CurrentPage = new SetupPageViewModel(_profiles, RestartAfterSetup);
             return;
         }
+
+        _session = OpenSession(profile, profiles);
 
         _signInPage = new SignInPageViewModel(BeginInteractiveSignInAsync);
         CurrentPage = _signInPage;
@@ -776,8 +790,33 @@ public sealed partial class ShellViewModel : ObservableObject
     /// </summary>
     private void ReturnToSignIn()
     {
+        var closing = _session;
+        foreach (var tab in Tabs.Where(t => ReferenceEquals(t.Session, closing)).ToList())
+        {
+            Tabs.Remove(tab);
+            tab.DisposeAll();
+        }
+
+        if (closing is not null)
+        {
+            _sessions.Remove(closing);
+            _ = closing.DisposeAsync().AsTask();
+        }
+
+        // M20: another tenant still open carries on; the window only returns to sign-in when none is left.
+        if (Tabs.FirstOrDefault() is { } remaining)
+        {
+            SelectedTab = remaining;
+            RefreshTabLabels();
+            RefreshTenantChoices();
+            ShowStatusMessage($"Signed out of {closing?.Label ?? "that tenant"}.");
+            return;
+        }
+
+        IsSessionReady = false;
         Tabs.Clear();
-        _tenant.Clear();
+        Palette = null;
+        _session = closing is null ? null : OpenSession(closing.Profile, _profiles.LoadProfiles());
         _signInPage ??= new SignInPageViewModel(BeginInteractiveSignInAsync);
         _scopesExplained = false;
         CurrentPage = _signInPage;
@@ -841,6 +880,7 @@ public sealed partial class ShellViewModel : ObservableObject
             _signInPage.IsBusy = false;
         }
 
+        Remember(_session!);
         AttachSession();
         if (_sync!.IsInitialSyncComplete)
         {
@@ -886,17 +926,206 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Wires the sync pill and status bar once the per-tenant services exist.</summary>
     private void AttachSession()
     {
+        var session = _session!;
+        if (!session.IsStarted)
+        {
+            session.Start();
+            // Events from a tenant that is not the one on screen change nothing on screen; the pill and the status bar
+            // are re-read from the session when its tab is selected.
+            session.Tenant.Changed += (_, _) => RunOnUi(() => { if (ReferenceEquals(session, _session)) RefreshTenantHeader(); });
+            session.Sync!.ProgressChanged += (_, p) => RunOnUi(() => { if (ReferenceEquals(session, _session)) OnSyncProgress(p); });
+            session.Sync.CycleCompleted += (_, _) => RunOnUi(() => { if (ReferenceEquals(session, _session)) OnCycleCompleted(); });
+            session.Palette.Chosen += OnPaletteChosen;
+        }
+
+        ShowSession(session);
+    }
+
+    /// <summary>Makes a session the one on screen: title bar, sync pill, status bar and palette are its own.</summary>
+    private void ShowSession(TenantSession session)
+    {
+        _session = session;
+        Palette = session.Palette;
         RefreshTenantHeader();
-        if (_sync is not null) return;
-        _sync = _services.GetRequiredService<ISyncStatus>();
-        _sync.ProgressChanged += (_, p) => RunOnUi(() => OnSyncProgress(p));
-        _sync.CycleCompleted += (_, _) => RunOnUi(OnCycleCompleted);
-        Palette = _services.GetRequiredService<PaletteViewModel>();
-        Palette.Chosen += OnPaletteChosen;
-        SyncState = SyncPillState.Syncing;
-        SyncStatusText = "Preparing…";
-        var last = _services.GetRequiredService<CacheDb>().GetAllSyncState().Select(s => s.LastSync).Max();
-        CacheAgeText = $"Cache {Age(last, DateTimeOffset.UtcNow)}";
+        if (session.Sync is { } sync)
+        {
+            if (sync.IsRunning || sync.LastCycleCompleted is null)
+            {
+                SyncState = SyncPillState.Syncing;
+                SyncStatusText = sync.IsInitialSyncComplete ? "Syncing…" : "Preparing…";
+            }
+            else
+            {
+                OnCycleCompleted();
+            }
+        }
+
+        if (session.Tenant.IsLoaded)
+        {
+            var last = session.Services.GetRequiredService<CacheDb>().GetAllSyncState().Select(s => s.LastSync).Max();
+            CacheAgeText = $"Cache {Age(last, DateTimeOffset.UtcNow)}";
+        }
+
+        RefreshTenantChoices();
+    }
+
+    // ---- tenants (M20) ----------------------------------------------------------------------------------------------
+
+    private TenantSession OpenSession(TenantProfile profile, TenantProfileList list)
+    {
+        var session = _factory.Create(profile, isPrimary: list.Profiles.FirstOrDefault()?.Id == profile.Id);
+        _sessions.Add(session);
+        return session;
+    }
+
+    /// <summary>Saves what the sign-in established: the tenant's id and name, and the account, so it reopens as itself.</summary>
+    private void Remember(TenantSession session)
+    {
+        var t = session.Tenant;
+        var profile = session.Profile with
+        {
+            TenantId = t.TenantId,
+            Name = t.TenantDisplayName.Length > 0 ? t.TenantDisplayName : session.Profile.Name,
+            AccountId = session.Auth.CurrentAccount?.HomeAccountId is { Length: > 0 } a ? a : session.Profile.AccountId,
+            Username = t.SignedInUpn,
+        };
+        session.Profile = profile;
+        var list = _profiles.LoadProfiles();
+        _profiles.SaveProfiles(list.With(profile) with { LastUsedId = profile.Id });
+    }
+
+    /// <summary>The title-bar switcher's entries.</summary>
+    public ObservableCollection<TenantChoice> TenantChoices { get; } = [];
+
+    [ObservableProperty]
+    private bool _isTenantMenuOpen;
+
+    // Built as the menu opens, so its tab counts are the ones on screen now.
+    partial void OnIsTenantMenuOpenChanged(bool value)
+    {
+        if (value) RefreshTenantChoices();
+    }
+
+    private void RefreshTenantChoices()
+    {
+        TenantChoices.Clear();
+        foreach (var p in _profiles.LoadProfiles().Profiles)
+        {
+            var open = _sessions.FirstOrDefault(s => s.Profile.Id == p.Id && s.Tenant.IsLoaded);
+            var tabs = open is null ? 0 : Tabs.Count(t => ReferenceEquals(t.Session, open));
+            var detail = open is null ? "Not open" : tabs == 1 ? "Open · 1 tab" : $"Open · {tabs} tabs";
+            TenantChoices.Add(new TenantChoice(p.Id, open?.Label ?? p.DisplayName, detail, ReferenceEquals(open, _session), OpenTenantAsync));
+        }
+    }
+
+    /// <summary>Badges every tab with its tenant while more than one tenant has tabs open; none when only one does.</summary>
+    private void RefreshTabLabels()
+    {
+        var several = Tabs.Select(t => t.Session).Distinct().Count() > 1;
+        foreach (var t in Tabs) t.TenantLabel = several ? t.Session?.Label : null;
+    }
+
+    /// <summary>
+    /// The switcher. An open tenant gets its most recent tab back (or a new one). A tenant not open yet is signed in to —
+    /// silently when its account is cached — loaded, and opened in a new tab beside the others.
+    /// </summary>
+    private async Task OpenTenantAsync(TenantChoice choice)
+    {
+        IsTenantMenuOpen = false;
+        if (_sessions.FirstOrDefault(s => s.Profile.Id == choice.ProfileId && s.Tenant.IsLoaded) is { } open)
+        {
+            if (Tabs.LastOrDefault(t => ReferenceEquals(t.Session, open)) is { } tab) SelectedTab = tab;
+            else
+            {
+                ShowSession(open);
+                OpenTab();
+            }
+
+            return;
+        }
+
+        var list = _profiles.LoadProfiles();
+        if (list.Profiles.FirstOrDefault(p => p.Id == choice.ProfileId) is not { } profile) return;
+        await OpenNewTenantAsync(profile, list);
+    }
+
+    private async Task OpenNewTenantAsync(TenantProfile profile, TenantProfileList list)
+    {
+        var session = OpenSession(profile, list);
+        ShowStatusMessage($"Signing in to {profile.DisplayName}…", 60);
+        try
+        {
+            try
+            {
+                await session.Auth.GetTokenAsync(Scopes.Read, CancellationToken.None);
+            }
+            catch (SignInRequiredException)
+            {
+                await session.Auth.EnsureSignedInAsync(Scopes.Read, CancellationToken.None);
+            }
+
+            await session.Loader.LoadAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _sessions.Remove(session);
+            await session.DisposeAsync();
+            _logger.LogWarning(ex, "Opening profile {Profile} failed", profile.Id);
+            ShowError(ex, $"Could not open {profile.DisplayName}");
+            return;
+        }
+
+        if (_sessions.FirstOrDefault(s => !ReferenceEquals(s, session) && s.Tenant.IsLoaded && s.Tenant.TenantId == session.Tenant.TenantId) is { } same)
+        {
+            _sessions.Remove(session);
+            await session.DisposeAsync();
+            ShowStatusMessage($"{same.Label} is already open.");
+            if (Tabs.LastOrDefault(t => ReferenceEquals(t.Session, same)) is { } tab) SelectedTab = tab;
+            return;
+        }
+
+        Remember(session);
+        _session = session;
+        AttachSession();
+        OpenTab();
+        ShowStatusMessage($"Opened {session.Label}. Its first sync runs in the background.", 8);
+    }
+
+    /// <summary>
+    /// Adds a tenant to the switcher. It uses this installation's registration — a multi-tenant one, as the script makes
+    /// it — so all it needs is which tenant: an id or a verified domain. The registration must be consented there.
+    /// </summary>
+    [RelayCommand]
+    private async Task AddTenantAsync()
+    {
+        IsTenantMenuOpen = false;
+        var prompt = new TextPromptDialogViewModel("Add a tenant",
+            "The tenant's ID or one of its domains. This installation's app registration must already be consented there (scripts/New-AppRegistration.ps1, or the admin consent link in doc 08).",
+            "contoso.onmicrosoft.com");
+        if (!await Dialogs.ShowAsync(prompt)) return;
+
+        var tenant = prompt.Value.Trim();
+        var list = _profiles.LoadProfiles();
+        if (list.Profiles.FirstOrDefault(p => string.Equals(p.TenantId, tenant, StringComparison.OrdinalIgnoreCase)) is { } known)
+        {
+            await OpenTenantAsync(new TenantChoice(known.Id, known.DisplayName, string.Empty, false, OpenTenantAsync));
+            return;
+        }
+
+        var template = _session?.Profile ?? list.Default;
+        if (template is null) return;
+        var profile = new TenantProfile { Name = tenant, TenantId = tenant, ClientId = template.ClientId, Authority = template.Authority };
+        list = list.With(profile);
+        _profiles.SaveProfiles(list);
+        await OpenNewTenantAsync(profile, list);
+        RefreshTenantChoices();
+    }
+
+    /// <summary>On exit: each tenant's sync loop stops and its cache closes.</summary>
+    public async Task CloseSessionsAsync()
+    {
+        foreach (var s in _sessions.ToList()) await s.DisposeAsync();
+        _sessions.Clear();
     }
 
     private void RefreshTenantHeader()

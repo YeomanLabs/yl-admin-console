@@ -110,6 +110,15 @@ public sealed partial class App : Application
         if (_host is not null)
         {
             _logger?.LogInformation("Admin Console exiting ({Code})", e.ApplicationExitCode);
+            try
+            {
+                await _host.Services.GetRequiredService<ShellViewModel>().CloseSessionsAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Closing tenant sessions on exit failed");
+            }
+
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             try
             {
@@ -126,28 +135,15 @@ public sealed partial class App : Application
         base.OnExit(e);
     }
 
-    /// <summary>
-    /// The registration this installation actually signs in with: <c>tenant.json</c> if it holds one, otherwise
-    /// whatever the build shipped with.
-    /// </summary>
-    private static AuthOptions Effective(IServiceProvider sp)
-    {
-        var config = sp.GetRequiredService<TenantConfigStore>().Load();
-        return new AuthOptions { ClientId = config.ClientId, Authority = config.Authority };
-    }
-
     private static void ConfigureServices(HostBuilderContext ctx, IServiceCollection services)
     {
+        // The registration the build shipped with: the fallback when tenant.json has no profile yet (M10.1).
         services.AddSingleton(ctx.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>() ?? new AuthOptions());
         services.AddSingleton(ctx.Configuration.GetSection(SyncOptions.SectionName).Get<SyncOptions>() ?? new SyncOptions());
 
-        // M12: on-prem AD. Empty by default, which is the cloud-only case — LdapDirectoryService reports "no domain
-        // configured" and every on-prem feature stays greyed with that reason rather than failing at a timeout.
-        // Singleton because it owns one bound LDAP connection for the life of the app.
+        // M12: on-prem AD from appsettings. Since M20 it belongs to the first tenant profile; other profiles carry
+        // their own domains (TenantProfile.Domains), which bind as the signed-in Windows user.
         services.AddSingleton(ctx.Configuration.GetSection(LdapOptions.SectionName).Get<LdapOptions>() ?? new LdapOptions());
-        services.AddSingleton<IDirectoryService>(sp => new LdapDirectoryService(
-            sp.GetRequiredService<LdapOptions>(),
-            sp.GetRequiredService<ILogger<LdapDirectoryService>>()));
 
         // M10.1: which registration this installation uses comes from %LOCALAPPDATA%, with appsettings.json as the
         // fallback. A client installation can be pointed at their own registration without editing a file under
@@ -162,12 +158,60 @@ public sealed partial class App : Application
             sp.GetRequiredService<ILogger<TenantConfigStore>>()));
 
         services.AddSingleton<WindowHandleProvider>();
+        services.AddSingleton(_ => new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }));
+        services.AddSingleton(sp => ActionLog.OpenFile(AppPaths.ActionsDbPath, sp.GetRequiredService<ILogger<ActionLog>>()));
+        services.AddSingleton(_ => new SnapshotStore(SnapshotStore.DefaultRoot));
+        services.AddSingleton(sp => new UserSettingsStore(UserSettingsStore.DefaultPath, sp.GetRequiredService<ILogger<UserSettingsStore>>()));
+        services.AddSingleton(_ => new PendingProvisioningStore(PendingProvisioningStore.DefaultDirectory));
+        services.AddSingleton(new AdminConsole.Core.Reports.ReportStore(AdminConsole.Core.Reports.ReportStore.DefaultRoot));
+        services.AddSingleton(sp => new OffboardingProfileStore(
+            OffboardingProfileStore.DefaultDirectory,
+            sp.GetRequiredService<ILogger<OffboardingProfileStore>>()));
+
+        services.AddSingleton<ToastService>();
+        services.AddSingleton<DialogService>();
+        services.AddSingleton<IDialogService>(sp => sp.GetRequiredService<DialogService>());
+        services.AddSingleton<FilePicker>();
+        services.AddSingleton<ShellViewModel>();
+        services.AddSingleton<MainWindow>();
+
+        // M20.2: everything that belongs to one tenant lives in a session container of its own (ConfigureTenantServices).
+        services.AddSingleton(sp => new TenantSessionFactory(sp, sp.GetRequiredService<LdapOptions>(), sp.GetRequiredService<ILogger<TenantSessionFactory>>()));
+    }
+
+    /// <summary>
+    /// One tenant's services (M20.2), built into a <see cref="TenantSession"/>'s own container. Before M20 these were
+    /// app-wide singletons; they are still singletons, but per tenant, so two tabs on two tenants never share a cache,
+    /// a token or a sync loop.
+    /// </summary>
+    internal static void ConfigureTenantServices(IServiceCollection services, TenantProfile profile, IReadOnlyList<LdapOptions> domains, bool isPrimary)
+    {
+        services.AddSingleton(new AuthOptions
+        {
+            ClientId = profile.ClientId,
+            Authority = profile.EffectiveAuthority,
+            AccountId = profile.AccountId,
+            TenantId = profile.TenantId,
+            // A profile that has never been signed in, when it is not the only one, asks which account to use.
+            PickAccount = profile.AccountId is null && profile.TenantId is not null,
+        });
+
+        // M12 / M20.3: on-prem. No domain is the cloud-only case (every on-prem feature greyed with that reason); one is
+        // one connection; several go through the router. LdapOptions is the first domain's, for the settings that are
+        // per domain in principle but used as one (the disabled-users OU).
+        services.AddSingleton(domains.Count > 0 ? domains[0] : new LdapOptions());
+        services.AddSingleton<IDirectoryService>(sp => domains.Count switch
+        {
+            0 => new LdapDirectoryService(new LdapOptions(), sp.GetRequiredService<ILogger<LdapDirectoryService>>()),
+            1 => new LdapDirectoryService(domains[0], sp.GetRequiredService<ILogger<LdapDirectoryService>>()),
+            _ => new DirectoryRouter([.. domains.Select(d => (IDirectoryService)new LdapDirectoryService(d, sp.GetRequiredService<ILogger<LdapDirectoryService>>()))]),
+        });
+
         services.AddSingleton<IAuthService>(sp => new AuthService(
-            Effective(sp),
+            sp.GetRequiredService<AuthOptions>(),
             () => sp.GetRequiredService<WindowHandleProvider>().Handle,
             sp.GetRequiredService<ILogger<AuthService>>()));
 
-        services.AddSingleton(_ => new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }));
         services.AddSingleton<GraphClient>();
         services.AddSingleton(sp => new ExchangeClient(
             sp.GetRequiredService<HttpClient>(),
@@ -177,7 +221,6 @@ public sealed partial class App : Application
         services.AddSingleton<ExchangeService>();
         services.AddSingleton<TenantContext>();
         services.AddSingleton<TenantContextLoader>();
-        services.AddSingleton(sp => ActionLog.OpenFile(AppPaths.ActionsDbPath, sp.GetRequiredService<ILogger<ActionLog>>()));
 
         // Per-tenant services: the cache file is named by tenant id, so these can only be resolved after sign-in
         // (TenantContextLoader.LoadAsync). Resolving earlier is a programming error and throws.
@@ -240,11 +283,9 @@ public sealed partial class App : Application
         services.AddSingleton<SharePointClient>();
         services.AddSingleton<OneDriveService>();
         services.AddSingleton<OneDriveExporter>();
-        services.AddSingleton(_ => new SnapshotStore(SnapshotStore.DefaultRoot));
-        services.AddSingleton(sp => new UserSettingsStore(UserSettingsStore.DefaultPath, sp.GetRequiredService<ILogger<UserSettingsStore>>()));
         services.AddSingleton<UserProvisioningService>();
         services.AddSingleton(sp => new TemplateService(
-            TemplateService.DefaultDirectory,
+            TemplateService.DirectoryFor(sp.GetRequiredService<TenantContext>().TenantId, adoptShared: isPrimary),
             sp.GetRequiredService<GraphClient>(),
             sp.GetRequiredService<ILogger<TemplateService>>())
         {
@@ -254,26 +295,14 @@ public sealed partial class App : Application
         });
 
         // Hybrid onboarding (M17): create in AD, finish in the cloud after Entra Connect.
-        services.AddSingleton(_ => new PendingProvisioningStore(PendingProvisioningStore.DefaultDirectory));
         services.AddSingleton<PendingProvisioningService>();
         services.AddSingleton<HybridProvisioningService>();
         services.AddSingleton<AdminConsole.Core.Users.BulkEdit.BulkEditService>();
         services.AddSingleton<AdminConsole.Core.Pim.PimService>();
-        services.AddSingleton(new AdminConsole.Core.Reports.ReportStore(AdminConsole.Core.Reports.ReportStore.DefaultRoot));
         services.AddSingleton<AdminConsole.Core.Reports.MfaReportService>();
         services.AddSingleton<AdminConsole.Core.Reports.LicenceReportService>();
         services.AddSingleton<AdminConsole.Core.Reports.MailboxReportService>();
-        services.AddSingleton(sp => new OffboardingProfileStore(
-            OffboardingProfileStore.DefaultDirectory,
-            sp.GetRequiredService<ILogger<OffboardingProfileStore>>()));
         services.AddSingleton<ConsentService>();
-        services.AddHostedService<SyncHostedService>();
-
-        services.AddSingleton<ToastService>();
-        services.AddSingleton<DialogService>();
-        services.AddSingleton<IDialogService>(sp => sp.GetRequiredService<DialogService>());
-        services.AddSingleton<ShellViewModel>();
-        services.AddSingleton<MainWindow>();
         services.AddTransient<PaletteViewModel>();
 
         // Page ViewModels are transient (doc 03): a fresh instance per navigation.
@@ -285,7 +314,6 @@ public sealed partial class App : Application
         services.AddTransient<UserDetailViewModel>();
         services.AddTransient<MailboxTabViewModel>();
         services.AddTransient<OneDriveTabViewModel>();
-        services.AddSingleton<FilePicker>();
         services.AddTransient<DeviceDetailViewModel>();
         services.AddTransient<GroupDetailViewModel>();
         services.AddTransient<SettingsPageViewModel>();

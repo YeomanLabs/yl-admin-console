@@ -164,6 +164,7 @@ public sealed class ActionLog : IDisposable
         if (q.ActionPrefix is not null) Add("action LIKE $ap ESCAPE '\\'", "$ap", EscapeLike(q.ActionPrefix) + "%");
         if (q.Outcome is not null) Add("outcome=$outcome", "$outcome", q.Outcome.Value.ToString());
         if (q.CorrelationId is not null) Add("correlation_id=$corr", "$corr", q.CorrelationId);
+        if (q.TenantId is not null) Add("tenant_id=$tenant", "$tenant", q.TenantId);
         if (q.Since is not null) Add("ts>=$since", "$since", CacheDb.FormatDate(q.Since.Value));
         if (q.Until is not null) Add("ts<=$until", "$until", CacheDb.FormatDate(q.Until.Value));
         if (q.Reversible == true) where.Add("inverse_action IS NOT NULL AND inverse_payload IS NOT NULL AND undone_at IS NULL AND outcome='Success'");
