@@ -285,10 +285,30 @@ public sealed class RestoreTests : IDisposable
             InversePayload = """{"principal":"Adele@contoso.com"}""", CorrelationId = "some-other-run",
         });
 
+        _exo.Enqueue(HttpStatusCode.OK, """{"value":[]}""");   // Get-RecipientPermission on Contoso Info: not back yet
+
         var preview = await Step("restore-other-mailbox-access").PreviewAsync(Context(Snapshot()), Ct);
 
         preview.Summary.Should().Be("Give back 1 permission on other mailboxes");
         preview.Details.Should().Equal("Send As on Contoso Info");
+    }
+
+    [Fact]
+    public async Task Access_that_is_already_back_is_not_offered_again()
+    {
+        // Found at the M15 gate: a second restore offered to give back what the first had already returned.
+        _actions.Record(new ActionRecord
+        {
+            Actor = "admin@contoso.com", TenantId = "t-1", TargetType = ObjectType.User, TargetId = "mbx-info", TargetName = "Contoso Info",
+            Action = "exchange.sendas.remove", Outcome = ActionOutcome.Success, InverseAction = "exchange.sendas.add",
+            InversePayload = """{"principal":"Adele@contoso.com"}""", CorrelationId = "run-1",
+        });
+        _exo.Enqueue(HttpStatusCode.OK, Fixtures.Text("exchange/recipient-permissions-shared"));   // Adele can send as it again
+
+        var preview = await Step("restore-other-mailbox-access").PreviewAsync(Context(Snapshot()), Ct);
+
+        preview.IsNoOp.Should().BeTrue();
+        preview.Summary.Should().Be("The 1 permission the run took away is back");
     }
 
     [Fact]

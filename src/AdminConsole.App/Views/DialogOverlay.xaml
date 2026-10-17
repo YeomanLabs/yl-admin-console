@@ -309,7 +309,8 @@
                                    Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}"
                                    AutomationProperties.Name="Undo the reversible steps" />
                         <ui:Button Content="Cancel" Margin="0,0,8,0" Command="{Binding CloseCommand}"
-                                   Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}" />
+                                   Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}"
+                                   AutomationProperties.Name="Cancel without running" />
                         <ui:Button Content="Cancel run" Margin="0,0,8,0" Command="{Binding CancelRunCommand}"
                                    Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}"
                                    AutomationProperties.Name="Cancel the run" />
@@ -317,7 +318,8 @@
                                    Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}"
                                    AutomationProperties.Name="{Binding RunLabel}" />
                         <ui:Button Content="Close" Appearance="Primary" Command="{Binding CloseCommand}"
-                                   Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}" />
+                                   Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}"
+                                   AutomationProperties.Name="Close the summary" />
                     </StackPanel>
                 </Grid>
             </StackPanel>
@@ -618,7 +620,8 @@
                                Visibility="{Binding HasResultPassword, Converter={StaticResource BoolToVisibility}}"
                                AutomationProperties.Name="Open the new user" />
                     <ui:Button Content="Close" Appearance="Primary" Command="{Binding CloseCommand}"
-                               Visibility="{Binding IsResult, Converter={StaticResource BoolToVisibility}}" />
+                               Visibility="{Binding IsResult, Converter={StaticResource BoolToVisibility}}"
+                               AutomationProperties.Name="Close the summary" />
                 </StackPanel>
             </StackPanel>
         </DataTemplate>

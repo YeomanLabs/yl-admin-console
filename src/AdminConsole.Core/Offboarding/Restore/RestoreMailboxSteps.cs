@@ -156,26 +156,37 @@ internal sealed class RestoreOtherMailboxAccessStep(ExchangeService exchange, Ac
 {
     private const string PlanKey = "restore.other.plan";
 
-    protected override Task<StepPreview> PreviewAsync(OffboardingContext ctx, OffboardingSnapshot snapshot, CancellationToken ct)
+    protected override async Task<StepPreview> PreviewAsync(OffboardingContext ctx, OffboardingSnapshot snapshot, CancellationToken ct)
     {
-        if (snapshot.CorrelationId is null) return Task.FromResult(StepPreview.NoOp(Id, "The snapshot isn't tied to a run, so there is nothing to look up"));
-        if (!exchange.IsAvailable) return Task.FromResult(StepPreview.Blocked(Id, Title, ExchangeStep.NotGranted));
+        if (snapshot.CorrelationId is null) return StepPreview.NoOp(Id, "The snapshot isn't tied to a run, so there is nothing to look up");
+        if (!exchange.IsAvailable) return StepPreview.Blocked(Id, Title, ExchangeStep.NotGranted);
 
         var removed = actions.Query(new ActionLogQuery { CorrelationId = snapshot.CorrelationId, ActionPrefix = "exchange.", Outcome = ActionOutcome.Success })
             .Where(a => a.UndoneAt is null && a.TargetId != ctx.UserId && a.Action is "exchange.sendas.remove" or "exchange.fullaccess.remove")
             .Select(a => (Row: a, Principal: PrincipalOf(a.InversePayload)))
             .Where(a => a.Principal is not null)
+            .Select(r => new Grant(r.Row.Id, r.Row.TargetId, r.Row.TargetName ?? r.Row.TargetId, r.Principal!, r.Row.Action == "exchange.sendas.remove"))
             .ToList();
-        var plan = removed.Select(r => new Grant(r.Row.TargetId, r.Row.TargetName ?? r.Row.TargetId, r.Principal!, r.Row.Action == "exchange.sendas.remove")).ToList();
-        ctx.Set(PlanKey, plan);
-        if (plan.Count == 0) return Task.FromResult(StepPreview.NoOp(Id, "The run took no access to other mailboxes away"));
+        if (removed.Count == 0) return StepPreview.NoOp(Id, "The run took no access to other mailboxes away");
 
-        return Task.FromResult(new StepPreview
+        // The log says what was taken; only the mailbox says whether it has come back since. Found at the M15 gate: a
+        // second restore offered to give back what the first already had.
+        var plan = new List<Grant>();
+        foreach (var g in removed)
+        {
+            var now = g.SendAs ? await exchange.GetSendAsAsync(g.MailboxId, ct).ConfigureAwait(false) : await exchange.GetFullAccessAsync(g.MailboxId, ct).ConfigureAwait(false);
+            if (now.Value?.Any(e => !e.IsDeny && string.Equals(e.Principal, g.Principal, StringComparison.OrdinalIgnoreCase)) != true) plan.Add(g);
+        }
+
+        ctx.Set(PlanKey, plan);
+        if (plan.Count == 0) return StepPreview.NoOp(Id, $"The {Plural(removed.Count, "permission")} the run took away {(removed.Count == 1 ? "is" : "are")} back");
+
+        return new StepPreview
         {
             StepId = Id,
             Summary = $"Give back {Plural(plan.Count, "permission")} on other mailboxes",
             Details = [.. plan.Select(g => $"{(g.SendAs ? "Send As" : "Full Access")} on {g.Label}")],
-        });
+        };
     }
 
     protected override async Task<StepResult> ExecuteAsync(OffboardingContext ctx, OffboardingSnapshot snapshot, CancellationToken ct)
@@ -185,9 +196,13 @@ internal sealed class RestoreOtherMailboxAccessStep(ExchangeService exchange, Ac
         {
             ct.ThrowIfCancellationRequested();
             var target = new MailboxRef(g.MailboxId, g.Label);
-            writes.Add(($"{(g.SendAs ? "Send As" : "Full Access")} on {g.Label}", g.SendAs
+            var outcome = g.SendAs
                 ? await exchange.GrantSendAsAsync(target, g.Principal, ct).ConfigureAwait(false)
-                : await exchange.GrantFullAccessAsync(target, g.Principal, autoMapping: true, ct).ConfigureAwait(false)));
+                : await exchange.GrantFullAccessAsync(target, g.Principal, autoMapping: true, ct).ConfigureAwait(false);
+
+            // The offboarding's row is reversed now; the Activity page should say so rather than offer to undo it again.
+            if (outcome.Success) actions.MarkUndone(g.RemovalRowId);
+            writes.Add(($"{(g.SendAs ? "Send As" : "Full Access")} on {g.Label}", outcome));
         }
 
         return Combined(Id, n => $"Gave back {Plural(n, "permission")} on other mailboxes", writes);
@@ -207,5 +222,5 @@ internal sealed class RestoreOtherMailboxAccessStep(ExchangeService exchange, Ac
         }
     }
 
-    private sealed record Grant(string MailboxId, string Label, string Principal, bool SendAs);
+    private sealed record Grant(long RemovalRowId, string MailboxId, string Label, string Principal, bool SendAs);
 }

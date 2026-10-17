@@ -463,3 +463,11 @@ service's own rule, and the service is the authority on when a link expires.
 - **Graph membership changes skip distribution lists and mail-enabled security groups** everywhere (group page,
   templates, offboarding), with the reason. Graph refuses them with a 400; Exchange is the only route.
 
+## 2026-10-17 — M15 gate: how a gate leaver gets a mailbox without a licence
+
+YeomanLabs has no spare Exchange-capable seat, and buying one for a test is not this project's call. The gate leaver's
+mailbox is created shared and converted to a user mailbox, which Exchange allows unlicensed for 30 days; between gates
+it is parked disabled and shared again so no clock runs. What this cannot exercise is the licence step itself
+(`remove-licenses` previews "No licences are assigned"); that step is unchanged since M6 and the mailbox steps' order
+ahead of it is pinned by a unit test. The AD half waits for the lab DC.
+
