@@ -258,10 +258,10 @@ No new hosts, and nothing waits on M13–M17; any of these can be pulled forward
 
 ## M19 — Reports
 
-- [ ] 19.1 🖥 MFA readiness: registration state per user, what is missing, who is exempt.
-- [ ] 19.2 🖥 Licence usage: seats, direct versus group assignment, licensed accounts that are disabled or quiet for 90 days.
-- [ ] 19.3 🖥 Mailbox size and mailbox delegation across the tenant, cached and dated rather than run live per view.
-- [ ] **Gate:** each report reconciled against the portal's own figure for the same question.
+- [x] 19.1 🖥 MFA readiness: registration state per user, what is missing, who is exempt. — done. Reports › MFA readiness, from `userRegistrationDetails` joined with the cache: Ready / Phone only / No second factor / Exempt (guest, shared or resource mailbox, Entra Connect's sync account), admins not ready, and the portal's "MFA capable" figure. Entra leaves blocked accounts out of the report; the console says how many.
+- [x] 19.2 🖥 Licence usage: seats, direct versus group assignment, licensed accounts that are disabled or quiet for 90 days. — done. Seats from `subscribedSkus`, direct/group from `licenseAssignmentStates`, last sign-in from `signInActivity` (falls back, and says so, without P1). A suspended subscription's holders are counted apart, so assigned never exceeds the seats on the page.
+- [x] 19.3 🖥 Mailbox size and mailbox delegation across the tenant, cached and dated rather than run live per view. — done. Two tenant-wide calls (mailboxes with Send on Behalf, every Send As grant) plus size and Full Access per mailbox, four at a time with progress. Every report is saved per tenant as dated JSON, shown from that on open and rebuilt on request; each exports what its filter shows.
+- [x] **Gate:** each report reconciled against the portal's own figure for the same question. — passed 2026-10-17, YeomanLabs, reports built through the UI. MFA: 15 of 15 statuses agree with each person's `/authentication/methods` (a different endpoint), every enabled account present, 6 blocked accounts accounted for. Licences: all 5 subscriptions equal `subscribedSkus` (the admin centre's figures) and an independent count of `assignedLicenses` holders. Mailboxes: 13 of 13 equal the ExchangeOnlineManagement module to the byte, with the same Full Access, Send As and Send on Behalf. Reconciled against the sources the portals display; the portal pages themselves were not opened. The first build found two figures that misled — a suspended P2 inflating "assigned", and the sync account counted as missing MFA — both fixed before the gate.
 
 ## M20 — Several tenants, several domains
 

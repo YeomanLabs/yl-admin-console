@@ -536,3 +536,19 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **Export writes every matching row, not the page on screen**, with a formula guard: a cell starting `= + - @` is
   prefixed with an apostrophe, because a display name is whatever someone typed.
 - **The YeomanLabs registration was extended live** with the three PIM scopes, so it matches the script.
+
+## 2026-10-17 — M19: reports
+
+- **Reports are built on request and kept, dated, as JSON per tenant** (`%LOCALAPPDATA%\AdminConsole\reports\{tenant}`),
+  like snapshots and the pending queue. The page shows the saved copy at once with its age; a rebuild is a button.
+  Mailbox size and Full Access have no tenant-wide form, so a live-per-view report would be a minutes-long wait.
+- **MFA readiness uses Entra's registration report, not a per-user walk**, because it is what the portal shows and one
+  paged read covers the tenant. Phone-only is its own status: it is MFA, but the weakest kind. Exempt means guests,
+  shared and resource mailboxes, and Entra Connect's sync account — not break-glass accounts, which should have a
+  passkey and are left visible.
+- **Blocked accounts are absent from Entra's registration report**, so the console says how many were left out rather
+  than showing them as exempt or missing.
+- **A suspended subscription is reported apart.** Entra keeps its assignments with no seats behind them; summing them
+  with active subscriptions made "assigned" exceed "seats".
+- **Quiet means no sign-in for 90 days by any route** (interactive, non-interactive or successful), on an account older
+  than that. Without P1 the report says quiet cannot be judged rather than calling everyone quiet.

@@ -3,7 +3,8 @@
                     xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
                     xmlns:pages="clr-namespace:AdminConsole.App.ViewModels.Pages"
                     xmlns:views="clr-namespace:AdminConsole.App.Views"
-                    xmlns:tpl="clr-namespace:AdminConsole.Core.Templates;assembly=AdminConsole.Core">
+                    xmlns:tpl="clr-namespace:AdminConsole.Core.Templates;assembly=AdminConsole.Core"
+                    xmlns:rep="clr-namespace:AdminConsole.Core.Reports;assembly=AdminConsole.Core">
     <!-- Doc 03: navigation is ContentControl + one DataTemplate per page ViewModel type. -->
 
     <!-- Home (M9.5). It was one sentence pointing at Ctrl+K. It is now somewhere to start from: search, the things
@@ -702,6 +703,199 @@
     </DataTemplate>
 
     <!-- Activity log (M8.2): every write this admin made, filtered, and copyable as markdown. -->
+    <!-- Reports (M19). One shape for all three: what it answers, when it was built, the headline figures, a filter,
+         the rows, and Export. Rows pick their template by type. -->
+    <DataTemplate DataType="{x:Type rep:MfaRow}">
+        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                AutomationProperties.Name="{Binding DisplayName}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding DisplayName}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Upn}" FontSize="11" FontFamily="{StaticResource AcMono}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="10,0">
+                    <TextBlock Text="{Binding Detail}" FontSize="12" TextWrapping="Wrap" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding MethodsText, StringFormat=Methods: {0}}" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Style="{StaticResource RowBadge}" Visibility="{Binding IsAdmin, Converter={StaticResource BoolToVisibility}}">
+                        <TextBlock Text="Admin" FontSize="11" />
+                    </Border>
+                    <Border Style="{StaticResource RowBadge}">
+                        <TextBlock Text="{Binding Status}" FontSize="11" />
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type rep:LicenceSkuRow}">
+        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                AutomationProperties.Name="{Binding Name}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding PartNumber}" FontSize="11" FontFamily="{StaticResource AcMono}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="10,0">
+                    <TextBlock FontSize="12">
+                        <Run Text="{Binding Consumed, Mode=OneWay}" /><Run Text=" of " /><Run Text="{Binding Enabled, Mode=OneWay}" /><Run Text=" seats assigned · " /><Run Text="{Binding Available, Mode=OneWay}" /><Run Text=" free" />
+                    </TextBlock>
+                    <TextBlock Text="{Binding StateText}" FontSize="11" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                               Visibility="{Binding IsSuspended, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="11">
+                        <Run Text="{Binding Direct, Mode=OneWay}" /><Run Text=" direct · " /><Run Text="{Binding ViaGroup, Mode=OneWay}" /><Run Text=" through a group · " /><Run Text="{Binding Disabled, Mode=OneWay}" /><Run Text=" blocked · " /><Run Text="{Binding Quiet, Mode=OneWay}" /><Run Text=" quiet" />
+                    </TextBlock>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type rep:LicensedUserRow}">
+        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                AutomationProperties.Name="{Binding DisplayName}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding DisplayName}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Upn}" FontSize="11" FontFamily="{StaticResource AcMono}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="10,0">
+                    <TextBlock Text="{Binding Reason}" FontSize="12" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding LicencesText}" FontSize="11" TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type rep:MailboxReportRow}">
+        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+                AutomationProperties.Name="{Binding Name}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="110" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Address}" FontSize="11" FontFamily="{StaticResource AcMono}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="{Binding SizeText}" FontSize="12" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Kind}" FontSize="11" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Margin="10,0">
+                    <TextBlock Text="{Binding DelegatesText}" FontSize="12" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Problem}" FontSize="11" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                               Visibility="{Binding Problem, Converter={StaticResource NullToCollapsed}}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ReportSectionTemplate">
+        <Grid Margin="0,12,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel>
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Description}" FontSize="12" TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                    <ui:Button Content="{Binding BuildText}" Appearance="Primary" Command="{Binding BuildCommand}" Padding="12,4"
+                               AutomationProperties.Name="{Binding BuildName}" />
+                    <ui:Button Content="Export" Icon="{ui:SymbolIcon ArrowDownload24}" Command="{Binding ExportCommand}" Margin="8,0,0,0" Padding="12,4"
+                               AutomationProperties.Name="{Binding ExportName}" />
+                    <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" Margin="12,0,6,0"
+                                     Visibility="{Binding IsBuilding, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="{Binding ProgressText}" FontSize="12" VerticalAlignment="Center"
+                               AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding ProgressText}" />
+                </StackPanel>
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding AsOfText}" FontSize="11" Margin="0,6,0,0"
+                           AutomationProperties.Name="{Binding AsOfText}" />
+                <TextBlock Text="{Binding Error}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                           AutomationProperties.LiveSetting="Assertive" AutomationProperties.Name="{Binding Error}"
+                           Visibility="{Binding Error, Converter={StaticResource NullToCollapsed}}" />
+            </StackPanel>
+            <StackPanel Grid.Row="1" Margin="0,12,0,0" Visibility="{Binding HasReport, Converter={StaticResource BoolToVisibility}}">
+                <ItemsControl ItemsSource="{Binding Figures}" AutomationProperties.Name="Figures">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pages:ReportFigure}">
+                            <Border Padding="12,8" Margin="0,0,8,8" CornerRadius="6" MinWidth="120"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
+                                    AutomationProperties.Name="{Binding}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Value}" FontSize="20" FontWeight="SemiBold">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsWarning}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Label}" FontSize="11" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Note}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Visibility="{Binding Note, Converter={StaticResource NullToCollapsed}}" />
+            </StackPanel>
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,4,0,8" Visibility="{Binding HasReport, Converter={StaticResource BoolToVisibility}}">
+                <TextBlock Text="Show" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                <ComboBox ItemsSource="{Binding Shows}" SelectedItem="{Binding Show}" DisplayMemberPath="Label" MinWidth="200"
+                          AutomationProperties.Name="Show" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding CountText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"
+                           AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding CountText}" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Rows}" AutomationProperties.Name="Report rows" />
+            </ScrollViewer>
+        </Grid>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pages:ReportsPageViewModel}">
+        <Grid Margin="24,16,24,56">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel>
+                <TextBlock Text="Reports" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" Margin="0,2,0,0" TextWrapping="Wrap"
+                           Text="Tenant-wide answers that take more than a cache read. Each is built when you ask, kept with its date, and exported as it is shown." />
+            </StackPanel>
+            <TabControl Grid.Row="1" Margin="0,12,0,0">
+                <TabItem Header="MFA readiness" Content="{Binding Mfa}" ContentTemplate="{StaticResource ReportSectionTemplate}" />
+                <TabItem Header="Licences" Content="{Binding Licences}" ContentTemplate="{StaticResource ReportSectionTemplate}" />
+                <TabItem Header="Mailboxes" Content="{Binding Mailboxes}" ContentTemplate="{StaticResource ReportSectionTemplate}" />
+            </TabControl>
+        </Grid>
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type pages:ActivityPageViewModel}">
         <Grid Margin="24,16,24,56">
             <Grid.RowDefinitions>

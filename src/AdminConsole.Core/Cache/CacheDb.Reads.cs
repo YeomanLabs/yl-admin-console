@@ -43,6 +43,18 @@ public sealed partial class CacheDb
     }
 
     /// <summary>Every cached mailbox of one Exchange type (<c>SharedMailbox</c>, say), by address — what offboarding scans (M15.3).</summary>
+    /// <summary>Ids of accounts blocked from signing in (M19.1: the registration report leaves them out, and says how many).</summary>
+    public IReadOnlyList<string> GetBlockedUserIds()
+    {
+        using var conn = OpenConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT id FROM users WHERE account_enabled = 0";
+        using var reader = cmd.ExecuteReader();
+        var ids = new List<string>();
+        while (reader.Read()) ids.Add(reader.GetString(0));
+        return ids;
+    }
+
     public IReadOnlyList<AdminConsole.Core.Exchange.MailboxSummary> GetMailboxes(string recipientType)
     {
         using var conn = OpenConnection();

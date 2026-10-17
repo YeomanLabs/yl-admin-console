@@ -259,6 +259,10 @@ public sealed partial class App : Application
         services.AddSingleton<HybridProvisioningService>();
         services.AddSingleton<AdminConsole.Core.Users.BulkEdit.BulkEditService>();
         services.AddSingleton<AdminConsole.Core.Pim.PimService>();
+        services.AddSingleton(new AdminConsole.Core.Reports.ReportStore(AdminConsole.Core.Reports.ReportStore.DefaultRoot));
+        services.AddSingleton<AdminConsole.Core.Reports.MfaReportService>();
+        services.AddSingleton<AdminConsole.Core.Reports.LicenceReportService>();
+        services.AddSingleton<AdminConsole.Core.Reports.MailboxReportService>();
         services.AddSingleton(sp => new OffboardingProfileStore(
             OffboardingProfileStore.DefaultDirectory,
             sp.GetRequiredService<ILogger<OffboardingProfileStore>>()));
@@ -287,6 +291,10 @@ public sealed partial class App : Application
         services.AddTransient<SettingsPageViewModel>();
         services.AddTransient<TemplatesPageViewModel>();
         services.AddTransient<ActivityPageViewModel>();
+        services.AddTransient<ReportsPageViewModel>();
+        services.AddTransient<MfaReportSection>();
+        services.AddTransient<LicenceReportSection>();
+        services.AddTransient<MailboxReportSection>();
         services.AddTransient<DomainPageViewModel>();
         services.AddTransient<DomainObjectViewModel>();
     }

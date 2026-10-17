@@ -107,6 +107,8 @@
         <KeyBinding Modifiers="Alt" Key="D4" Command="{Binding NavigateOrdinalCommand}" CommandParameter="4" />
         <KeyBinding Modifiers="Alt" Key="D5" Command="{Binding NavigateOrdinalCommand}" CommandParameter="5" />
         <KeyBinding Modifiers="Alt" Key="D6" Command="{Binding NavigateOrdinalCommand}" CommandParameter="6" />
+        <KeyBinding Modifiers="Alt" Key="D7" Command="{Binding NavigateOrdinalCommand}" CommandParameter="7" />
+        <KeyBinding Modifiers="Alt" Key="D8" Command="{Binding NavigateOrdinalCommand}" CommandParameter="8" />
         <!-- Esc closes a modal wherever focus is; the palette handles its own Esc on the search box first. -->
         <KeyBinding Key="Escape" Command="{Binding Dialogs.Current.CancelCommand}" />
     </ui:FluentWindow.InputBindings>

@@ -59,10 +59,11 @@ public sealed partial class ShellViewModel : ObservableObject
             new NavItem("groups", "Groups", SymbolRegular.PeopleTeam24, 3, typeof(GroupsPageViewModel)),
             new NavItem("devices", "Devices", SymbolRegular.Laptop24, 4, typeof(DevicesPageViewModel)),
             new NavItem("templates", "Templates", SymbolRegular.DocumentBulletList24, 5, typeof(TemplatesPageViewModel)),
-            new NavItem("activity", "Activity log", SymbolRegular.History24, 6, typeof(ActivityPageViewModel)),
+            new NavItem("reports", "Reports", SymbolRegular.DataBarVertical24, 6, typeof(ReportsPageViewModel)),
+            new NavItem("activity", "Activity log", SymbolRegular.History24, 7, typeof(ActivityPageViewModel)),
             // M12.3: on-prem AD. It sits below the cloud pages because most tenants have no domain, and the page
             // says so plainly rather than looking broken.
-            new NavItem("domain", "Domain", SymbolRegular.Server24, 7, typeof(DomainPageViewModel)),
+            new NavItem("domain", "Domain", SymbolRegular.Server24, 8, typeof(DomainPageViewModel)),
         ];
         SettingsItem = new NavItem("settings", "Settings", SymbolRegular.Settings24, 0, typeof(SettingsPageViewModel));
 
@@ -147,6 +148,11 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
         if (page is SettingsPageViewModel settings) settings.SignedOut = ReturnToSignIn;
         if (page is ActivityPageViewModel activity) activity.OpenObject = OpenObjectFromPage;
+        if (page is ReportsPageViewModel reports)
+        {
+            reports.ReportStatus = text => RunOnUi(() => ShowStatusMessage(text, 8));
+            _ = reports.StartAsync();
+        }
         if (page is DomainPageViewModel domain)
         {
             domain.OpenObject = OpenDirectoryObject;
