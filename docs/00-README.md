@@ -15,6 +15,7 @@
 | 11 | `11-ONPREM-AD.md` | Anything that talks to on-prem Active Directory (Phase 2) |
 | 12 | `12-ENTRA-CONNECT-LAB.md` | Working with the lab DC and its Entra Connect sync |
 | 13 | `13-EXCHANGE-ONLINE.md` | Anything that talks to Exchange Online (Phase 3) |
+| 14 | `14-ONEDRIVE.md` | Anything that talks to SharePoint or a OneDrive (M16) |
 | — | `DECISIONS.md` | Append-only log of choices made where the spec was silent |
 
 Phases: **Phase 1** (this plan) is cloud-only: Entra users/groups/devices + Intune devices, search, User 360 view, template create, checklist offboarding. **Phase 2** adds on-prem AD and sync-state awareness. **Phase 3** adds Exchange Online depth, OneDrive, and multi-tenant switching (M13–M20 in doc 09).

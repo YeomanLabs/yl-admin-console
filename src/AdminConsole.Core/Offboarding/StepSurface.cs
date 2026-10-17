@@ -1,4 +1,4 @@
-﻿namespace AdminConsole.Core.Offboarding;
+namespace AdminConsole.Core.Offboarding;
 
 /// <summary>
 /// Which system a step talks to (doc 06 "Cap" column). Doc 06 calls this the step's capability, but that name is
@@ -14,4 +14,7 @@ public enum StepSurface
 
     /// <summary>On-prem Active Directory over LDAP. Phase 2.</summary>
     OnPremAd,
+
+    /// <summary>SharePoint Online — a user's OneDrive. M16.</summary>
+    SharePoint,
 }

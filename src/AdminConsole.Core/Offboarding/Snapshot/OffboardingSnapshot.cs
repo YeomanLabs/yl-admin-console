@@ -51,6 +51,9 @@ public sealed record OffboardingSnapshot
 
     public SnapshotMailbox? Mailbox { get; init; }
 
+    /// <summary>The OneDrive's access and state (M16); null when the person has none or SharePoint wasn't reachable.</summary>
+    public SnapshotOneDrive? OneDrive { get; init; }
+
     /// <summary>What could not be read, in words — "Exchange: the permission isn't granted", "AD: no controller reachable".</summary>
     public IReadOnlyList<string> Gaps { get; init; } = [];
 }
@@ -72,6 +75,16 @@ public sealed record SnapshotOnPrem
     public bool Enabled { get; init; }
     public IReadOnlyList<string> GroupDns { get; init; } = [];
     public string? ManagerDn { get; init; }
+}
+
+public sealed record SnapshotOneDrive
+{
+    public required string Url { get; init; }
+    public string LockState { get; init; } = "Unlock";
+    public int Sharing { get; init; }
+
+    /// <summary>Site admins by sign-in name (the owner included).</summary>
+    public IReadOnlyList<string> Admins { get; init; } = [];
 }
 
 public sealed record SnapshotMailbox

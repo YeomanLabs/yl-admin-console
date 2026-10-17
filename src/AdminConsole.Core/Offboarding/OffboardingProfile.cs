@@ -57,4 +57,7 @@ public sealed record OffboardingOptions
 
     /// <summary>The automatic reply's text (plain, not HTML); null uses the template that names the delegate.</summary>
     public string? AutoReplyMessage { get; init; }
+
+    /// <summary>A folder on this machine the OneDrive export step writes to (M16.4); null leaves the step blocked.</summary>
+    public string? ExportFolder { get; init; }
 }

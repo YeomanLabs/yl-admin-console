@@ -240,6 +240,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         CorrelationId = _correlationId,
         AttributeStamps = SelectedProfile.Options.AttributeStamps,
         AutoReplyMessage = SelectedProfile.Options.AutoReplyMessage,
+        ExportFolder = SelectedProfile.Options.ExportFolder,
         RestoreFrom = SelectedSnapshot?.Snapshot,
         RestoreOuDn = SelectedOu?.Dn,
     };

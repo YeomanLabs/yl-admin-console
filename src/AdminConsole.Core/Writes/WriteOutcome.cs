@@ -1,5 +1,6 @@
 using AdminConsole.Core.Exchange;
 using AdminConsole.Core.Graph;
+using AdminConsole.Core.SharePoint;
 
 namespace AdminConsole.Core.Writes;
 
@@ -22,6 +23,9 @@ public sealed record WriteOutcome
     /// <summary>The Exchange error behind a failed mailbox write (doc 13); null for Graph writes.</summary>
     public ExchangeException? ExchangeError { get; init; }
 
+    /// <summary>The SharePoint error behind a failed OneDrive write (M16); null otherwise.</summary>
+    public SharePointException? SharePointError { get; init; }
+
     /// <summary>Something Exchange said about a write that succeeded — shown, never dropped (doc 13 §1).</summary>
     public string? Warning { get; init; }
 
@@ -38,6 +42,7 @@ public sealed record WriteOutcome
 
     public string? Details => Error is not null ? GraphErrorText.Details(Error)
         : ExchangeError is not null ? ExchangeErrorText.Details(ExchangeError)
+        : SharePointError is not null ? SharePointException.Details(SharePointError)
         : null;
 
     public static WriteOutcome Failed(string summary, GraphException ex, long actionId, string? roleHint = null) => new()
@@ -55,6 +60,15 @@ public sealed record WriteOutcome
         Summary = summary,
         FriendlyError = ExchangeErrorText.Friendly(ex),
         ExchangeError = ex,
+        ActionId = actionId,
+    };
+
+    public static WriteOutcome FailedSharePoint(string summary, SharePointException ex, long actionId) => new()
+    {
+        Success = false,
+        Summary = summary,
+        FriendlyError = SharePointException.Friendly(ex),
+        SharePointError = ex,
         ActionId = actionId,
     };
 

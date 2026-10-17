@@ -7,6 +7,7 @@ using AdminConsole.Core.Groups;
 using AdminConsole.Core.Licensing;
 using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Offboarding.Snapshot;
+using AdminConsole.Core.OneDrive;
 using AdminConsole.Core.Users;
 
 namespace AdminConsole.Core.Offboarding.Steps;
@@ -35,7 +36,9 @@ public static class OffboardingCatalog
         ExchangeService exchange,
         CacheDb db,
         SnapshotService snapshots,
-        SnapshotStore store) =>
+        SnapshotStore store,
+        OneDriveService oneDrive,
+        OneDriveExporter exporter) =>
     [
         new SnapshotStep(snapshots, store, actions),                    // M15.1: first, required, halts
 
@@ -69,9 +72,8 @@ public static class OffboardingCatalog
         new NotInThisPhaseStep("remove-registered-devices", "Remove Entra device registrations", StepSurface.Graph,
             "Deleting Entra device objects needs Directory.AccessAsUser.All, which this app does not request."),
 
-        // 15: M16 brings the SharePoint admin host this needs.
-        new NotInThisPhaseStep("delegate-onedrive", "Grant the delegate access to OneDrive", StepSurface.Graph,
-            "OneDrive arrives in M16, with the SharePoint admin permission it needs. Use the SharePoint admin centre for now."),
+        new DelegateOneDriveStep(oneDrive),                            // 15, M16
+        new ExportOneDriveStep(oneDrive, exporter),                     // M16.4
 
         new RemoveTeamsOwnershipStep(graph, actions, tenant),           // 16
         new UpdateAttributesStep(users),                                // 17

@@ -408,6 +408,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 user.OpenObject = OpenObjectFromPage;
                 user.PickGroup = OpenGroupPicker;
                 user.PickPerson = OpenPersonPicker;
+                user.ReportStatus = text => RunOnUi(() => ShowStatusMessage(text, 8));
                 user.Start(id);
                 return user;
             case ObjectType.Device:

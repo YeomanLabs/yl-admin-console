@@ -30,6 +30,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 {
     private const int ActivityTabIndex = 3;
     private const int MailboxTabIndex = 4;
+    private const int OneDriveTabIndex = 5;
 
     private readonly UserService _users;
     private readonly IDirectoryService _directory;
@@ -49,8 +50,11 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private bool _auditRequested;
 
     public UserDetailViewModel(UserService users, IDirectoryService directory, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, MailboxTabViewModel mailbox, ILogger<UserDetailViewModel> logger,
-        SnapshotStore snapshots, [FromKeyedServices(RestoreRunnerKey)] OffboardingRunner restore)
+        SnapshotStore snapshots, [FromKeyedServices(RestoreRunnerKey)] OffboardingRunner restore, OneDriveTabViewModel oneDrive)
     {
+        OneDrive = oneDrive;
+        OneDrive.PickPerson = (prompt, onPicked) => PickPerson?.Invoke(prompt, onPicked);
+        OneDrive.ReportStatus = text => ReportStatus?.Invoke(text);
         _snapshots = snapshots;
         _restore = restore;
         Mailbox = mailbox;
@@ -121,6 +125,12 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
     /// <summary>The Mailbox tab (M13.5). Its own view model, loaded the first time the tab is selected.</summary>
     public MailboxTabViewModel Mailbox { get; }
+
+    /// <summary>The OneDrive tab (M16.2). Its own view model, loaded the first time the tab is selected.</summary>
+    public OneDriveTabViewModel OneDrive { get; }
+
+    /// <summary>Set by the shell: the status bar, for work that outlives the page (a OneDrive export).</summary>
+    public Action<string>? ReportStatus { get; set; }
 
     /// <summary>UX §6: consent first, then "not built yet". Recomputed whenever the granted scopes change.</summary>
     [ObservableProperty]
@@ -1097,6 +1107,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     partial void OnSelectedTabIndexChanged(int value)
     {
         if (value == MailboxTabIndex) Mailbox.EnsureLoaded();
+        if (value == OneDriveTabIndex) OneDrive.EnsureLoaded();
 
         if (value == ActivityTabIndex && !_auditRequested)
         {
@@ -1159,6 +1170,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         Id = id;
         HasSnapshots = _snapshots.List(_tenant.TenantId, Id).Count > 0;
         Mailbox.Start(id);
+        OneDrive.Start(id);
         RecomputeReasons();
         _ = LoadAsync(CancellationToken.None);
     }
@@ -1167,7 +1179,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     {
         _auditRequested = false;
         Mailbox.Reset();
+        OneDrive.Reset();
         if (SelectedTabIndex == MailboxTabIndex) Mailbox.EnsureLoaded();
+        if (SelectedTabIndex == OneDriveTabIndex) OneDrive.EnsureLoaded();
         return LoadAsync(ct);
     }
 
@@ -1242,5 +1256,6 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     {
         _cts?.Cancel();
         Mailbox.Dispose();
+        OneDrive.Dispose();
     }
 }

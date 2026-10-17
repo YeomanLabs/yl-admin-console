@@ -476,3 +476,25 @@ also exercised the licence step. The leaver mailbox trick above is still how a g
 A gate that moves a synced account into an out-of-scope OU must run inside one Entra Connect interval: read
 `organization.onPremisesLastSyncDateTime`, start right after a cycle, and check it has not moved before the restore.
 
+## 2026-10-17 — M16: OneDrive through the SharePoint tenant admin API
+
+- **SharePoint is asked for by application id** (`00000003-0000-0ff1-ce00-000000000000/AllSites.FullControl`), not by
+  host. One consent, one token, every SharePoint host of the tenant — and nothing to know about the tenant's SharePoint
+  name before sign-in. Proven on the admin host, the OneDrive host and through CSOM.
+- **CSOM's wire protocol over raw HTTP for `SetSiteAdmin`.** The tenant admin REST API has no site-admin call; CSOM's
+  `Tenant.SetSiteAdmin` is documented and its XML protocol is plain HTTP, so it is posted as text — no CSOM library is
+  loaded (non-negotiable 5). `SPOInternalUseOnly…SetSiteSecondaryAdministrators` also works but replaces the whole list
+  and is named internal.
+- **No "create OneDrive" button.** SharePoint refuses `CreatePersonalSiteEnqueueBulk` to a delegated Global
+  Administrator (403 on both hosts, with and without SharePoint user-profile permission). The tab explains instead.
+- **An export opens the OneDrive by making the admin a site admin for its duration**, logged both ways — the same thing
+  the SharePoint admin centre's "grant access" does, but taken away again afterwards.
+- **Exports stage files on disk under numbered names, then pack.** ZIP-append is not streaming in .NET, numbered names
+  avoid Windows path limits for deep OneDrive trees, and a ZIP is only ever written whole. The cost is twice the disk
+  space while it runs, said in doc 14.
+- **The M16 gate ran on a test site, not a test user's OneDrive.** None of the test accounts has a OneDrive and one
+  cannot be created for them; the existing OneDrives are people's. The tenant API is the same for both.
+- **The YeomanLabs registration was extended live** (SharePoint `AllSites.FullControl`, Graph `Files.Read.All`), and the
+  SharePoint `User.ReadWrite.All` added only for the provisioning probe was removed again, so the registration matches
+  the script.
+

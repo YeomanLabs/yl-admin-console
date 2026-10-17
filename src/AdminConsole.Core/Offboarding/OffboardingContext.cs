@@ -33,6 +33,9 @@ public sealed class OffboardingContext
     /// <summary>The automatic reply the auto-reply step sets; null uses the template in doc 06 step 12.</summary>
     public string? AutoReplyMessage { get; init; }
 
+    /// <summary>Where the OneDrive export step writes its ZIP (M16.4); null leaves that step blocked with the reason.</summary>
+    public string? ExportFolder { get; init; }
+
     /// <summary>The snapshot a restore puts back (M15.4); null for an offboarding.</summary>
     public OffboardingSnapshot? RestoreFrom { get; init; }
 

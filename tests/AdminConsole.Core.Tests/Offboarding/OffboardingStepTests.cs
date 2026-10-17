@@ -435,7 +435,10 @@ public sealed class OffboardingStepTests : IDisposable
         var exchange = Exchange.MailboxSummaryTests.Service(new FakeHttpHandler());
         var snapshots = new SnapshotService(_users, _db, _directory, exchange, NullLogger<SnapshotService>.Instance);
         var store = new SnapshotStore(Path.Combine(Path.GetTempPath(), "ac-tests", Guid.NewGuid().ToString("N")));
-        return OffboardingCatalog.Build(_users, _groups, _licenses, _devices, _graph, _actions, _tenant, _directory, _onPrem, exchange, _db, snapshots, store);
+        var sharePoint = new AdminConsole.Core.SharePoint.SharePointClient(new HttpClient(_handler), new FakeAuthService(), NullLogger<AdminConsole.Core.SharePoint.SharePointClient>.Instance);
+        var oneDrive = new AdminConsole.Core.OneDrive.OneDriveService(_graph, sharePoint, _tenant, _actions, NullLogger<AdminConsole.Core.OneDrive.OneDriveService>.Instance);
+        var exporter = new AdminConsole.Core.OneDrive.OneDriveExporter(_graph, oneDrive, new FakeAuthService(), new HttpClient(_handler), _tenant, _actions, NullLogger<AdminConsole.Core.OneDrive.OneDriveExporter>.Instance);
+        return OffboardingCatalog.Build(_users, _groups, _licenses, _devices, _graph, _actions, _tenant, _directory, _onPrem, exchange, _db, snapshots, store, oneDrive, exporter);
     }
 
     [Fact]
@@ -450,7 +453,7 @@ public sealed class OffboardingStepTests : IDisposable
             "remove-group-memberships", "remove-ad-group-memberships", "remove-from-distribution-lists",
             "hide-from-gal", "convert-to-shared", "litigation-hold", "set-auto-reply", "forward-mail", "delegate-mailbox",
             "remove-mailbox-permissions", "remove-inbox-rules", "cancel-organized-meetings", "remove-mobile-devices",
-            "remove-licenses", "retire-devices", "remove-registered-devices", "delegate-onedrive",
+            "remove-licenses", "retire-devices", "remove-registered-devices", "delegate-onedrive", "export-onedrive",
             "remove-teams-ownership", "update-attributes", "move-ou", "disable-ad-account",
         ]);
 
@@ -489,6 +492,7 @@ public sealed class OffboardingStepTests : IDisposable
         catalog.Where(s => s.Surface == StepSurface.OnPremAd).Should().HaveCount(4);
 
         // Still registered rather than omitted — a step an admin cannot see is a step they cannot know exists.
-        catalog.OfType<NotInThisPhaseStep>().Select(s => s.Id).Should().Equal(["remove-registered-devices", "delegate-onedrive"]);
+        catalog.Where(s => s.Surface == StepSurface.SharePoint).Select(s => s.Id).Should().Equal(["delegate-onedrive", "export-onedrive"]);
+        catalog.OfType<NotInThisPhaseStep>().Select(s => s.Id).Should().Equal(["remove-registered-devices"]);
     }
 }

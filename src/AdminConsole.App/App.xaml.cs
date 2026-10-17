@@ -28,6 +28,8 @@ using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Offboarding;
 using AdminConsole.Core.Offboarding.Restore;
 using AdminConsole.Core.Offboarding.Snapshot;
+using AdminConsole.Core.OneDrive;
+using AdminConsole.Core.SharePoint;
 using AdminConsole.Core.Offboarding.Steps;
 using AdminConsole.Core.Templates;
 using AdminConsole.Core.Users;
@@ -210,7 +212,9 @@ public sealed partial class App : Application
                 sp.GetRequiredService<ExchangeService>(),
                 sp.GetRequiredService<CacheDb>(),
                 sp.GetRequiredService<SnapshotService>(),
-                sp.GetRequiredService<SnapshotStore>()),
+                sp.GetRequiredService<SnapshotStore>(),
+                sp.GetRequiredService<OneDriveService>(),
+                sp.GetRequiredService<OneDriveExporter>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
         services.AddKeyedSingleton(UserDetailViewModel.RestoreRunnerKey, (sp, _) => new OffboardingRunner(
             RestoreCatalog.Build(
@@ -221,9 +225,21 @@ public sealed partial class App : Application
                 sp.GetRequiredService<ActionLog>(),
                 sp.GetRequiredService<TenantContext>(),
                 sp.GetRequiredService<IDirectoryService>(),
-                sp.GetRequiredService<ExchangeService>()),
+                sp.GetRequiredService<ExchangeService>(),
+                sp.GetRequiredService<OneDriveService>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
-        services.AddSingleton<SnapshotService>();
+        services.AddSingleton(sp => new SnapshotService(
+            sp.GetRequiredService<UserService>(),
+            sp.GetRequiredService<CacheDb>(),
+            sp.GetRequiredService<IDirectoryService>(),
+            sp.GetRequiredService<ExchangeService>(),
+            sp.GetRequiredService<ILogger<SnapshotService>>(),
+            sp.GetRequiredService<OneDriveService>()));
+
+        // OneDrive (M16, doc 14): SharePoint admin API plus Graph for the files.
+        services.AddSingleton<SharePointClient>();
+        services.AddSingleton<OneDriveService>();
+        services.AddSingleton<OneDriveExporter>();
         services.AddSingleton(_ => new SnapshotStore(SnapshotStore.DefaultRoot));
         services.AddSingleton(sp => new UserSettingsStore(UserSettingsStore.DefaultPath, sp.GetRequiredService<ILogger<UserSettingsStore>>()));
         services.AddSingleton<UserProvisioningService>();
@@ -252,6 +268,8 @@ public sealed partial class App : Application
         services.AddTransient<DevicesPageViewModel>();
         services.AddTransient<UserDetailViewModel>();
         services.AddTransient<MailboxTabViewModel>();
+        services.AddTransient<OneDriveTabViewModel>();
+        services.AddSingleton<FilePicker>();
         services.AddTransient<DeviceDetailViewModel>();
         services.AddTransient<GroupDetailViewModel>();
         services.AddTransient<SettingsPageViewModel>();

@@ -104,7 +104,9 @@ public sealed class RestoreTests : IDisposable
         _users,
         new GroupService(_graph, _db, _actions, _tenant, NullLogger<GroupService>.Instance),
         new LicenseService(_graph, _db, _actions, _tenant, NullLogger<LicenseService>.Instance, (_, _) => Task.CompletedTask),
-        _graph, _actions, _tenant, directory ?? new FakeDirectoryService(), MailboxSummaryTests.Service(_exo, actions: _actions));
+        _graph, _actions, _tenant, directory ?? new FakeDirectoryService(), MailboxSummaryTests.Service(_exo, actions: _actions),
+        new AdminConsole.Core.OneDrive.OneDriveService(_graph, new AdminConsole.Core.SharePoint.SharePointClient(new HttpClient(_graphHandler), new FakeAuthService(),
+            NullLogger<AdminConsole.Core.SharePoint.SharePointClient>.Instance), _tenant, _actions, NullLogger<AdminConsole.Core.OneDrive.OneDriveService>.Instance));
 
     private IOffboardingStep Step(string id, IDirectoryService? directory = null) => Catalog(directory).Single(s => s.Id == id);
 
@@ -118,7 +120,7 @@ public sealed class RestoreTests : IDisposable
         ids.Should().Equal([
             "restore-ad-ou", "restore-ad-account", "restore-ad-groups", "restore-sign-in", "restore-licences", "restore-mailbox-type",
             "restore-groups", "restore-distribution-lists", "restore-manager", "restore-attributes", "restore-mailbox-settings",
-            "restore-other-mailbox-access", "restore-not-restorable",
+            "restore-other-mailbox-access", "restore-onedrive", "restore-not-restorable",
         ]);
         Catalog().Should().NotContain(s => s.HaltsOnFailure || s.IsRequired);
     }

@@ -26,10 +26,13 @@ public sealed class ScriptScopesMatchCodeTests
         Array("ReadScopes", script).Should().BeEquivalentTo(Scopes.Read, "the read tier is consented at first sign-in");
         Array("WriteScopes", script).Should().BeEquivalentTo(Scopes.Write, "the write tier is asked for on the first write");
         Array("SensitiveScopes", script).Should().BeEquivalentTo(Scopes.Sensitive, "the sensitive tier is asked for at a reveal");
+        Array("FilesScopes", script).Should().BeEquivalentTo(Scopes.Files, "the files tier is asked for at the first export");
 
         // The script names Exchange's permission as the registration does; the app asks MSAL for it by resource URI.
         Array("ExchangeScopes", script).Should().BeEquivalentTo(Scopes.Exchange.Select(Scopes.ShortName),
             "Exchange Online is its own resource with its own consent");
+        Array("SharePointScopes", script).Should().BeEquivalentTo(Scopes.SharePoint.Select(Scopes.ShortName),
+            "SharePoint is its own resource too, asked for by its application id");
     }
 
     [Fact]

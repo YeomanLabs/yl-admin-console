@@ -127,12 +127,35 @@ public static class Capabilities
         RoleHint = "Exchange Administrator or Exchange Recipient Administrator",
     };
 
+    /// <summary>
+    /// A user's OneDrive (M16, doc 14): usage, sharing, lock state and site admins, through the SharePoint admin API.
+    /// SharePoint decides what the admin may change; the scope only lets the console ask.
+    /// </summary>
+    public static readonly Capability ManageOneDrive = new()
+    {
+        Id = "onedrive.manage",
+        Title = "Read and manage OneDrive (SharePoint)",
+        Scopes = [Scopes.SharePointFullControl],
+        RoleTemplateIds = [DirectoryRoleRef.SharePointAdministrator],
+        RoleHint = "SharePoint Administrator",
+    };
+
+    /// <summary>Downloading a OneDrive's files to a ZIP (M16.4). Graph reads the files; SharePoint opens the drive first.</summary>
+    public static readonly Capability ExportOneDrive = new()
+    {
+        Id = "onedrive.export",
+        Title = "Export a OneDrive to a ZIP",
+        Scopes = [Scopes.SharePointFullControl, Scopes.FilesReadAll],
+        RoleTemplateIds = [DirectoryRoleRef.SharePointAdministrator],
+        RoleHint = "SharePoint Administrator",
+    };
+
     /// <summary>Everything the Permissions page lists, in display order.</summary>
     public static readonly IReadOnlyList<Capability> All =
     [
         EditUser, CreateUser, ResetPassword, RevokeSessions, AssignLicense,
         ChangeGroupMembership, EditGroup, DeleteAuthMethod, EditDevice, DeviceActions,
-        ManageMailboxes, RevealBitLocker, RevealLaps,
+        ManageMailboxes, ManageOneDrive, ExportOneDrive, RevealBitLocker, RevealLaps,
     ];
 
     /// <summary>Every write-tier scope, for the one-shot consent prompt on the first write (doc 03 §Auth flow item 2).</summary>

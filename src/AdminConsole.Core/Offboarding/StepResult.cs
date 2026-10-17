@@ -1,5 +1,6 @@
 using AdminConsole.Core.Exchange;
 using AdminConsole.Core.Graph;
+using AdminConsole.Core.SharePoint;
 using AdminConsole.Core.Writes;
 
 namespace AdminConsole.Core.Offboarding;
@@ -37,8 +38,12 @@ public sealed record StepResult
     /// <summary>The Exchange error behind a failed mailbox step (doc 13); null for Graph and AD steps.</summary>
     public ExchangeException? ExchangeError { get; init; }
 
+    /// <summary>The SharePoint error behind a failed OneDrive step (M16).</summary>
+    public SharePointException? SharePointError { get; init; }
+
     public string? Details => Error is not null ? GraphErrorText.Details(Error)
         : ExchangeError is not null ? ExchangeErrorText.Details(ExchangeError)
+        : SharePointError is not null ? SharePointException.Details(SharePointError)
         : null;
 
     /// <summary>Reverses this step. Null when the step is not reversible or did not change anything.</summary>

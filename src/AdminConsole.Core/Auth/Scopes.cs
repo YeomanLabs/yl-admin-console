@@ -39,6 +39,15 @@ public static class Scopes
     // and is asked for with its resource prefix.
     public const string ExchangeManage = "https://outlook.office365.com/Exchange.Manage";
 
+    // OneDrive (M16, doc 14). SharePoint is addressed by its application id rather than by a host: a token for
+    // `00000003-0000-0ff1-ce00-000000000000` is accepted on the tenant's admin, OneDrive and root hosts alike (proven
+    // 2026-10-17), so one scope serves every tenant without knowing its SharePoint name in advance.
+    public const string SharePointResource = "00000003-0000-0ff1-ce00-000000000000/";
+    public const string SharePointFullControl = SharePointResource + "AllSites.FullControl";
+
+    /// <summary>Graph: read the files of a drive the admin can open — what a OneDrive export downloads with.</summary>
+    public const string FilesReadAll = "Files.Read.All";
+
     public static readonly IReadOnlyList<string> Read =
     [
         OpenId, Profile, OfflineAccess,
@@ -64,6 +73,18 @@ public static class Scopes
         ExchangeManage,
     ];
 
+    /// <summary>The SharePoint tier (M16): site properties, site admins and lock state, through the SharePoint admin API.</summary>
+    public static readonly IReadOnlyList<string> SharePoint =
+    [
+        SharePointFullControl,
+    ];
+
+    /// <summary>The files tier (M16): asked for the first time an export runs, not before.</summary>
+    public static readonly IReadOnlyList<string> Files =
+    [
+        FilesReadAll,
+    ];
+
     /// <summary>Graph scopes are matched case-insensitively by the service; do the same locally.</summary>
     public static bool Matches(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
 
@@ -71,10 +92,14 @@ public static class Scopes
     /// The resource a scope belongs to, as the prefix MSAL needs (<c>https://outlook.office365.com/</c>), or empty for a
     /// bare name, which MSAL treats as Microsoft Graph. One interactive request may only name one resource.
     /// </summary>
-    public static string ResourceOf(string scope) =>
-        Uri.TryCreate(scope, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
-            ? $"{uri.Scheme}://{uri.Host}/"
-            : string.Empty;
+    public static string ResourceOf(string scope)
+    {
+        if (Uri.TryCreate(scope, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps) return $"{uri.Scheme}://{uri.Host}/";
+
+        // `{application id}/Scope`, the form SharePoint is asked for by.
+        var slash = scope.IndexOf('/');
+        return slash > 0 && Guid.TryParse(scope[..slash], out _) ? scope[..(slash + 1)] : string.Empty;
+    }
 
     /// <summary>The name a token's <c>scp</c> claim and an app registration use: <c>Exchange.Manage</c>, not the URI.</summary>
     public static string ShortName(string scope)

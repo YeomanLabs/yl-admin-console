@@ -24,6 +24,7 @@ public sealed partial class OffboardStepRow : ObservableObject
     {
         StepSurface.Exchange => "Exchange",
         StepSurface.OnPremAd => "On-prem AD",
+        StepSurface.SharePoint => "OneDrive",
         _ => null,
     };
 

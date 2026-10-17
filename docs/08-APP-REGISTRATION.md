@@ -156,3 +156,12 @@ fails only on the machines that use the broker, which is all of them.
 Optional, and only relevant if you ever move to a shared multi-tenant app: Branding & properties → publisher domain,
 then publisher verification through Partner Center, so the consent screen says "verified publisher" rather than
 showing the unverified warning. A per-tenant registration created by the tenant's own admin does not need it.
+
+## SharePoint Online and Files.Read.All (M16)
+
+- **SharePoint Online — `AllSites.FullControl` (delegated).** OneDrive settings, site admins and lock state through the
+  SharePoint tenant admin API (doc 14). The console asks for it as
+  `00000003-0000-0ff1-ce00-000000000000/AllSites.FullControl`; SharePoint's own roles decide what the admin may change.
+- **Microsoft Graph — `Files.Read.All` (delegated).** The OneDrive export. Asked for at the first export, not at sign-in.
+- Existing registrations: `New-AppRegistration.ps1 -Update` adds both and extends the admin consent.
+

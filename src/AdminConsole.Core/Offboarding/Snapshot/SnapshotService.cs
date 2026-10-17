@@ -5,6 +5,8 @@ using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
 using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Offboarding.Steps;
+using AdminConsole.Core.OneDrive;
+using AdminConsole.Core.SharePoint;
 using AdminConsole.Core.Users;
 
 namespace AdminConsole.Core.Offboarding.Snapshot;
@@ -23,10 +25,13 @@ public sealed class SnapshotService
     private readonly CacheDb _db;
     private readonly IDirectoryService _directory;
     private readonly ExchangeService _exchange;
+    private readonly OneDriveService? _oneDrive;
     private readonly ILogger<SnapshotService> _logger;
 
-    public SnapshotService(UserService users, CacheDb db, IDirectoryService directory, ExchangeService exchange, ILogger<SnapshotService> logger)
+    public SnapshotService(UserService users, CacheDb db, IDirectoryService directory, ExchangeService exchange, ILogger<SnapshotService> logger,
+        OneDriveService? oneDrive = null)
     {
+        _oneDrive = oneDrive;
         _users = users;
         _db = db;
         _directory = directory;
@@ -84,6 +89,7 @@ public sealed class SnapshotService
             Devices = [.. _users.GetCachedDevices(user.Id).Select(d => d.DeviceName ?? d.Id)],
             OnPrem = user.OnPremisesSyncEnabled ? await OnPremAsync(ctx, gaps, ct).ConfigureAwait(false) : null,
             Mailbox = await MailboxAsync(user.Id, gaps, ct).ConfigureAwait(false),
+            OneDrive = await OneDriveAsync(user.Id, gaps, ct).ConfigureAwait(false),
             Gaps = gaps,
         };
     }
@@ -107,6 +113,33 @@ public sealed class SnapshotService
             GroupDns = u.MemberOfDns,
             ManagerDn = u.ManagerDn,
         };
+    }
+
+    private async Task<SnapshotOneDrive?> OneDriveAsync(string userId, List<string> gaps, CancellationToken ct)
+    {
+        if (_oneDrive is null) return null;
+        if (!_oneDrive.IsAvailable)
+        {
+            gaps.Add("OneDrive: the SharePoint permission isn't granted, so OneDrive access was not recorded.");
+            return null;
+        }
+
+        try
+        {
+            var od = await _oneDrive.GetAsync(userId, ct).ConfigureAwait(false);
+            return od is null ? null : new SnapshotOneDrive
+            {
+                Url = od.Url,
+                LockState = od.LockState,
+                Sharing = (int)od.Sharing,
+                Admins = [.. od.Admins.Select(a => a.UserPrincipalName ?? a.LoginName)],
+            };
+        }
+        catch (SharePointException ex)
+        {
+            gaps.Add($"OneDrive: {SharePointException.Friendly(ex)}");
+            return null;
+        }
     }
 
     private async Task<SnapshotMailbox?> MailboxAsync(string userId, List<string> gaps, CancellationToken ct)

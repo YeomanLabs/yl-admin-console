@@ -81,6 +81,7 @@ Set-StrictMode -Version Latest
 # Microsoft Graph's and Exchange Online's own service principals. Constant across every tenant.
 $GraphAppId = '00000003-0000-0000-c000-000000000000'
 $ExchangeAppId = '00000002-0000-0ff1-ce00-000000000000'
+$SharePointAppId = '00000003-0000-0ff1-ce00-000000000000'
 
 # --- The permissions the console uses -------------------------------------------------------------------------------
 # These must match Core/Auth/Scopes.cs exactly. A test (ScriptScopesMatchCodeTests) fails the build if they drift, so
@@ -117,11 +118,20 @@ $SensitiveScopes = @(
     'BitlockerKey.Read.All'
     'DeviceLocalCredential.Read.All'
 )
-$AllScopes = $ReadScopes + $WriteScopes + $SensitiveScopes
+# Files tier (M16) — asked for the first time a OneDrive export runs.
+$FilesScopes = @(
+    'Files.Read.All'
+)
+$AllScopes = $ReadScopes + $WriteScopes + $SensitiveScopes + $FilesScopes
 # Exchange Online tier (Phase 3, docs/13-EXCHANGE-ONLINE.md) — a different resource from Graph. Still delegated: the
 # console runs cmdlets as the admin, and Exchange's own role-based access control decides which.
 $ExchangeScopes = @(
     'Exchange.Manage'
+)
+# SharePoint Online tier (M16, docs/14-ONEDRIVE.md) — OneDrive settings, site admins and lock state through the
+# SharePoint admin API. Delegated: SharePoint's own roles decide what the admin may change.
+$SharePointScopes = @(
+    'AllSites.FullControl'
 )
 
 function Write-Step($text) { Write-Host "`n== $text" -ForegroundColor Cyan }
@@ -211,7 +221,28 @@ else {
     Write-Warn 'This tenant has no Exchange Online service principal, so the Mailbox tab will stay unavailable.'
 }
 
-# What the registration should ask for: Graph, and Exchange where the tenant has it. Every entry is delegated.
+# SharePoint Online. Every tenant with Microsoft 365 has it; without it the OneDrive tab simply stays unavailable.
+$sharePointSp = $null
+$sharePointResolved = @()
+try {
+    $sharePointSp = Invoke-MgGraphRequest -Method GET -Uri "v1.0/servicePrincipals(appId='$SharePointAppId')?`$select=id,appId,oauth2PermissionScopes"
+}
+catch { $sharePointSp = $null }
+if ($sharePointSp) {
+    $sharePointAvailable = @{}
+    foreach ($scope in $sharePointSp.oauth2PermissionScopes) { $sharePointAvailable[$scope.value.ToLowerInvariant()] = $scope.id }
+    foreach ($scope in $SharePointScopes) {
+        $id = $sharePointAvailable[$scope.ToLowerInvariant()]
+        if (-not $id) { throw "SharePoint Online offers no delegated permission called '$scope' in this tenant." }
+        $sharePointResolved += [pscustomobject]@{ Scope = $scope; Id = $id }
+    }
+    Write-Ok "SharePoint Online: $($sharePointResolved.Count) delegated permission resolved"
+}
+else {
+    Write-Warn 'This tenant has no SharePoint Online service principal, so the OneDrive tab will stay unavailable.'
+}
+
+# What the registration should ask for: Graph, and Exchange and SharePoint where the tenant has them. Every entry is delegated.
 function Get-WantedResourceAccess {
     $list = @(@{
         resourceAppId  = $GraphAppId
@@ -221,6 +252,12 @@ function Get-WantedResourceAccess {
         $list += @{
             resourceAppId  = $ExchangeAppId
             resourceAccess = @($exchangeResolved | ForEach-Object { @{ id = $_.Id; type = 'Scope' } })
+        }
+    }
+    if ($sharePointResolved.Count -gt 0) {
+        $list += @{
+            resourceAppId  = $SharePointAppId
+            resourceAccess = @($sharePointResolved | ForEach-Object { @{ id = $_.Id; type = 'Scope' } })
         }
     }
     return , $list
@@ -241,7 +278,7 @@ if ($Update) {
     Write-Ok "$($target.displayName) — client ID $($target.appId)"
 
     $nameById = @{}
-    foreach ($r in @($resolved) + @($exchangeResolved)) { $nameById[$r.Id] = $r.Scope }
+    foreach ($r in @($resolved) + @($exchangeResolved) + @($sharePointResolved)) { $nameById[$r.Id] = $r.Scope }
 
     # Merge: keep everything the registration already lists, add what is missing. Nothing is ever removed.
     $merged = @()
@@ -273,6 +310,7 @@ if ($Update) {
     $grantPlan = @()
     $resources = @(@{ Sp = $graphSp; Scopes = $AllScopes; Name = 'Microsoft Graph' })
     if ($exchangeSp) { $resources += @{ Sp = $exchangeSp; Scopes = $ExchangeScopes; Name = 'Exchange Online' } }
+    if ($sharePointSp) { $resources += @{ Sp = $sharePointSp; Scopes = $SharePointScopes; Name = 'SharePoint Online' } }
     foreach ($res in $resources) {
         $grant = (Invoke-MgGraphRequest -Method GET -Uri "v1.0/oauth2PermissionGrants?`$filter=clientId eq '$($sp.id)' and resourceId eq '$($res.Sp.id)'").value |
             Where-Object { $_.consentType -eq 'AllPrincipals' } | Select-Object -First 1
@@ -346,7 +384,7 @@ if ($WhatIfPreference) {
     Write-Info "Registration      : $Name"
     Write-Info "Sign-in audience  : $audience"
     Write-Info "Public client     : yes (no secret, Windows broker)"
-    Write-Info "Permissions       : $($resolved.Count) delegated on Graph, $($exchangeResolved.Count) on Exchange Online, all resolved"
+    Write-Info "Permissions       : $($resolved.Count) delegated on Graph, $($exchangeResolved.Count) on Exchange Online, $($sharePointResolved.Count) on SharePoint Online, all resolved"
     Write-Info "Admin consent     : $(if ($NoConsent) { 'no — a URL would be printed' } else { 'yes' })"
     Write-Host "`nNothing was created. Run again without -WhatIf to do it." -ForegroundColor Cyan
     return
@@ -421,6 +459,14 @@ else {
                 consentType = 'AllPrincipals'
                 resourceId  = $exchangeSp.id
                 scope       = ($ExchangeScopes -join ' ')
+            } | ConvertTo-Json) | Out-Null
+        }
+        if ($sharePointResolved.Count -gt 0) {
+            Invoke-MgGraphRequest -Method POST -Uri 'v1.0/oauth2PermissionGrants' -Body (@{
+                clientId    = $sp.id
+                consentType = 'AllPrincipals'
+                resourceId  = $sharePointSp.id
+                scope       = ($SharePointScopes -join ' ')
             } | ConvertTo-Json) | Out-Null
         }
         Write-Ok 'Admin consent granted'

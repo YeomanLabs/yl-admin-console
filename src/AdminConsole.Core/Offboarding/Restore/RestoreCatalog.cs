@@ -5,6 +5,7 @@ using AdminConsole.Core.Graph;
 using AdminConsole.Core.Groups;
 using AdminConsole.Core.Licensing;
 using AdminConsole.Core.OnPrem;
+using AdminConsole.Core.OneDrive;
 using AdminConsole.Core.Offboarding.Steps;
 using AdminConsole.Core.Users;
 
@@ -34,7 +35,8 @@ public static class RestoreCatalog
         ActionLog actions,
         TenantContext tenant,
         IDirectoryService directory,
-        ExchangeService exchange) =>
+        ExchangeService exchange,
+        OneDriveService oneDrive) =>
     [
         new RestoreAdOuStep(directory),
         new RestoreAdAccountStep(directory),
@@ -48,6 +50,7 @@ public static class RestoreCatalog
         new RestoreAttributesStep(users),
         new RestoreMailboxSettingsStep(exchange),
         new RestoreOtherMailboxAccessStep(exchange, actions),
+        new RestoreOneDriveStep(oneDrive),
         new NotInThisPhaseStep("restore-not-restorable", "What a restore can't put back", StepSurface.Graph, NotRestorable),
     ];
 }

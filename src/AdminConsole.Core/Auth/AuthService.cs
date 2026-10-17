@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Broker;
 using Microsoft.Identity.Client.Extensions.Msal;
@@ -184,7 +184,12 @@ public sealed class AuthService : IAuthService
 
         // A Graph token knows nothing about another resource, so Exchange is asked for separately and silently. No
         // token means not granted, never an error: an install whose registration predates Phase 3 is a normal state.
-        return [.. graph, .. await GetResourceScopesAsync(Scopes.ExchangeManage, ct).ConfigureAwait(false)];
+        return
+        [
+            .. graph,
+            .. await GetResourceScopesAsync(Scopes.ExchangeManage, ct).ConfigureAwait(false),
+            .. await GetResourceScopesAsync(Scopes.SharePointFullControl, ct).ConfigureAwait(false),
+        ];
     }
 
     /// <summary>
