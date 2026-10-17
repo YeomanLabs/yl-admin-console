@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AdminConsole.App.Views.DialogOverlay"
+<UserControl x:Class="AdminConsole.App.Views.DialogOverlay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -229,8 +229,28 @@
 
         <DataTemplate DataType="{x:Type dlg:OffboardDialogViewModel}">
             <StackPanel>
-                <!-- Phase 1 chrome: profile, delegate. Hidden once the run starts. -->
-                <Grid Margin="0,4,0,8" Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}">
+                <!-- Restore (M15.4): which snapshot, and where the AD account goes. Instead of profile and delegate. -->
+                <Grid Margin="0,4,0,8" Visibility="{Binding ShowsRestoreChrome, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Snapshot" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Snapshots}" SelectedItem="{Binding SelectedSnapshot}"
+                              DisplayMemberPath="Label" AutomationProperties.Name="Snapshot to restore from" />
+                    <TextBlock Grid.Row="1" Foreground="{DynamicResource AcTextSecondary}" Text="AD account to" FontSize="12" VerticalAlignment="Center" Margin="0,6,8,0"
+                               Visibility="{Binding HasOuChoices, Converter={StaticResource BoolToVisibility}}" />
+                    <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,6,0,0" ItemsSource="{Binding OuChoices}" SelectedItem="{Binding SelectedOu}"
+                              DisplayMemberPath="Label" AutomationProperties.Name="OU to restore the AD account to"
+                              Visibility="{Binding HasOuChoices, Converter={StaticResource BoolToVisibility}}" />
+                </Grid>
+
+                <!-- Phase 1 chrome: profile, delegate. Hidden once the run starts, and for a restore. -->
+                <Grid Margin="0,4,0,8" Visibility="{Binding ShowsOffboardChrome, Converter={StaticResource BoolToVisibility}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -275,7 +295,7 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
 
-                    <StackPanel Orientation="Horizontal" Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}">
+                    <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsOffboardChrome, Converter={StaticResource BoolToVisibility}}">
                         <ui:TextBox MinWidth="160" PlaceholderText="Save these as…" Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
                                     AutomationProperties.Name="New profile name" />
                         <ui:Button Content="Save profile" Margin="6,0,0,0" Command="{Binding SaveProfileCommand}" AutomationProperties.Name="Save profile" />
@@ -295,7 +315,7 @@
                                    AutomationProperties.Name="Cancel the run" />
                         <ui:Button Content="{Binding RunLabel}" Appearance="Danger" Command="{Binding RunCommand}" IsEnabled="{Binding CanRun}"
                                    Visibility="{Binding IsPreview, Converter={StaticResource BoolToVisibility}}"
-                                   AutomationProperties.Name="Run the offboarding" />
+                                   AutomationProperties.Name="{Binding RunLabel}" />
                         <ui:Button Content="Close" Appearance="Primary" Command="{Binding CloseCommand}"
                                    Visibility="{Binding IsSummary, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>

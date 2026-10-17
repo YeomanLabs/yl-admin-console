@@ -26,6 +26,7 @@ using AdminConsole.Core.Search;
 using AdminConsole.Core.Sync;
 using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Offboarding;
+using AdminConsole.Core.Offboarding.Restore;
 using AdminConsole.Core.Offboarding.Snapshot;
 using AdminConsole.Core.Offboarding.Steps;
 using AdminConsole.Core.Templates;
@@ -210,6 +211,17 @@ public sealed partial class App : Application
                 sp.GetRequiredService<CacheDb>(),
                 sp.GetRequiredService<SnapshotService>(),
                 sp.GetRequiredService<SnapshotStore>()),
+            sp.GetRequiredService<ILogger<OffboardingRunner>>()));
+        services.AddKeyedSingleton(UserDetailViewModel.RestoreRunnerKey, (sp, _) => new OffboardingRunner(
+            RestoreCatalog.Build(
+                sp.GetRequiredService<UserService>(),
+                sp.GetRequiredService<GroupService>(),
+                sp.GetRequiredService<LicenseService>(),
+                sp.GetRequiredService<GraphClient>(),
+                sp.GetRequiredService<ActionLog>(),
+                sp.GetRequiredService<TenantContext>(),
+                sp.GetRequiredService<IDirectoryService>(),
+                sp.GetRequiredService<ExchangeService>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
         services.AddSingleton<SnapshotService>();
         services.AddSingleton(_ => new SnapshotStore(SnapshotStore.DefaultRoot));

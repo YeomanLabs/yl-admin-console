@@ -55,7 +55,7 @@ public sealed class RemoveAdGroupMembershipsStep : IOffboardingStep
         foreach (var dn in user.MemberOfDns)
         {
             if (byDn.TryGetValue(dn, out var g)) plan.Add(g);
-            else unresolved.Add(DistinguishedNames.Friendly(dn));
+            else unresolved.Add(DistinguishedNames.FriendlyPath(dn));
         }
 
         ctx.Set(Plan, new GroupPlan(user, plan));

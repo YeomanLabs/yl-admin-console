@@ -1,5 +1,6 @@
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Models;
+using AdminConsole.Core.Offboarding.Snapshot;
 
 namespace AdminConsole.Core.Offboarding;
 
@@ -31,6 +32,12 @@ public sealed class OffboardingContext
 
     /// <summary>The automatic reply the auto-reply step sets; null uses the template in doc 06 step 12.</summary>
     public string? AutoReplyMessage { get; init; }
+
+    /// <summary>The snapshot a restore puts back (M15.4); null for an offboarding.</summary>
+    public OffboardingSnapshot? RestoreFrom { get; init; }
+
+    /// <summary>Where a restore moves the AD account; null means back where the snapshot found it.</summary>
+    public string? RestoreOuDn { get; init; }
 
     public string UserId => User.Id;
 

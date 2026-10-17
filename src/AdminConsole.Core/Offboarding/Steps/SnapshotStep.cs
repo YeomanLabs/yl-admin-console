@@ -101,5 +101,5 @@ public sealed class SnapshotStep : IOffboardingStep
 
     private static string Count(int n, string noun) => n == 1 ? $"1 {noun}" : $"{n} {noun}s";
 
-    private static string DistinguishedNamesFriendly(string dn) => OnPrem.DistinguishedNames.Friendly(dn);
+    private static string DistinguishedNamesFriendly(string dn) => OnPrem.DistinguishedNames.FriendlyPath(dn);
 }

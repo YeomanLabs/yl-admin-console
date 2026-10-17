@@ -6,7 +6,9 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using AdminConsole.App.Services;
 using AdminConsole.App.ViewModels.Dialogs;
+using Microsoft.Extensions.DependencyInjection;
 using AdminConsole.Core.Offboarding;
+using AdminConsole.Core.Offboarding.Snapshot;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Groups;
@@ -46,8 +48,11 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, IDirectoryService directory, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, MailboxTabViewModel mailbox, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, IDirectoryService directory, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, MailboxTabViewModel mailbox, ILogger<UserDetailViewModel> logger,
+        SnapshotStore snapshots, [FromKeyedServices(RestoreRunnerKey)] OffboardingRunner restore)
     {
+        _snapshots = snapshots;
+        _restore = restore;
         Mailbox = mailbox;
         // The picker is wired onto this page by the shell after construction, so read it at the moment of the pick.
         Mailbox.PickPerson = (prompt, onPicked) => PickPerson?.Invoke(prompt, onPicked);
@@ -67,6 +72,12 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         _actions = actions;
         _logger = logger;
     }
+
+    /// <summary>The DI key of the runner that holds the restore catalog (M15.4); the unkeyed runner is the offboarding one.</summary>
+    public const string RestoreRunnerKey = "restore";
+
+    private readonly SnapshotStore _snapshots;
+    private readonly OffboardingRunner _restore;
 
     public string Id { get; private set; } = string.Empty;
 
@@ -618,6 +629,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private void RefreshFromCache()
     {
         if (_users.GetCached(Id) is { } fresh) User = fresh;
+        HasSnapshots = _snapshots.List(_tenant.TenantId, Id).Count > 0;
     }
 
     // ---- Access tab (UX §4 tab 2) ----------------------------------------------------------------------------------
@@ -935,6 +947,66 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     /// <summary>Set by the shell: opens the palette restricted to users and calls back with the pick.</summary>
     public Action<string, Action<PersonRef>>? PickPerson { get; set; }
 
+    /// <summary>True when an offboarding left a snapshot of this account behind, so there is something to restore from.</summary>
+    [ObservableProperty]
+    private bool _hasSnapshots;
+
+    /// <summary>
+    /// Restore from a snapshot (M15.4): the offboard dialog in reverse, with the restore catalog. Newest snapshot first;
+    /// the AD account goes back where the snapshot found it unless the admin picks another OU.
+    /// </summary>
+    [RelayCommand]
+    private async Task RestoreAsync()
+    {
+        if (User is null) return;
+        var snapshots = _snapshots.List(_tenant.TenantId, Id);
+        if (snapshots.Count == 0)
+        {
+            _toasts.Show("There is no snapshot of this account. Offboarding takes one before it changes anything.");
+            return;
+        }
+
+        DirectoryUser target;
+        try
+        {
+            target = await _users.ReadFreshAsync(Id, CancellationToken.None) ?? User;
+        }
+        catch (GraphException ex)
+        {
+            _logger.LogWarning("Could not re-read {UserId} before restoring: {Code}", Id, ex.ErrorCode);
+            _toasts.Show(GraphErrorText.Friendly(ex));
+            return;
+        }
+
+        var ous = new List<OuChoice> { new(null, "Where the snapshot found it") };
+        if (snapshots.Any(s => s.Snapshot.OnPrem is not null))
+        {
+            try
+            {
+                var all = await _directory.GetOrganisationalUnitsAsync(CancellationToken.None);
+                ous.AddRange(all.OrderBy(o => o.DistinguishedName.Length).ThenBy(o => o.DistinguishedName, StringComparer.OrdinalIgnoreCase)
+                    .Select(o => new OuChoice(o.DistinguishedName, DistinguishedNames.FriendlyPath(o.DistinguishedName))));
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // Unreachable AD leaves the default choice; the AD rows say why they cannot run.
+                _logger.LogInformation("OU list unavailable for restore: {Message}", ex.Message);
+            }
+        }
+
+        var dialog = new OffboardDialogViewModel(target, _restore, _profiles, _permissions, _consent, _actions, _tenant, _logger)
+        {
+            Snapshots = [.. snapshots.Select(s => new SnapshotChoice(s.Path, s.Snapshot))],
+            OuChoices = ous,
+        };
+        dialog.ChooseRestoreTarget(dialog.Snapshots[0], ous[0]);
+
+        await dialog.RefreshPreviewAsync();
+        await _dialogs.ShowAsync(dialog);
+        RefreshFromCache();
+        await RefreshAsync(CancellationToken.None);
+    }
+
     // ---- Devices tab (UX §4 tab 3) ---------------------------------------------------------------------------------
 
     [ObservableProperty]
@@ -1085,6 +1157,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     public void Start(string id)
     {
         Id = id;
+        HasSnapshots = _snapshots.List(_tenant.TenantId, Id).Count > 0;
         Mailbox.Start(id);
         RecomputeReasons();
         _ = LoadAsync(CancellationToken.None);

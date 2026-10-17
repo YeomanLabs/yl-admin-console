@@ -72,13 +72,59 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
 
     public DirectoryUser User { get; }
 
-    public override string Title => $"Offboard {User.DisplayName ?? User.UserPrincipalName}";
+    public override string Title => IsRestore
+        ? $"Restore {User.DisplayName ?? User.UserPrincipalName}"
+        : $"Offboard {User.DisplayName ?? User.UserPrincipalName}";
 
     public override bool ShowFooter => false;
 
     public override double Width => 760;
 
     public IReadOnlyList<OffboardStepRow> Rows { get; }
+
+    // ---- restore (M15.4) ------------------------------------------------------------------------------------------
+
+    /// <summary>Set for a restore: the dialog runs the restore catalog against one of these, newest first.</summary>
+    public IReadOnlyList<SnapshotChoice> Snapshots { get; init; } = [];
+
+    /// <summary>Where the AD account may go back to; the first is "where the snapshot found it".</summary>
+    public IReadOnlyList<OuChoice> OuChoices { get; init; } = [];
+
+    public bool IsRestore => Snapshots.Count > 0;
+
+    public bool HasOuChoices => OuChoices.Count > 1;
+
+    /// <summary>The profile, delegate and save-profile chrome belong to an offboarding only.</summary>
+    public bool ShowsOffboardChrome => IsPreview && !IsRestore;
+
+    public bool ShowsRestoreChrome => IsPreview && IsRestore;
+
+    [ObservableProperty]
+    private SnapshotChoice? _selectedSnapshot;
+
+    [ObservableProperty]
+    private OuChoice? _selectedOu;
+
+    /// <summary>The opener's first choice, set without a preview each: it previews once, straight after.</summary>
+    public void ChooseRestoreTarget(SnapshotChoice snapshot, OuChoice ou)
+    {
+        _choosing = true;
+        SelectedSnapshot = snapshot;
+        SelectedOu = ou;
+        _choosing = false;
+    }
+
+    private bool _choosing;
+
+    partial void OnSelectedSnapshotChanged(SnapshotChoice? value)
+    {
+        if (!_choosing) _ = RefreshPreviewAsync();
+    }
+
+    partial void OnSelectedOuChanged(OuChoice? value)
+    {
+        if (!_choosing) _ = RefreshPreviewAsync();
+    }
 
     // ---- profiles -------------------------------------------------------------------------------------------------
 
@@ -155,6 +201,8 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     [NotifyPropertyChangedFor(nameof(IsPreview))]
     [NotifyPropertyChangedFor(nameof(IsRunning))]
     [NotifyPropertyChangedFor(nameof(IsSummary))]
+    [NotifyPropertyChangedFor(nameof(ShowsOffboardChrome))]
+    [NotifyPropertyChangedFor(nameof(ShowsRestoreChrome))]
     private OffboardPhase _phase = OffboardPhase.Preview;
 
     public bool IsPreview => Phase == OffboardPhase.Preview;
@@ -186,6 +234,8 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         CorrelationId = _correlationId,
         AttributeStamps = SelectedProfile.Options.AttributeStamps,
         AutoReplyMessage = SelectedProfile.Options.AutoReplyMessage,
+        RestoreFrom = SelectedSnapshot?.Snapshot,
+        RestoreOuDn = SelectedOu?.Dn,
     };
 
     // ---- preview --------------------------------------------------------------------------------------------------
@@ -235,7 +285,8 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     private void RefreshRunLabel()
     {
         var count = Rows.Count(r => r.IsEnabled && !r.IsBlocked);
-        RunLabel = count == 1 ? "Run 1 step" : $"Run {count} steps";
+        var verb = IsRestore ? "Restore" : "Run";
+        RunLabel = count == 1 ? $"{verb} 1 step" : $"{verb} {count} steps";
         OnPropertyChanged(nameof(CanRun));
     }
 
