@@ -19,6 +19,9 @@ using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Groups;
 using AdminConsole.Core.Sync;
 using AdminConsole.Core.Templates;
+using AdminConsole.Core.Users;
+using AdminConsole.Core.Search;
+using AdminConsole.Core.Offboarding;
 
 namespace AdminConsole.App.ViewModels;
 
@@ -178,6 +181,7 @@ public sealed partial class ShellViewModel : ObservableObject
             home.OpenPalette = OpenPalette;
             home.NewUser = () => NewUserCommand.Execute(null);
             home.Offboard = Offboard;
+            home.OffboardMany = () => OffboardListCommand.Execute(null);
             home.SyncNow = () => SyncNowCommand.Execute(null);
             home.OpenObject = OpenObjectFromPage;
             home.OpenList = OpenListWithFilters;
@@ -542,6 +546,67 @@ public sealed partial class ShellViewModel : ObservableObject
         Palette.OpenPicker(ObjectType.User, "Choose the user to offboard");
         ShowStatusMessage("Choose a user, then press Ctrl+Shift+O on their page.");
     }
+
+    /// <summary>
+    /// Offboard a list (M15.5). The list dialog settles who is who; then each person gets the ordinary offboard dialog
+    /// with its own preview, one after another. Closing one without running it stops the list there, and the status bar
+    /// names who was not reached — a list that quietly skipped someone would be worse than no list.
+    /// </summary>
+    [RelayCommand]
+    private async Task OffboardListAsync()
+    {
+        if (!IsSessionReady) return;
+
+        var list = new OffboardListDialogViewModel(_services.GetRequiredService<CacheDb>(), _services.GetRequiredService<SearchService>());
+        if (!await Dialogs.ShowAsync(list)) return;
+
+        var people = list.Chosen;
+        var users = _services.GetRequiredService<UserService>();
+        var done = 0;
+        for (var i = 0; i < people.Count; i++)
+        {
+            DirectoryUser target;
+            try
+            {
+                target = await users.ReadFreshAsync(people[i].Id, CancellationToken.None) ?? people[i];
+            }
+            catch (GraphException ex)
+            {
+                ShowStatusMessage($"Stopped: {people[i].DisplayName} could not be read ({GraphErrorText.Friendly(ex)}). Not reached: {Names(people.Skip(i))}.");
+                return;
+            }
+
+            var dialog = new OffboardDialogViewModel(
+                target,
+                _services.GetRequiredService<OffboardingRunner>(),
+                _services.GetRequiredService<OffboardingProfileStore>(),
+                _services.GetRequiredService<PermissionChecker>(),
+                _services.GetRequiredService<ConsentService>(),
+                _services.GetRequiredService<ActionLog>(),
+                _tenant,
+                _logger)
+            {
+                PickDelegate = OpenPersonPicker,
+                ListPosition = $"{i + 1} of {people.Count}",
+            };
+
+            await dialog.RefreshPreviewAsync();
+            await Dialogs.ShowAsync(dialog);
+            if (!dialog.HasRun)
+            {
+                ShowStatusMessage(done == 0
+                    ? $"Stopped before anyone was offboarded. Not reached: {Names(people.Skip(i))}."
+                    : $"Stopped after {done} of {people.Count}. Not offboarded: {Names(people.Skip(i))}.");
+                return;
+            }
+
+            done++;
+        }
+
+        ShowStatusMessage($"Offboarded {done} of {people.Count} people. Each run is on the Activity page.");
+    }
+
+    private static string Names(IEnumerable<DirectoryUser> people) => string.Join(", ", people.Select(p => p.DisplayName ?? p.UserPrincipalName));
 
     /// <summary>Ctrl+N and the palette's "New user from template" (doc 07 §flow).</summary>
     [RelayCommand]

@@ -40,6 +40,9 @@ public sealed partial class HomePageViewModel : ObservableObject, IPageViewModel
 
     public Action? Offboard { get; set; }
 
+    /// <summary>Set by the shell: the paste-a-list offboarding (M15.5).</summary>
+    public Action? OffboardMany { get; set; }
+
     public Action? SyncNow { get; set; }
 
     /// <summary>Opens a list page with filters already applied.</summary>
@@ -97,6 +100,9 @@ public sealed partial class HomePageViewModel : ObservableObject, IPageViewModel
 
     [RelayCommand]
     private void OffboardUser() => Offboard?.Invoke();
+
+    [RelayCommand]
+    private void OffboardList() => OffboardMany?.Invoke();
 
     [RelayCommand]
     private void Sync() => SyncNow?.Invoke();

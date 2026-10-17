@@ -66,6 +66,29 @@ public sealed partial class CacheDb
         return list;
     }
 
+    /// <summary>
+    /// Users whose sign-in name or mail is exactly <paramref name="address"/>, or — for text without an @ — whose display
+    /// name is exactly it, ignoring case (M15.5). Exact only: a list of leavers must never match someone by a prefix.
+    /// </summary>
+    public IReadOnlyList<DirectoryUser> FindUsersExact(string text)
+    {
+        using var conn = OpenConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = text.Contains('@')
+            ? "SELECT raw FROM users WHERE upn = $t COLLATE NOCASE OR mail = $t COLLATE NOCASE ORDER BY upn;"
+            : "SELECT raw FROM users WHERE display_name = $t COLLATE NOCASE ORDER BY upn;";
+        cmd.Parameters.AddWithValue("$t", text);
+        using var r = cmd.ExecuteReader();
+        var list = new List<DirectoryUser>();
+        while (r.Read())
+        {
+            using var doc = JsonDocument.Parse(r.GetString(0));
+            list.Add(DirectoryUser.FromJson(doc.RootElement));
+        }
+
+        return list;
+    }
+
     public EntraDevice? GetEntraDevice(string id) => Parse(GetRaw(CacheEntity.Devices, id), EntraDevice.FromJson);
 
     /// <summary>

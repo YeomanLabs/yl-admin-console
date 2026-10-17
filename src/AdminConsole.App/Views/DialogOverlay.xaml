@@ -322,6 +322,61 @@
                 </Grid>
             </StackPanel>
         </DataTemplate>
+        <!-- Offboard a list (M15.5): paste, resolve, settle every line that is not exactly one person. -->
+        <DataTemplate DataType="{x:Type dlg:OffboardListDialogViewModel}">
+            <StackPanel>
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,6"
+                           Text="One person per line: sign-in names, mail addresses, or names as HR writes them (&quot;Vance, Adele&quot; works). Only exact matches are used." />
+                <ui:TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                            MinHeight="90" MaxHeight="160" VerticalScrollBarVisibility="Auto"
+                            PlaceholderText="adele@contoso.com&#x0a;Vance, Adele&#x0a;Megan Bowen"
+                            b:FocusBehavior.FocusWhen="True" AutomationProperties.Name="Leaver list" />
+                <ui:Button Content="Find these people" Margin="0,8,0,0" Command="{Binding FindCommand}" AutomationProperties.Name="Find these people" />
+
+                <ItemsControl ItemsSource="{Binding Rows}" Margin="0,12,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type dlg:OffboardListRow}">
+                            <Border Padding="10,8" Margin="0,0,0,6" CornerRadius="4"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                                <StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding Input}" FontFamily="{StaticResource AcMono}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                        <CheckBox Grid.Column="1" Content="Skip" IsChecked="{Binding IsSkipped}" Margin="8,0,0,0"
+                                                  Visibility="{Binding IsProblem, Converter={StaticResource BoolToVisibility}}"
+                                                  AutomationProperties.Name="{Binding Input, StringFormat=Skip {0}}" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding Status}" FontSize="12" TextWrapping="Wrap" Margin="0,3,0,0">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsProblem}" Value="True">
+                                                        <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <ComboBox Margin="0,6,0,0" ItemsSource="{Binding Candidates}" SelectedItem="{Binding SelectedCandidate}"
+                                              DisplayMemberPath="Label" IsEnabled="{Binding CanChoose}"
+                                              Visibility="{Binding HasCandidates, Converter={StaticResource BoolToVisibility}}"
+                                              AutomationProperties.Name="{Binding Input, StringFormat=Who is {0}}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding StatusText}" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Visibility="{Binding StatusText, Converter={StaticResource NullToCollapsed}}" />
+            </StackPanel>
+        </DataTemplate>
+
         <!-- Create from template (doc 07 §flow): pick, fill, run, then the password once. -->
         <DataTemplate DataType="{x:Type dlg:CreateUserDialogViewModel}">
             <StackPanel>

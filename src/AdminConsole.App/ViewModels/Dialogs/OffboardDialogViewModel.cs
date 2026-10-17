@@ -72,9 +72,15 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
 
     public DirectoryUser User { get; }
 
-    public override string Title => IsRestore
+    public override string Title => (ListPosition is { } at ? $"{at} · " : string.Empty) + (IsRestore
         ? $"Restore {User.DisplayName ?? User.UserPrincipalName}"
-        : $"Offboard {User.DisplayName ?? User.UserPrincipalName}";
+        : $"Offboard {User.DisplayName ?? User.UserPrincipalName}");
+
+    /// <summary>"2 of 5" when this is one person of a pasted list (M15.5).</summary>
+    public string? ListPosition { get; init; }
+
+    /// <summary>Whether the run started — what tells a list whether to go on to the next person.</summary>
+    public bool HasRun => _run is not null;
 
     public override bool ShowFooter => false;
 

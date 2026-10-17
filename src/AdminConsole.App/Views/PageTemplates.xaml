@@ -75,6 +75,9 @@
                         <ui:Button Icon="{ui:SymbolIcon PersonDelete24}" Content="Offboard someone" Margin="0,0,8,8"
                                    Command="{Binding OffboardUserCommand}"
                                    AutomationProperties.Name="Offboard someone" />
+                        <ui:Button Icon="{ui:SymbolIcon PeopleList24}" Content="Offboard a list" Margin="0,0,8,8"
+                                   Command="{Binding OffboardListCommand}"
+                                   AutomationProperties.Name="Offboard a list" />
                         <ui:Button Icon="{ui:SymbolIcon ArrowSync24}" Content="Sync now" Margin="0,0,8,8"
                                    Command="{Binding SyncCommand}"
                                    AutomationProperties.Name="Sync now" />
