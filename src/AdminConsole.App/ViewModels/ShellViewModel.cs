@@ -838,6 +838,7 @@ public sealed partial class ShellViewModel : ObservableObject
         CacheEntity.ManagedDevices => "Intune devices",
         CacheEntity.Skus => "licences",
         CacheEntity.Organization => "tenant details",
+        CacheEntity.Mailboxes => "mailboxes",
         _ => e.ToString(),
     };
 

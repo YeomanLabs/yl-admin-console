@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
+using AdminConsole.Core.Exchange;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
 
@@ -20,18 +22,26 @@ public sealed class DeltaSyncService : ISyncStatus
     private readonly SyncOptions _options;
     private readonly ILogger<DeltaSyncService> _logger;
     private readonly TimeProvider _time;
+    private readonly ExchangeService? _exchange;
     private readonly SemaphoreSlim _cycleLock = new(1, 1);
     private readonly Dictionary<CacheEntity, SyncProgress> _latest = new();
     private readonly object _latestLock = new();
     private TaskCompletionSource _wake = NewWake();
 
-    public DeltaSyncService(GraphClient graph, CacheDb db, SyncOptions options, ILogger<DeltaSyncService> logger, TimeProvider? time = null)
+    public DeltaSyncService(
+        GraphClient graph,
+        CacheDb db,
+        SyncOptions options,
+        ILogger<DeltaSyncService> logger,
+        TimeProvider? time = null,
+        ExchangeService? exchange = null)
     {
         _graph = graph;
         _db = db;
         _options = options;
         _logger = logger;
         _time = time ?? TimeProvider.System;
+        _exchange = exchange;
     }
 
     public event EventHandler<SyncProgress>? ProgressChanged;
@@ -101,6 +111,7 @@ public sealed class DeltaSyncService : ISyncStatus
                 await Guard(CacheEntity.ManagedDevices, () => RefreshManagedDevicesAsync(ct), ct).ConfigureAwait(false);
                 await Guard(CacheEntity.Skus, () => RefreshSkusAsync(ct), ct).ConfigureAwait(false);
                 await Guard(CacheEntity.Organization, () => RefreshOrganizationAsync(ct), ct).ConfigureAwait(false);
+                await Guard(CacheEntity.Mailboxes, () => RefreshMailboxesAsync(ct), ct).ConfigureAwait(false);
             }
 
             LastCycleCompleted = _time.GetUtcNow();
@@ -309,6 +320,46 @@ public sealed class DeltaSyncService : ISyncStatus
         });
 
         Publish(CacheEntity.Organization, SyncPhase.Refresh, 1, 1, done: true);
+    }
+
+    /// <summary>
+    /// Exchange's recipient facts for every user (M13.4, doc 13 §2). Skipped quietly when the permission is not granted or
+    /// the admin holds no Exchange role: both are the install's normal state, not a sync failure, and must never turn the
+    /// sync pill red on a tenant that simply does not use the Mailbox tab.
+    /// </summary>
+    public async Task RefreshMailboxesAsync(CancellationToken ct)
+    {
+        if (_exchange is null || !_exchange.IsAvailable) return;
+
+        IReadOnlyList<MailboxSummary> items;
+        try
+        {
+            Publish(CacheEntity.Mailboxes, SyncPhase.Refresh, 0, null, done: false);
+            items = await _exchange.GetMailboxSummariesAsync(ct).ConfigureAwait(false);
+        }
+        catch (ExchangeException ex) when (ex.IsForbidden)
+        {
+            _logger.LogInformation("mailboxes: Exchange refused the walk ({Code}); the admin may hold no Exchange role", ex.ErrorCode);
+            Publish(CacheEntity.Mailboxes, SyncPhase.Refresh, 0, 0, done: true);
+            return;
+        }
+        catch (SignInRequiredException)
+        {
+            _logger.LogInformation("mailboxes: no Exchange token; treating Exchange as not granted");
+            Publish(CacheEntity.Mailboxes, SyncPhase.Refresh, 0, 0, done: true);
+            return;
+        }
+
+        var now = _time.GetUtcNow();
+        _db.Write(w =>
+        {
+            foreach (var m in items) w.UpsertMailbox(m);
+            w.DeleteStale(CacheEntity.Mailboxes);
+            w.SetSyncState(new SyncState { Entity = CacheEntity.Mailboxes, LastFullSync = now, RowCount = items.Count });
+        });
+
+        _logger.LogInformation("mailboxes: refreshed {Count} recipient(s)", items.Count);
+        Publish(CacheEntity.Mailboxes, SyncPhase.Refresh, items.Count, items.Count, done: true);
     }
 
     // ---- helpers ---------------------------------------------------------------------------------------------------

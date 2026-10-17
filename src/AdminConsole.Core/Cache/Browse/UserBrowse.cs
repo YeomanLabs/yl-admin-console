@@ -30,8 +30,35 @@ public static class UserBrowse
     public static readonly BrowseFilter Synced =
         new("synced", "Synced from AD", "origin", "synced = 1", "Mastered on-prem — most attributes are read-only until Phase 2");
 
+    // Mailbox (M13.4). Each reads the mailboxes table Exchange fills, and only a user with a row there can match: a user
+    // Exchange has not been asked about yet is unknown, not mailbox-less, so "No mailbox" must never sweep them in.
+    public static readonly BrowseFilter UserMailbox =
+        new("mailbox-user", "User mailbox", "mailbox", "id IN (SELECT user_id FROM mailboxes WHERE recipient_type = 'UserMailbox')",
+            "A person's own mailbox");
+
+    public static readonly BrowseFilter SharedMailbox =
+        new("mailbox-shared", "Shared mailbox", "mailbox", "id IN (SELECT user_id FROM mailboxes WHERE recipient_type = 'SharedMailbox')",
+            "A mailbox people share — the account behind it is disabled by design");
+
+    public static readonly BrowseFilter ResourceMailbox =
+        new("mailbox-resource", "Room or equipment", "mailbox",
+            "id IN (SELECT user_id FROM mailboxes WHERE recipient_type IN ('RoomMailbox','EquipmentMailbox'))",
+            "Booked through the calendar rather than signed in to");
+
+    public static readonly BrowseFilter NoMailbox =
+        new("mailbox-none", "No mailbox", "mailbox",
+            "id IN (SELECT user_id FROM mailboxes WHERE recipient_type NOT IN ('UserMailbox','SharedMailbox','RoomMailbox','EquipmentMailbox','SchedulingMailbox','DiscoveryMailbox'))",
+            "No mailbox in this tenant — including guests and people whose mailbox lives elsewhere");
+
+    /// <summary>Every filter, mailbox chips included. Shown once Exchange has been read at least once.</summary>
     public static IReadOnlyList<BrowseFilter> Filters =>
-        [Enabled, Disabled, Licensed, Unlicensed, Members, Guests, CloudOnly, Synced];
+        [Enabled, Disabled, Licensed, Unlicensed, Members, Guests, CloudOnly, Synced, UserMailbox, SharedMailbox, ResourceMailbox, NoMailbox];
+
+    /// <summary>
+    /// The filters for an install that has never read Exchange. Mailbox chips there would all count zero, and "No mailbox:
+    /// 0" reads as a fact about the tenant when it is really an absence of data.
+    /// </summary>
+    public static IReadOnlyList<BrowseFilter> FiltersWithoutMailboxes => [.. Filters.Where(f => f.Group != "mailbox")];
 
     public static IReadOnlyList<BrowseSort> Sorts =>
     [

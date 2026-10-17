@@ -4,6 +4,8 @@ using Microsoft.Data.Sqlite;
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Models;
 
+using AdminConsole.Core.Exchange;
+
 namespace AdminConsole.Core.Search;
 
 /// <summary>
@@ -132,8 +134,9 @@ public sealed class SearchService
     private List<SearchHit> SearchUsers(SqliteConnection conn, ParsedQuery q, Dictionary<string, RecentObject> recent, int limit, CancellationToken ct)
     {
         var hits = new Dictionary<string, SearchHit>(StringComparer.Ordinal);
-        const string select = "SELECT u.id, u.display_name, u.upn, u.mail, u.account_enabled, u.synced, u.user_type, bm25(users_fts) AS rank " +
-                              "FROM users_fts JOIN users u ON u.rowid = users_fts.rowid WHERE users_fts MATCH $q ORDER BY rank LIMIT $n;";
+        const string select = "SELECT u.id, u.display_name, u.upn, u.mail, u.account_enabled, u.synced, u.user_type, bm25(users_fts) AS rank, mb.recipient_type " +
+                              "FROM users_fts JOIN users u ON u.rowid = users_fts.rowid LEFT JOIN mailboxes mb ON mb.user_id = u.id " +
+                              "WHERE users_fts MATCH $q ORDER BY rank LIMIT $n;";
 
         if (q.Terms.Count > 0)
         {
@@ -157,7 +160,9 @@ public sealed class SearchService
         var upn = r.GetString(2);
         var mail = r.IsDBNull(3) ? null : r.GetString(3);
         var badges = new List<string>(3);
-        if (r.GetInt64(4) == 0) badges.Add("Disabled");
+        var mailbox = MailboxKinds.From(r.IsDBNull(8) ? null : r.GetString(8));
+        if (MailboxKinds.Badge(mailbox) is { } mailboxBadge && mailbox is not MailboxKind.None) badges.Add(mailboxBadge);
+        if (r.GetInt64(4) == 0 && !MailboxKinds.IsDisabledByDesign(mailbox)) badges.Add("Disabled");
         if (r.GetInt64(5) != 0) badges.Add("Synced");
         if (!r.IsDBNull(6) && string.Equals(r.GetString(6), "Guest", StringComparison.OrdinalIgnoreCase)) badges.Add("Guest");
 

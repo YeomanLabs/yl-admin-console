@@ -197,6 +197,27 @@ public sealed class CacheWriter : IDisposable
         cmd.ExecuteNonQuery();
     }
 
+    // ---- Exchange mailboxes ------------------------------------------------------------------------------------
+
+    public void UpsertMailbox(AdminConsole.Core.Exchange.MailboxSummary m)
+    {
+        var cmd = Command("mailbox-upsert", """
+            INSERT INTO mailboxes (user_id, recipient_type, primary_smtp, hidden, dir_synced, updated_at)
+            VALUES ($user_id, $recipient_type, $primary_smtp, $hidden, $dir_synced, $updated_at)
+            ON CONFLICT(user_id) DO UPDATE SET
+                recipient_type=excluded.recipient_type, primary_smtp=excluded.primary_smtp, hidden=excluded.hidden,
+                dir_synced=excluded.dir_synced, updated_at=excluded.updated_at;
+            """,
+            "$user_id", "$recipient_type", "$primary_smtp", "$hidden", "$dir_synced", "$updated_at");
+        Set(cmd, "$user_id", m.UserId);
+        Set(cmd, "$recipient_type", m.RecipientType);
+        Set(cmd, "$primary_smtp", m.PrimarySmtp);
+        Set(cmd, "$hidden", m.HiddenFromAddressLists);
+        Set(cmd, "$dir_synced", m.DirSynced);
+        Set(cmd, "$updated_at", _now);
+        cmd.ExecuteNonQuery();
+    }
+
     // ---- SKUs / organization -----------------------------------------------------------------------------------
 
     public void UpsertSku(LicenseSku s)

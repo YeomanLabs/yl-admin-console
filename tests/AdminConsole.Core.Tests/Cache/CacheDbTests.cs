@@ -15,11 +15,11 @@ public sealed class CacheDbTests : IDisposable
     [Fact]
     public void Migrate_CreatesSchemaOnce_AndIsIdempotent()
     {
-        _db.SchemaVersion.Should().Be(1);
+        _db.SchemaVersion.Should().Be(2);
         _db.Migrate();
-        _db.SchemaVersion.Should().Be(1);
+        _db.SchemaVersion.Should().Be(2);
 
-        Tables().Should().Contain(["sync_state", "users", "users_fts", "groups", "groups_fts", "group_members", "devices", "managed_devices", "devices_fts", "skus", "recent_objects", "organization"]);
+        Tables().Should().Contain(["sync_state", "users", "users_fts", "groups", "groups_fts", "group_members", "devices", "managed_devices", "devices_fts", "skus", "recent_objects", "organization", "mailboxes"]);
         Scalar("PRAGMA journal_mode;").Should().Be("memory", "in-memory databases cannot use WAL; the pragma is still issued for files");
     }
 
@@ -165,7 +165,7 @@ public sealed class CacheDbTests : IDisposable
         {
             using (var file = CacheDb.OpenFile(path))
             {
-                file.SchemaVersion.Should().Be(1);
+                file.SchemaVersion.Should().Be(2);
                 using var conn = file.OpenConnection();
                 using var cmd = conn.CreateCommand();
                 cmd.CommandText = "PRAGMA journal_mode;";

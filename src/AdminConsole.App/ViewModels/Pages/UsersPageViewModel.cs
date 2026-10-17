@@ -11,8 +11,12 @@ public sealed class UsersPageViewModel : ListPageViewModel<UserRow>
     private readonly CacheDb _cache;
 
     public UsersPageViewModel(CacheDb cache, ILogger<UsersPageViewModel> logger)
-        : base(UserBrowse.Filters, UserBrowse.Sorts, UserBrowse.DefaultSort, logger)
+        : base(HasMailboxData(cache) ? UserBrowse.Filters : UserBrowse.FiltersWithoutMailboxes, UserBrowse.Sorts, UserBrowse.DefaultSort, logger)
         => _cache = cache;
+
+    /// <summary>Mailbox chips only once Exchange has been read: until then they would all count zero, which reads as a
+    /// fact about the tenant rather than an absence of data.</summary>
+    private static bool HasMailboxData(CacheDb cache) => cache.GetSyncState(CacheEntity.Mailboxes) is not null;
 
     public override string Title => "Users";
 

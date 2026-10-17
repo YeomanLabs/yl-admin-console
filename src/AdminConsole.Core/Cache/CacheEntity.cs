@@ -9,6 +9,9 @@ public enum CacheEntity
     ManagedDevices,
     Skus,
     Organization,
+
+    /// <summary>Exchange Online recipient facts per user (M13.4). Refreshed on the device interval; no delta exists.</summary>
+    Mailboxes,
 }
 
 public static class CacheEntityExtensions
@@ -22,6 +25,7 @@ public static class CacheEntityExtensions
         CacheEntity.ManagedDevices => "managed_devices",
         CacheEntity.Skus => "skus",
         CacheEntity.Organization => "organization",
+        CacheEntity.Mailboxes => "mailboxes",
         _ => throw new ArgumentOutOfRangeException(nameof(entity), entity, null),
     };
 

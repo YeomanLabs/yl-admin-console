@@ -23,6 +23,25 @@ public sealed partial class CacheDb
 
     public ManagedDevice? GetManagedDevice(string id) => Parse(GetRaw(CacheEntity.ManagedDevices, id), ManagedDevice.FromJson);
 
+    /// <summary>The cached Exchange facts for a user (M13.4), or null when Exchange has not been read since they appeared.</summary>
+    public AdminConsole.Core.Exchange.MailboxSummary? GetMailbox(string userId)
+    {
+        using var conn = OpenConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT recipient_type, primary_smtp, hidden, dir_synced FROM mailboxes WHERE user_id=$id;";
+        cmd.Parameters.AddWithValue("$id", userId);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return null;
+        return new AdminConsole.Core.Exchange.MailboxSummary
+        {
+            UserId = userId,
+            RecipientType = r.GetString(0),
+            PrimarySmtp = r.IsDBNull(1) ? null : r.GetString(1),
+            HiddenFromAddressLists = r.GetInt64(2) != 0,
+            DirSynced = r.GetInt64(3) != 0,
+        };
+    }
+
     public EntraDevice? GetEntraDevice(string id) => Parse(GetRaw(CacheEntity.Devices, id), EntraDevice.FromJson);
 
     /// <summary>

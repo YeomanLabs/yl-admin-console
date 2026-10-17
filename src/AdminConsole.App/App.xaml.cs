@@ -18,6 +18,7 @@ using AdminConsole.Core;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Devices;
+using AdminConsole.Core.Exchange;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Licensing;
 using AdminConsole.Core.Groups;
@@ -164,6 +165,12 @@ public sealed partial class App : Application
 
         services.AddSingleton(_ => new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }));
         services.AddSingleton<GraphClient>();
+        services.AddSingleton(sp => new ExchangeClient(
+            sp.GetRequiredService<HttpClient>(),
+            sp.GetRequiredService<IAuthService>(),
+            sp.GetRequiredService<TenantContext>(),
+            sp.GetRequiredService<ILogger<ExchangeClient>>()));
+        services.AddSingleton<ExchangeService>();
         services.AddSingleton<TenantContext>();
         services.AddSingleton<TenantContextLoader>();
         services.AddSingleton(sp => ActionLog.OpenFile(AppPaths.ActionsDbPath, sp.GetRequiredService<ILogger<ActionLog>>()));

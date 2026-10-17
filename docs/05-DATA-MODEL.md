@@ -130,6 +130,17 @@ CREATE TABLE organization (
 
 Group `kind` derivation: `groupTypes` contains `Unified` → `M365`; else `securityEnabled && !mailEnabled` → `Security`; else `DistributionOrMailSecurity`.
 
+### `mailboxes` (`0002_mailboxes.sql`, M13.4)
+
+Exchange Online's recipient facts per user, keyed by Entra object id (Exchange's `ExternalDirectoryObjectId`):
+`recipient_type` (RecipientTypeDetails as Exchange reports it), `primary_smtp`, `hidden`, `dir_synced`, `updated_at`.
+
+A separate table, not columns on `users`: `users` is rewritten by Graph delta, and an upsert that does not mention a
+column must never be able to blank it. Exchange has no delta, so the table is replaced by a full walk on the device
+interval (`Get-User` for every user, mailbox or not, joined to `Get-Mailbox`). **No row means "not known yet", never "no
+mailbox"** — the "No mailbox" filter only matches users Exchange has actually reported on. The walk is skipped quietly
+when the Exchange permission is not granted or the admin holds no Exchange role; neither is a sync error.
+
 ## Core models (C# records in `Models/`)
 `DirectoryUser`, `DirectoryGroup`, `EntraDevice`, `ManagedDevice`, `LicenseSku`, `Organization`, `AuthMethod` (with `Kind` enum and `DeleteCollectionName`), `SearchHit` (`ObjectType`, `Id`, `Primary`, `Secondary`, `Badges`, `Score`). Each has `static X FromJson(JsonElement)` and the user/device records expose the computed badge booleans used by the UI.
 
@@ -148,3 +159,4 @@ When `DirectoryUser.OnPremisesSyncEnabled == true`, these properties are **read-
 - Entra device ↔ owner: `/devices/{id}/registeredOwners` on demand (not cached in Phase 1).
 - User ↔ groups: `group_members.member_id = users.id`.
 - (Phase 2) Entra user ↔ AD user: `onPremisesImmutableId` == base64(`ms-DS-ConsistencyGuid`), fallback base64(`objectGUID`).
+- (Phase 3) Entra user ↔ Exchange recipient: `mailboxes.user_id = users.id` = Exchange's `ExternalDirectoryObjectId`, which every cmdlet also accepts as `-Identity`.
