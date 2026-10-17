@@ -600,7 +600,11 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (!IsSessionReady) return;
 
-        var list = new OffboardListDialogViewModel(_services.GetRequiredService<CacheDb>(), _services.GetRequiredService<SearchService>());
+        var files = _services.GetRequiredService<FilePicker>();
+        var list = new OffboardListDialogViewModel(_services.GetRequiredService<CacheDb>(), _services.GetRequiredService<SearchService>())
+        {
+            PickCsvFile = () => files.OpenFile("CSV files (*.csv;*.txt)|*.csv;*.txt|All files (*.*)|*.*", "Import a leaver list"),
+        };
         if (!await Dialogs.ShowAsync(list)) return;
 
         var people = list.Chosen;

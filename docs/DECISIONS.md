@@ -598,3 +598,25 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **Drawn per size, from code** (`scripts/icon/New-AppIcon.py`): each size rendered at 8x and scaled down rather than one
   image shrunk. Below 32 px the person is left out and the strokes thicken; a faint rim keeps the tile's edge on a dark
   taskbar. Sizes below 256 are classic DIB entries, which every shell reads; 256 is PNG.
+
+## 2026-10-17 — Offboard a list from a CSV: the file fills the list, it does not run it
+
+- **Per-person confirmation still holds for a file.** "Import CSV…" only fills the list box. The values go through
+  `OffboardList.Parse` and `Resolve` exactly as a paste does — exact matches only, a shared name or a near miss waits
+  for the admin, the same person twice is offboarded once — and then each person gets the ordinary offboard dialog with
+  its own preview and Run, one after another (M15.5). There is no unattended or "run the whole file" mode. A file from
+  HR is exactly the input a scripted chain trusts, and one wrong row is a colleague who still works there, disabled.
+- **The column is chosen by its name, never by its position.** The first of UserPrincipalName, UPN, SignInName,
+  Email (or EmailAddress), Mail, PrimarySmtpAddress, DisplayName, Name: sign-in names first, because they identify one
+  account and a display name may not. A header matches whole, ignoring case, spaces and punctuation, so "Sign-in name"
+  (the console's own export) and "E-mail" match, and "Manager email" never does.
+- **No known header: the admin chooses the column**, and the first row is then read as a person like the rest, shown in
+  the list where a heading can be skipped. Dropping it unseen would leave out a real leaver whenever the file has no
+  header at all.
+- **The dialog says what it read:** the file, the column, how many rows, how many had nothing in that column and were
+  left out, and a quote that is never closed.
+- **Excel in any locale.** Comma, semicolon or tab, counted on the first row outside quotes, a tie going to the
+  semicolon (semicolon Excel leaves the comma in "Vance, Adele" unquoted); Excel's `sep=` line; UTF-8 with or without
+  a byte-order mark and UTF-16 with one; otherwise the Windows ANSI code page, which Excel's plain "CSV" save writes —
+  without it "Müller" would never match. The file is read while Excel still has it open, and anything over 10 MB is
+  refused as the wrong file. No package: the reader is plain Core code, and code pages are .NET's own provider.

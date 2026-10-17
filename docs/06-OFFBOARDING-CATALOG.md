@@ -115,6 +115,11 @@ Paste leavers, one per line. Exact matches only — sign-in name, mail, or a dis
 name or a near miss waits for the admin to pick or skip. Then each person gets the ordinary dialog in turn, titled
 "2 of 5"; closing one without running stops the list and the status bar names who was not reached.
 
+Or import the list from a CSV ("Import CSV…"). The people column is taken by its header — the first of
+UserPrincipalName, UPN, SignInName, Email, Mail, PrimarySmtpAddress, DisplayName, Name — or, when no header is one of
+those, the admin chooses it. The dialog names the file, the column and how many rows it read; the values fill the list
+and meet the same exact-match rule. A file never skips a preview: there is no unattended mode.
+
 ## Preview text (must be this concrete)
 
 - "Disable sign-in for **jdoe@contoso.com** (currently enabled)"

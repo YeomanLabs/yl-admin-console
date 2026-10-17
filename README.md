@@ -41,8 +41,8 @@ one click from there instead of five admin centres.
 - **Bulk edit.** Tick people (or select every match), set the fields, read a per-person preview of what changes and
   whether it is written in Entra ID or in AD, and watch each person's result arrive. One correlation id for the run.
 - **Offboarding as a checklist.** A snapshot of everything first, then the AD, Graph, Exchange and OneDrive steps,
-  previewed in parallel and run in order with a live log. Restore from the snapshot puts it back. A list of leavers can
-  be offboarded one after another.
+  previewed in parallel and run in order with a live log. Restore from the snapshot puts it back. A list of leavers,
+  pasted or imported from CSV, can be offboarded one after another.
 - **Users from templates — in AD when the organisation is synced.** The account is created in AD, and the cloud half
   (licences, groups, mailbox settings) finishes on its own once Entra Connect brings it up.
 
@@ -80,7 +80,7 @@ Download the MSI for your machine from the [releases](https://github.com/YeomanL
 for most PCs, `arm64` for Windows on Arm. It is self-contained: no .NET runtime to install first.
 
 ```powershell
-msiexec /i AdminConsole-0.3.1-x64.msi /qn      # silent, e.g. as an Intune Win32 app (installs per machine)
+msiexec /i AdminConsole-0.3.2-x64.msi /qn      # silent, e.g. as an Intune Win32 app (installs per machine)
 ```
 
 It installs to `Program Files\Admin Console` with a Start menu entry, upgrades in place, and closes a running console
@@ -272,7 +272,7 @@ our control — see [docs/04-GRAPH-REFERENCE.md](docs/04-GRAPH-REFERENCE.md).
 
 ## Status
 
-**v0.3.1** — Phases 1 to 3 are built: the cloud console, on-prem AD, and Exchange Online, OneDrive, hybrid onboarding,
+**v0.3.2** — Phases 1 to 3 are built: the cloud console, on-prem AD, and Exchange Online, OneDrive, hybrid onboarding,
 reports and several tenants. Each milestone was verified against a live tenant and a lab domain; every gate and what it
 actually proved is in [docs/09-PLAN.md](docs/09-PLAN.md), including the places where a gate could not be met in full
 and why. Three gates are the owner's to run, because they cannot be simulated: a workday of real helpdesk tasks, a
