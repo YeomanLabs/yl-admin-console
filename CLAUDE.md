@@ -1,6 +1,6 @@
 # CLAUDE.md — Admin Console
 
-You are building a Windows desktop admin console that unifies Entra ID, Intune, (later) on-prem AD, and (later) Exchange Online into one fast, search-first UI. Read `docs/00-README.md` first, then the doc it points you to for the current task.
+You are building a Windows desktop admin console that unifies Entra ID, Intune, on-prem AD, and (Phase 3) Exchange Online and OneDrive into one fast, search-first UI. Read `docs/00-README.md` first, then the doc it points you to for the current task.
 
 **The product is white-label (M11).** It ships branded to nobody: namespace and assembly `AdminConsole`, a neutral
 slate-and-blue palette, and `%LOCALAPPDATA%\AdminConsole` on disk. Product name, tagline and the two colours come
@@ -11,9 +11,9 @@ name, a colour or a logo anywhere — if something needs to differ per deploymen
 
 1. **Speed is the product.** No UI action may block the UI thread. Search hits the local SQLite cache, never Graph. Target: palette results < 100 ms on a 5,000-user tenant.
 2. **Never make the admin guess.** Every disabled control has an inline reason. Every failure has a human-readable message plus the raw Graph error behind an expander. Every destructive action shows a preview and a live log.
-3. **No data leaves the tenant.** No telemetry, no license server, no crash reporting in Phase 1. Zero outbound calls except `login.microsoftonline.com` and `graph.microsoft.com`.
-4. **No service accounts, no app-only auth.** Delegated permissions only, personal sign-in, WAM broker on Windows, MSAL token cache protected by DPAPI.
-5. **Raw Graph over HttpClient. Do not add the Microsoft.Graph SDK.** We need control over batching, delta, throttling, and payload size. See `docs/04-GRAPH-REFERENCE.md`.
+3. **No data leaves the tenant.** No telemetry, no license server, no crash reporting. Outbound calls go only to Microsoft's own endpoints for the tenant: `login.microsoftonline.com`, `graph.microsoft.com`, Exchange Online's admin endpoint `outlook.office365.com` (M13), and the tenant's own SharePoint hosts `{tenant}-admin.sharepoint.com` and `{tenant}-my.sharepoint.com` (M16). Any other host needs a recorded decision in `docs/DECISIONS.md` first.
+4. **No service accounts, no app-only auth.** Delegated permissions only, personal sign-in, WAM broker on Windows, MSAL token cache protected by DPAPI. This holds for Exchange and SharePoint too: no certificate connection, even though Exchange automation commonly uses one.
+5. **Raw HTTP over HttpClient. Do not add the Microsoft.Graph SDK.** We need control over batching, delta, throttling, and payload size. See `docs/04-GRAPH-REFERENCE.md`. The same goes for Exchange and SharePoint: do not host the ExchangeOnlineManagement module, PnP or CSOM in-process.
 6. **Hybrid-aware from day one.** Any attribute on an `onPremisesSyncEnabled` user that is mastered on-prem is read-only in the UI with the reason "Mastered in on-prem AD (Phase 2)". See `docs/05-DATA-MODEL.md` for the list.
 7. **Ask before adding a NuGet package** not already listed in the csproj files.
 

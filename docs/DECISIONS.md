@@ -374,3 +374,34 @@ ADUC's tabs carry. Two choices worth recording:
 `ResetComputerAccountAsync` writes `unicodePwd` as the lower-case machine name, which is exactly what ADUC's "Reset
 Account" does. It is behind a confirm that names the consequence — the machine's secure channel dies until it
 rejoins — because that is the part nobody knows the first time.
+
+## Phase 3 — Exchange Online and SharePoint become allowed hosts (2026-10-17, Andrew)
+
+Graph cannot administer somebody else's mailbox under delegated permissions. Delegation, forwarding, automatic
+replies, holds, hiding from address lists and conversion to shared all belong to Exchange, and the delegated
+`MailboxSettings.*` scopes reach only mailboxes the admin can already open. So staying Graph-only would leave the
+Mailbox tab greyed permanently, and leave five offboarding steps (convert to shared among them) needing a second tool.
+That is the gap both reference points for Phase 3 show: EasyEntra manages the mailbox from the same screen as the
+account, and the scripted deprovisioning chain this was compared against ends by converting the mailbox to shared.
+
+**Decision:** Exchange Online's admin endpoint, `outlook.office365.com`, with the delegated `Exchange.Manage`
+permission, joins Graph as an allowed host. For OneDrive, the tenant's SharePoint admin endpoint joins as well, with
+`Files.Read.All` on Graph. CLAUDE.md non-negotiable 3 now names these hosts. Non-negotiables 4 and 5 are unchanged in
+spirit and now say so explicitly: the console still signs in as the admin, and Exchange's RBAC and SharePoint's admin
+roles enforce what that person holds, the way AD enforces delegation on-prem.
+
+Rejected:
+- **Staying Graph-only.** Keeps the posture smaller, and keeps the console unable to finish an offboarding.
+- **App-only certificate authentication**, as Exchange automation usually runs. A certificate with standing rights
+  over every mailbox in the tenant is the thing non-negotiable 4 exists to prevent.
+- **Hosting the ExchangeOnlineManagement module in-process.** A heavy client prerequisite, and errors that arrive as
+  parsed text: the same reasons doc 11 rejected shelling out to RSAT for AD. The REST endpoint the module itself calls
+  is the route, and M13.2 proves it before anything depends on it. If it cannot be made to work, doc 13 records the
+  fallback and the decision comes back here.
+
+This supersedes the 2026-09-09 entry that left offboarding step 15 blocked rather than add a SharePoint surface for one
+step: with the OneDrive tab and export in M16, it is no longer one step.
+
+The one-button Entra Connect delta sync was considered and **deferred**. It needs WinRM to the sync server and the
+admin in `ADSyncOperators`, which is a remote-execution surface rather than another API. Hybrid onboarding (M17) waits
+for the scheduled cycle instead, and says when the next one is due.

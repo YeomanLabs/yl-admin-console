@@ -165,3 +165,112 @@ semantics — and LDAP semantics are where the bugs are, exactly as the real Gra
 - [x] 12.9 🖥 A Domain row opens the object's real page, not a lesser one. — done, proven for users; built but unprovable here for computers. An AD user whose cloud account exists opens User 360; a hybrid-joined computer opens Device 360; anything with no cloud counterpart keeps the AD object page, because that is genuinely all there is to show. The join is the one M12.4 proved — `onPremisesImmutableId` for users, and for computers the Entra `deviceId`, which for a hybrid join *is* the AD `objectGUID`.
 - [x] 12.10 🖥 Move an object's OU from the page you are already on. — done. The control is on User 360's Quick facts under the on-prem DN, and on the AD page for everything else. The User 360 button was not pressed against the lab: the only synced users live in the one OU Entra Connect scopes, and moving one out would delete it from the tenant at the next cycle. The write beneath it is `MoveAsync`, proven in the M12 gate with the objectGUID confirmed unchanged through ADSI. Today the only route is the AD object page, so an admin looking at a user has to leave it, find them again in the Domain list, and move them from there. Offered only where there is an AD object to move, and greyed with the reason where there is not.
 - [x] 12.11 🖥 The AD-only page does everything ADUC does for a user or a computer. — done. Four new writes on the contract — account options, expiry, manager, reset machine account — each proven against the lab and read back through a separate connection: password-never-expires sets exactly one bit; must-change writes `pwdLastSet=0` and `-1` clears it; expiry round-trips as a FILETIME and never is `0`; the manager is stored as a DN and a user cannot be their own; resetting a machine account moves its `pwdLastSet`. Then two of them were driven **through the page itself** — button press, ADSI read, button press, ADSI read: `userAccountControl` 512 → 66048 → 512, and `pwdLastSet` timestamp → 0 → timestamp. The page reuses the User 360 identity rows, with the LDAP attribute as the row's property name since there is no Graph name to translate from; the manager DN resolves to a name; membership rows carry the GUID the remove button needs, from one group list loaded per page and capped at 500 — a row past the cap keeps its name, loses its button, and says why. A person who exists only in AD has this page as their *whole* page, and today it is a fact sheet with four buttons. Users: every attribute editable in place (name, job, contact, address), reset password with the show-once reveal, unlock, enable/disable, password-never-expires and must-change-at-next-logon, account expiry, manager, group membership add/remove, move, rename, delete. Computers: description and location editable, enable/disable, reset the machine account, LAPS, group membership, move, rename, delete. Proven against `ada.lovelace` and `LAB-WKS-001`, neither of which is in the sync scope, so nothing done here can reach the tenant.
+
+## Phase 3 — the rest of the console
+
+Planned 2026-10-17 against two references: EasyEntra's feature set, and a scripted deprovisioning chain in use
+elsewhere (mail-triggered parser → cloud snapshot → AD → Graph → mailbox to shared). Phases 1 and 2 cover Entra,
+Intune and AD. What is left is almost entirely **Exchange Online and OneDrive** — five of the seven offboarding steps
+still greyed are Exchange's, and the sixth is OneDrive's — plus a handful of Graph-only features.
+
+Decisions (2026-10-17, Andrew), recorded in DECISIONS.md:
+
+- Exchange Online's admin endpoint (`outlook.office365.com`, delegated `Exchange.Manage`) joins Graph as an allowed
+  host. CLAUDE.md non-negotiable 3 is amended accordingly. Still delegated, still as the signed-in admin.
+- OneDrive is managed in full through the tenant's SharePoint admin endpoint, plus `Files.Read.All`.
+- The one-button Entra Connect sync is **not** planned for now; hybrid onboarding waits for the scheduled cycle.
+- Order: Exchange, then offboarding, then OneDrive, hybrid onboarding, Graph-only additions, reports, multi-tenant.
+
+## M13 — Exchange Online, read
+
+Graph cannot administer somebody else's mailbox under delegated permissions: mailbox settings, delegation,
+forwarding, holds and conversion all belong to Exchange. M13 proves the route and makes the Mailbox tab real,
+read-only, before anything writes.
+
+- [ ] 13.1 📄 `docs/13-EXCHANGE-ONLINE.md`, design before code as doc 11 was for AD: the endpoint and its token audience, which operations it accepts, throttling and error shape, the hybrid rule (where a synced mailbox's Exchange attributes are mastered on-prem, which writes go to AD's `proxyAddresses` and `msExchHideFromAddressLists` instead), how the Mailbox tab and offboarding consume it, and the fallback if the endpoint cannot do what is needed.
+- [ ] 13.2 🧪 `Exchange/ExchangeClient` over HttpClient, calling the admin REST endpoint the ExchangeOnlineManagement v3 module itself uses. It is undocumented, so this task proves it against the dev tenant before anything is built on it — `Get-Mailbox`, `Get-MailboxStatistics`, `Get-MailboxPermission`, `Get-RecipientPermission`, `Get-MailboxFolderPermission` — and records exactly what it accepts. Paging, Retry-After, an `ExchangeException` shaped like `GraphException`, tests with a fake handler.
+- [ ] 13.3 🧪 `Exchange.Manage` added to `Scopes`, the registration script, doc 08 and the drift test; a second token audience in `AuthService` with incremental consent; a Permissions row in Settings. Without consent every Exchange surface stays greyed with the reason, as today.
+- [ ] 13.4 🧪 Mailbox facts in the cache — recipient type (user, shared, room, equipment, none) and primary SMTP — refreshed on an interval like managed devices, since there is no delta. Shared mailboxes become findable in the palette and get a chip on the Users page.
+- [ ] 13.5 🖥 The Mailbox tab un-greyed, read-only: type, size and quota, archive, litigation hold, email addresses, forwarding, Send As / Send on Behalf / Full Access, folder permissions, regional settings, hidden from address lists. "No mailbox" and "not permitted" are each said in words, never a blank section.
+- [ ] **Gate:** every licensed user in the dev tenant opened and each Mailbox section compared field by field against Exchange PowerShell, not the console; a shared mailbox and a user with no mailbox each render their own correct state.
+
+## M14 — Exchange Online, write
+
+The dialogs from the EasyEntra demo. Each write previewed where it matters, logged, and undoable where Exchange allows.
+
+- [ ] 14.1 🖥 Email addresses: add, remove and set primary across the tenant's verified domains, with a uniqueness check first (M7's rule: "could not check" never reads as free). A synced mailbox writes to AD per doc 13.
+- [ ] 14.2 🖥 Hide from address lists; convert regular ↔ shared; regional settings (language, time zone, localised default folder names).
+- [ ] 14.3 🖥 Delegation: Send As, Send on Behalf, Full Access with the automapping choice, and the save-a-copy-to-Sent-Items flags.
+- [ ] 14.4 🖥 Delivery: forwarding with deliver-and-forward, automatic replies (internal, external, scheduled), delivery restrictions.
+- [ ] 14.5 🖥 Storage: archive and auto-expanding archive, litigation hold with duration — the licence each needs is stated before the click, not discovered from the error.
+- [ ] 14.6 🖥 Folder permissions on Calendar, Contacts, Inbox and the other default folders: per user, with access rights and the calendar sharing flags.
+- [ ] **Gate:** every write performed on a mailbox that is not the admin's own, read back through Exchange PowerShell, every reversible one undone, and the mailbox left exactly as found. Needs the disposable test user M15 asks for.
+
+## M15 — Offboarding, finished
+
+Twelve of nineteen steps run today. This milestone finishes the chain end to end — snapshot, AD, Entra, Exchange —
+leaving only OneDrive for M16. Everything the scripted chain does, done interactively, as the admin, behind a preview,
+and without its weakest link: one hardcoded password shared by every leaver.
+
+- [ ] 15.1 🧪 `snapshot`, first and halting: the leaver's whole before-picture — attributes, manager, cloud and AD groups, licences, OU, mailbox type, delegation, forwarding — written to a JSON file and the action log before anything changes. If it cannot be written, nothing runs.
+- [ ] 15.2 🧪 AD steps: `reset-ad-password` (random per account, never shown, never logged; replaces step 3's skip for synced users without writeback) and `remove-ad-group-memberships` (primary and protected groups skipped with reasons, per 12.5's rules).
+- [ ] 15.3 🧪 Exchange steps 10–14 un-greyed — hide from address lists, convert to shared, auto-reply, forward, delegate — plus `remove-mailbox-permissions`, `cancel-organized-meetings`, `remove-inbox-rules`, `remove-from-distribution-lists`, `remove-mobile-devices`, and `litigation-hold` (off by default). The runner orders convert-to-shared and litigation hold ahead of licence removal, and the preview says why.
+- [ ] 15.4 🖥 Restore from snapshot, for a rehire or the wrong person: re-enable, move back to the original OU or a chosen one, groups, licences, manager, attributes, mailbox back to regular. Previewed like an offboard, because it is one in reverse.
+- [ ] 15.5 🖥 Offboard a list: paste names or UPNs; each resolves against the cache; an ambiguous name shows its candidates and is never picked automatically; then one preview per person and a sequential run. The interactive answer to a mail-triggered parser — no service, no polling, no wildcard match acting on the wrong person.
+- [ ] 15.6 📄 Doc 06 rewritten as the full catalog: each step's surface, default, order and reversibility.
+- [ ] **Gate:** a disposable licensed hybrid test user with a mailbox, offboarded on the default profile in under 60 s (doc 01's target, unmeasured since M6), every effect verified in AD and the portals through a separate path, then restored from its snapshot and verified back to its starting state. **Needs:** a spare licence seat and permission to create and destroy that account.
+
+## M16 — OneDrive
+
+This reverses the 2026-09-09 decision that left offboarding step 15 blocked rather than add a SharePoint surface for
+one step. With the OneDrive tab and export, it is no longer one step.
+
+- [ ] 16.1 🧪 Prove the SharePoint admin calls against the dev tenant — token audience, delegated permission, the site properties behind sharing and lock state, site collection admins — and record them in doc 13. `Files.Read.All` and the SharePoint permission through the script, doc 08 and the drift test.
+- [ ] 16.2 🖥 The OneDrive tab: URL with copy, usage and quota, external sharing, lock state, site collection admins. Read first, then write.
+- [ ] 16.3 🧪 Offboarding step 15 `delegate-onedrive` un-greyed, as a site-collection-admin grant to the delegate. Reversible.
+- [ ] 16.4 🖥 Export a OneDrive to a ZIP: streamed to disk, resumable, progress in the status bar, never held in memory. Available in offboarding, off by default.
+- [ ] **Gate:** on the test user, sharing and lock state changed and restored, the delegate added and removed, and an export verified file for file against the drive's listing.
+
+## M17 — Hybrid onboarding
+
+Templates are cloud-only (doc 07's InfoBar), and a hybrid organisation creates people in AD. With no sync button, the
+console creates the AD account and finishes the cloud half itself once Entra Connect brings the user up.
+
+- [ ] 17.1 🧪 Templates gain `onPrem` (OU, AD groups, AD attributes) and `exchange` (regional settings, shared mailbox access, extra addresses) sections; create-template-from-user reads both halves.
+- [ ] 17.2 🖥 Create in AD from a template, into the chosen OU, with the show-once password and must-change.
+- [ ] 17.3 🧪 A persisted pending-provisioning queue: the cloud half (usage location, licences, cloud groups) runs when delta first returns the user by its anchor; the Exchange half when the mailbox exists. Survives a restart, and says when Entra Connect last ran and when the next cycle is due.
+- [ ] 17.4 🖥 Pending items visible on Home and in the Activity log until finished or abandoned.
+- [ ] **Gate:** three hybrid users created from a template and finished with nobody touching them after the create; the wait measured against the sync schedule.
+
+## M18 — Graph-only additions
+
+No new hosts, and nothing waits on M13–M17; any of these can be pulled forward.
+
+- [ ] 18.1 🖥 Issue a Temporary Access Pass — lifetime, one-time use — in the show-once dialog. Read and delete already exist.
+- [ ] 18.2 🖥 PIM: list the admin's eligible roles and self-activate with duration, justification and ticket where policy demands one. A control greyed for a missing role that is PIM-eligible offers activation inline rather than a dead end.
+- [ ] 18.3 🖥 Edit several users at once: multi-select on the Users page, a property sheet that writes only the fields changed, each user routed to Graph or AD by the hybrid rule, one correlation id, results per user.
+- [ ] 18.4 🧪 Field queries in list search — `dep=research lic=e5`, `disabled=true` — where each key maps to a fixed SQL fragment in code (9.1's rule: never built from input) and an unknown key says so.
+- [ ] 18.5 🖥 Column chooser and Export list: a CSV of exactly what is on screen, filters included.
+- [ ] **Gate:** a bulk edit across five users including a synced one, verified in Graph and AD; a field query and an export checked against the same filter ticked as chips.
+
+## M19 — Reports
+
+- [ ] 19.1 🖥 MFA readiness: registration state per user, what is missing, who is exempt.
+- [ ] 19.2 🖥 Licence usage: seats, direct versus group assignment, licensed accounts that are disabled or quiet for 90 days.
+- [ ] 19.3 🖥 Mailbox size and mailbox delegation across the tenant, cached and dated rather than run live per view.
+- [ ] **Gate:** each report reconciled against the portal's own figure for the same question.
+
+## M20 — Several tenants, several domains
+
+Doc 03 already anticipated this: `TenantContext` is a class so that it can become one per tab.
+
+- [ ] 20.1 🧪 `tenant.json` becomes a list of tenant profiles; caches are already per tenant.
+- [ ] 20.2 🖥 A tenant switcher, and a tab bound to the tenant it was opened in.
+- [ ] 20.3 🧪 More than one on-prem domain, per doc 11 §9.3.
+- [ ] **Gate:** two tenants open side by side in two tabs, a write in each, each landing in the right directory.
+
+## Not planned yet
+
+- One-button Entra Connect delta sync — deferred 2026-10-17. It needs WinRM to the sync server and the admin in `ADSyncOperators`.
+- A PowerShell module over the console's services.
+- Starting an offboarding from mail or an HR feed. The console has no background service by design; 15.5 is the interactive equivalent.
