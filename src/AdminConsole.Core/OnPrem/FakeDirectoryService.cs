@@ -526,6 +526,55 @@ public sealed class FakeDirectoryService : IDirectoryService
             ? LapsReadResult.None("That computer no longer exists in Active Directory.")
             : Laps);
 
+    public async Task<CreatedAdUser> CreateUserAsync(NewAdUser user, CancellationToken ct)
+    {
+        var dn = DistinguishedNames.Child("CN", user.Name.Trim(), user.ParentOuDn);
+        if (Exists(dn))
+        {
+            return new CreatedAdUser(DirectoryOutcome.Failed($"Create {user.Name}", 68, "00000524: UpdErr: DSID-031A11E2, problem 6005 (ENTRY_EXISTS)", "that user"), null);
+        }
+
+        if (All<OnPremUser>().Any(u => string.Equals(u.SamAccountName, user.SamAccountName, StringComparison.OrdinalIgnoreCase)))
+        {
+            return new CreatedAdUser(DirectoryOutcome.Failed($"Create {user.Name}", 68, "00000524: UpdErr: DSID-031A11E2, problem 6005 (ENTRY_EXISTS), data 0", "that sign-in name"), null);
+        }
+
+        string? A(string name) => user.Attributes.TryGetValue(name, out var v) ? v : null;
+        var created = new OnPremUser
+        {
+            ObjectGuid = Guid.NewGuid(),
+            SamAccountName = user.SamAccountName,
+            UserPrincipalName = user.UserPrincipalName,
+            DisplayName = user.Name.Trim(),
+            GivenName = user.GivenName,
+            Surname = user.Surname,
+            Mail = user.Mail,
+            Department = A("department"),
+            JobTitle = A("title"),
+            Company = A("company"),
+            Office = A("physicalDeliveryOfficeName"),
+            City = A("l"),
+            DistinguishedName = dn,
+            UserAccountControl = AccountFlags.NewDisabledUser,
+        };
+        Insert(created.ObjectGuid, dn, created);
+        ProxyAddressesOf[created.ObjectGuid] = user.ProxyAddresses;
+
+        var password = await SetPasswordAsync(created.ObjectGuid, user.Password, user.MustChangePassword, ct).ConfigureAwait(false);
+        if (!password.Success)
+        {
+            await DeleteAsync(created.ObjectGuid, ct).ConfigureAwait(false);
+            return new CreatedAdUser(password with { Summary = $"Not created: {password.FriendlyError ?? password.Summary}" }, null);
+        }
+
+        await SetEnabledAsync(created.ObjectGuid, true, ct).ConfigureAwait(false);
+        return new CreatedAdUser(DirectoryOutcome.Ok($"Created {user.SamAccountName} in {DistinguishedNames.FriendlyPath(user.ParentOuDn)}"),
+            await GetUserAsync(created.ObjectGuid, ct).ConfigureAwait(false));
+    }
+
+    /// <summary>What a create wrote to <c>proxyAddresses</c>, which <see cref="OnPremUser"/> does not carry.</summary>
+    public Dictionary<Guid, IReadOnlyList<string>> ProxyAddressesOf { get; } = [];
+
     public Task<DirectoryOutcome> CreateOuAsync(string name, string parentDn, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(name))

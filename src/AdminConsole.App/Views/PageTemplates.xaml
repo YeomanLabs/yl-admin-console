@@ -83,6 +83,53 @@
                                    AutomationProperties.Name="Sync now" />
                     </WrapPanel>
 
+                    <!-- M17.4: people created in AD whose cloud half is still to come. -->
+                    <StackPanel Visibility="{Binding HasPending, Converter={StaticResource BoolToVisibility}}">
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,4">
+                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Waiting for Entra Connect" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" />
+                            <ui:Button Content="Check now" Padding="8,2" Margin="12,0,0,0" Command="{Binding CheckPendingCommand}"
+                                       AutomationProperties.Name="Check the pending accounts now" />
+                            <ui:ProgressRing IsIndeterminate="True" Width="12" Height="12" Margin="8,0,0,0"
+                                             Visibility="{Binding IsCheckingPending, Converter={StaticResource BoolToVisibility}}" />
+                        </StackPanel>
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding SyncLine}" FontSize="12" Margin="0,0,0,8" />
+                        <ItemsControl ItemsSource="{Binding Pending}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type pages:PendingRow}">
+                                    <Border Padding="12,8" Margin="0,0,0,6" CornerRadius="4" MaxWidth="760" HorizontalAlignment="Left"
+                                            Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                            BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Detail}" FontSize="12" />
+                                                <TextBlock Text="{Binding LastNote}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding HasProblems}" Value="True">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCautionBrush}" />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </StackPanel>
+                                            <ui:Button Grid.Column="1" Content="Abandon" Padding="8,2" VerticalAlignment="Top" Margin="12,0,0,0"
+                                                       Command="{Binding AbandonCommand}" AutomationProperties.Name="{Binding AbandonName}"
+                                                       Visibility="{Binding CanAbandon, Converter={StaticResource BoolToVisibility}}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="In this tenant" FontSize="13" FontWeight="SemiBold" Margin="0,20,0,8" />
                     <ItemsControl ItemsSource="{Binding Totals}">
                         <ItemsControl.ItemsPanel>

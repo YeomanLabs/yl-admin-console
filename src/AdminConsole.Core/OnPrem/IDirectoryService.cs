@@ -125,6 +125,12 @@ public interface IDirectoryService
     /// </remarks>
     Task<DirectoryOutcome> SetGroupTypeAsync(Guid groupGuid, GroupScope scope, GroupCategory category, CancellationToken ct);
 
+    /// <summary>
+    /// Creates a user (M17.2): added disabled, given its password, then enabled — AD refuses an enabled account with no
+    /// password. If the password is refused (policy), the half-made account is deleted again rather than left behind.
+    /// </summary>
+    Task<CreatedAdUser> CreateUserAsync(NewAdUser user, CancellationToken ct);
+
     /// <summary>Creates an organisational unit under <paramref name="parentDn"/> (M12.6).</summary>
     Task<DirectoryOutcome> CreateOuAsync(string name, string parentDn, CancellationToken ct);
 

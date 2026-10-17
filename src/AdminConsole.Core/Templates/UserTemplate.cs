@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace AdminConsole.Core.Templates;
 
@@ -37,6 +37,15 @@ public sealed record UserTemplate
 
     public PasswordPolicy PasswordPolicy { get; init; } = new();
 
+    /// <summary>The AD half (M17.1). Present on a hybrid template: new people are made in AD and finished in the cloud after sync.</summary>
+    public TemplateOnPrem? OnPrem { get; init; }
+
+    /// <summary>The mailbox half (M17.1), applied once the mailbox exists.</summary>
+    public TemplateExchange? Exchange { get; init; }
+
+    [JsonIgnore]
+    public bool IsHybrid => OnPrem is not null;
+
     /// <summary>What the snapshot deliberately left out, in words, so nobody wonders where a group went.</summary>
     public IReadOnlyList<string> ExcludedOnSnapshot { get; init; } = [];
 
@@ -48,6 +57,12 @@ public sealed record UserTemplate
     public bool IsSaved => FileName is not null;
 
     public DateTimeOffset? LastUsed { get; init; }
+
+    /// <summary>
+    /// What a list item announces to UI Automation and screen readers: the name, not the record (found in M17 — the
+    /// template picker read out every field, the source user's sign-in name included).
+    /// </summary>
+    public override string ToString() => Name;
 }
 
 /// <summary>Where a template was snapshotted from (doc 07 <c>createdFrom</c>).</summary>

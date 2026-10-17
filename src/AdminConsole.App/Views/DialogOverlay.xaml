@@ -1,4 +1,4 @@
-<UserControl x:Class="AdminConsole.App.Views.DialogOverlay"
+﻿<UserControl x:Class="AdminConsole.App.Views.DialogOverlay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -219,7 +219,7 @@
                     </StackPanel>
 
                     <ui:Button Grid.Column="2" Content="Retry" Padding="8,2" VerticalAlignment="Top"
-                               Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl, AncestorLevel=2}}"
+                               Command="{Binding DataContext.RetryCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                CommandParameter="{Binding}"
                                Visibility="{Binding CanRetry, Converter={StaticResource BoolToVisibility}}"
                                AutomationProperties.Name="Retry this step" />
@@ -397,7 +397,7 @@
                             <DataTemplate DataType="{x:Type tpl:UserTemplate}">
                                 <Button Background="Transparent" BorderThickness="0" Padding="0" Cursor="Hand" HorizontalContentAlignment="Stretch"
                                         FocusVisualStyle="{x:Null}" AutomationProperties.Name="{Binding Name}"
-                                        Command="{Binding DataContext.ChooseTemplateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl, AncestorLevel=2}}"
+                                        Command="{Binding DataContext.ChooseTemplateCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                                         CommandParameter="{Binding}">
                                     <Border Padding="12,10" Margin="0,0,0,6" CornerRadius="4"
                                             Background="{DynamicResource ControlFillColorDefaultBrush}"
@@ -474,6 +474,27 @@
                                     </Style>
                                 </TextBlock.Style>
                             </TextBlock>
+                        </StackPanel>
+
+                        <!-- M17.2: where the account is made. Shown only for a hybrid template with a reachable DC. -->
+                        <StackPanel Margin="0,10,0,0" Visibility="{Binding CanCreateInAd, Converter={StaticResource BoolToVisibility}}">
+                            <CheckBox Content="Create in Active Directory" IsChecked="{Binding CreateInAd}" AutomationProperties.Name="Create in Active Directory" />
+                            <Grid Margin="0,8,0,0" Visibility="{Binding ShowAdFields, Converter={StaticResource BoolToVisibility}}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="12" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel>
+                                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Pre-Windows 2000 name (20 characters at most)" FontSize="11" Margin="0,0,0,3" />
+                                    <ui:TextBox Text="{Binding SamAccountName, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource AcMono}" MaxLength="20"
+                                                AutomationProperties.Name="Pre-Windows 2000 name" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2">
+                                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="AD sign-in name" FontSize="11" Margin="0,0,0,3" />
+                                    <TextBlock Text="{Binding AdUpn}" FontFamily="{StaticResource AcMono}" VerticalAlignment="Center" Margin="0,6,0,0" />
+                                </StackPanel>
+                            </Grid>
                         </StackPanel>
 
                         <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Manager" FontSize="11" Margin="0,10,0,0" />

@@ -7,6 +7,7 @@ using AdminConsole.Core;
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Cache.Browse;
 using AdminConsole.Core.Models;
+using AdminConsole.Core.Templates;
 
 namespace AdminConsole.App.ViewModels.Pages;
 
@@ -21,9 +22,12 @@ public sealed partial class HomePageViewModel : ObservableObject, IPageViewModel
     private readonly TenantContext _tenant;
     private readonly UserSettingsStore _settings;
     private readonly ILogger<HomePageViewModel> _logger;
+    private readonly PendingProvisioningService _pending;
 
-    public HomePageViewModel(CacheDb cache, TenantContext tenant, UserSettingsStore settings, ILogger<HomePageViewModel> logger)
+    public HomePageViewModel(CacheDb cache, TenantContext tenant, UserSettingsStore settings, ILogger<HomePageViewModel> logger,
+        PendingProvisioningService pending)
     {
+        _pending = pending;
         _cache = cache;
         _tenant = tenant;
         _settings = settings;
@@ -64,6 +68,53 @@ public sealed partial class HomePageViewModel : ObservableObject, IPageViewModel
     public ObservableCollection<HomeTile> Attention { get; } = [];
 
     public ObservableCollection<RecentEntry> Recent { get; } = [];
+
+    // ---- hybrid creates waiting for Entra Connect (M17.4) ------------------------------------------------------------
+
+    public ObservableCollection<PendingRow> Pending { get; } = [];
+
+    public bool HasPending => Pending.Count > 0;
+
+    [ObservableProperty]
+    private string? _syncLine;
+
+    [ObservableProperty]
+    private bool _isCheckingPending;
+
+    private void RefreshPending()
+    {
+        Pending.Clear();
+        // Open ones, plus anything finished in the last day so the admin sees how it ended.
+        foreach (var item in _pending.Items.Where(i => i.IsOpen || (i.FinishedAt is { } f && DateTimeOffset.UtcNow - f < TimeSpan.FromDays(1)))
+                     .OrderByDescending(i => i.CreatedAt))
+        {
+            Pending.Add(new PendingRow(item, row =>
+            {
+                _pending.Abandon(row.Item.Id);
+                RefreshPending();
+            }));
+        }
+
+        SyncLine = _pending.LastSync is { } last
+            ? $"Entra Connect last ran at {last.ToLocalTime():HH:mm}" + (_pending.NextSyncDue is { } due ? $"; the next cycle is due about {due.ToLocalTime():HH:mm}." : ".")
+            : "Waiting for the first check of when Entra Connect last ran.";
+        OnPropertyChanged(nameof(HasPending));
+    }
+
+    [RelayCommand]
+    private async Task CheckPendingAsync()
+    {
+        IsCheckingPending = true;
+        try
+        {
+            await _pending.ProcessAsync(CancellationToken.None);
+        }
+        finally
+        {
+            IsCheckingPending = false;
+            RefreshPending();
+        }
+    }
 
     public bool HasAttention => Attention.Count > 0;
 
@@ -112,6 +163,10 @@ public sealed partial class HomePageViewModel : ObservableObject, IPageViewModel
     /// <summary>Called by the shell when Home is shown. Reads are off the UI thread; the page paints first.</summary>
     public async Task LoadAsync(CancellationToken ct)
     {
+        RefreshPending();
+
+        // The sync time and any account that came up while Home was closed: one check on open, not a wait for the next cycle.
+        if (_pending.Open.Count > 0) _ = CheckPendingAsync();
         TenantName = _tenant.TenantDisplayName;
         Greeting = string.IsNullOrWhiteSpace(_tenant.SignedInDisplayName)
             ? "Admin Console"

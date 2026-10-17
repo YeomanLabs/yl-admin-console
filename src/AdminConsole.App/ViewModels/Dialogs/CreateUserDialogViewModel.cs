@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using AdminConsole.App.Services;
@@ -120,10 +120,54 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
     [NotifyPropertyChangedFor(nameof(Title))]
     private UserTemplate? _template;
 
-    /// <summary>Doc 07 §Hybrid note: cloud-only creation, said out loud rather than enforced by a block.</summary>
+    /// <summary>Doc 07 §Hybrid note, rewritten for M17: what kind of create this will be, said before the click.</summary>
     public bool IsHybridTenant => _tenant.OnPremisesSyncEnabled;
 
-    public string HybridNote => "This tenant syncs from on-prem AD. The user created here is cloud-only. On-prem creation arrives in Phase 2.";
+    public string HybridNote => CanCreateInAd
+        ? CreateInAd
+            ? $"Creates the account in Active Directory, in {Core.OnPrem.DistinguishedNames.FriendlyPath(Template!.OnPrem!.OuDn)}. Licences, cloud groups and mailbox settings follow by themselves once Entra Connect syncs it; progress is on Home."
+            : "Creates a cloud-only account even though this template has an AD section. In a synced organisation that is usually a second identity for the same person."
+        : Template?.IsHybrid == true
+            ? $"This template creates in AD, but {(AdReason ?? "no domain controller is reachable")} — so the account would be cloud-only."
+            : "This tenant syncs from on-prem AD, and this template has no AD section, so the user is cloud-only. Snapshot a template from a synced user to create in AD.";
+
+    // ---- hybrid (M17.2) ----------------------------------------------------------------------------------------------
+
+    /// <summary>Set by the shell: creates in AD and queues the cloud half (M17.2). Null when AD is not configured.</summary>
+    public HybridProvisioningService? Hybrid { get; init; }
+
+    /// <summary>Set by the shell: the AD domain's DNS name when a DC is reachable; null otherwise.</summary>
+    public string? AdDomain { get; init; }
+
+    /// <summary>Set by the shell: why AD can't be used right now, when it can't.</summary>
+    public string? AdReason { get; init; }
+
+    public bool CanCreateInAd => Template?.IsHybrid == true && Hybrid is not null && AdDomain is not null;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HybridNote))]
+    [NotifyPropertyChangedFor(nameof(ShowAdFields))]
+    private bool _createInAd;
+
+    public bool ShowAdFields => CanCreateInAd && CreateInAd;
+
+    [ObservableProperty]
+    private string _samAccountName = string.Empty;
+
+    /// <summary>True once the admin edits the pre-Windows 2000 name; the rule stops overwriting it.</summary>
+    private bool _samEdited;
+
+    partial void OnSamAccountNameChanged(string value)
+    {
+        if (Template is { } t && value != HybridProvisioningService.SamFor(t, FirstName, LastName)) _samEdited = true;
+        OnPropertyChanged(nameof(CanCreate));
+    }
+
+    public string AdUpnSuffix => Template?.OnPrem?.UpnSuffix ?? AdDomain ?? string.Empty;
+
+    public string AdUpn => UpnLocal.Length == 0 ? string.Empty : $"{UpnLocal}@{AdUpnSuffix}";
+
+    partial void OnCreateInAdChanged(bool value) => RefreshPreview();
 
     [RelayCommand]
     private void ChooseTemplate(UserTemplate template) => Choose(template);
@@ -153,6 +197,10 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
         Groups = new List<CreateGroupRow>(template.Groups.Select(g => new CreateGroupRow(g, RemoveGroup)));
         ManagerId = template.ManagerId;
         ManagerLabel = template.ManagerDisplayName ?? (template.ManagerId is null ? "None" : template.ManagerId);
+        CreateInAd = CanCreateInAd;
+        OnPropertyChanged(nameof(CanCreateInAd));
+        OnPropertyChanged(nameof(HybridNote));
+        OnPropertyChanged(nameof(AdUpnSuffix));
         RefreshNames();
     }
 
@@ -337,15 +385,21 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
         && DisplayName.Trim().Length > 0
         && UpnLocal.Trim().Length > 0
         && Domain.Length > 0
-        && !UpnBlocked;
+        && !UpnBlocked
+        && (!ShowAdFields || SamAccountName.Trim().Length is > 0 and <= 20);
 
     private void RefreshPreview()
     {
+        if (Template is { } t && !_samEdited) SamAccountName = HybridProvisioningService.SamFor(t, FirstName, LastName);
+        OnPropertyChanged(nameof(AdUpn));
         var licences = Licenses.Count(l => l.IsSelected);
         var parts = new List<string>(4)
         {
-            $"Create {(DisplayName.Trim().Length == 0 ? "a user" : DisplayName.Trim())} as {(Upn.Length == 0 ? "…" : Upn)}",
+            ShowAdFields
+                ? $"Create {(DisplayName.Trim().Length == 0 ? "a user" : DisplayName.Trim())} in AD as {(AdUpn.Length == 0 ? "…" : AdUpn)} ({SamAccountName})"
+                : $"Create {(DisplayName.Trim().Length == 0 ? "a user" : DisplayName.Trim())} as {(Upn.Length == 0 ? "…" : Upn)}",
         };
+        if (ShowAdFields && Template?.OnPrem is { } onPrem) parts.Add($"{onPrem.Groups.Count} AD group{(onPrem.Groups.Count == 1 ? string.Empty : "s")}");
 
         if (UsageLocation is { } usage) parts.Add($"usage location {usage}");
         parts.Add($"{licences} licence{(licences == 1 ? string.Empty : "s")}");
@@ -414,7 +468,17 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
             ForceChangePasswordNextSignIn = template.PasswordPolicy.ForceChangeOnFirstSignIn,
         };
 
-        Result = await _provisioning.CreateAsync(request, CancellationToken.None);
+        if (ShowAdFields && Hybrid is { } hybrid && template.OnPrem is { } onPremTemplate)
+        {
+            // The cloud address becomes the AD mail attribute: Entra Connect carries it up as the primary SMTP address.
+            attributes["mail"] = Upn;
+            request = request with { Attributes = attributes };
+            Result = await hybrid.CreateAsync(template, request, onPremTemplate.OuDn, SamAccountName.Trim(), AdUpn, CancellationToken.None);
+        }
+        else
+        {
+            Result = await _provisioning.CreateAsync(request, CancellationToken.None);
+        }
         Phase = CreatePhase.Result;
         OnPropertyChanged(nameof(HasResultPassword));
         OnPropertyChanged(nameof(ResultSummary));
@@ -456,6 +520,7 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
         _upnEdited = false;
         DisplayName = string.Empty;
         UpnLocal = string.Empty;
+        _samEdited = false;
         UpnMessage = null;
         UpnBlocked = false;
         StatusText = null;

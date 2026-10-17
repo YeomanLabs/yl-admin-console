@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
@@ -35,6 +35,15 @@ public sealed class TemplateService
     }
 
     public static string DefaultDirectory => Path.Combine(AppPaths.TemplatesDirectory, "users");
+
+    /// <summary>Reads the AD half of a synced user when snapshotting (M17.1); null leaves templates cloud-only.</summary>
+    public OnPrem.IDirectoryService? ActiveDirectory { get; init; }
+
+    /// <summary>Reads the mailbox half when snapshotting (M17.1); null leaves it out.</summary>
+    public Exchange.ExchangeService? ExchangeService { get; init; }
+
+    /// <summary>The cached shared mailboxes, scanned for the source user's Full Access (M17.1).</summary>
+    public Cache.CacheDb? Cache { get; init; }
 
     /// <summary>Files that would not load, so the page can say so instead of showing a shorter list.</summary>
     public IReadOnlyList<string> LoadErrors { get; private set; } = [];
@@ -185,6 +194,9 @@ public sealed class TemplateService
         excluded.AddRange(groupNotes);
 
         var manager = await ReadManagerAsync(userId, ct).ConfigureAwait(false);
+        var onPrem = user.OnPremisesSyncEnabled ? await SnapshotOnPremAsync(user, excluded, ct).ConfigureAwait(false) : null;
+        var exchange = await SnapshotExchangeAsync(user, excluded, ct).ConfigureAwait(false);
+        if (onPrem is not null && exchange.Addresses.Count > 0) onPrem = onPrem with { AddressRules = exchange.Addresses };
 
         _logger.LogInformation("Snapshotted a template from {UserId}: {Attributes} attribute(s), {Licenses} licence(s), {Groups} group(s)",
             userId, attributes.Count, licenses.Count, groups.Count);
@@ -199,7 +211,104 @@ public sealed class TemplateService
             Licenses = licenses,
             Groups = groups,
             ExcludedOnSnapshot = excluded,
+            OnPrem = onPrem,
+            Exchange = exchange.Settings,
         };
+    }
+
+    /// <summary>The AD half of a synced user: its OU, AD groups and role attributes (M17.1).</summary>
+    private async Task<TemplateOnPrem?> SnapshotOnPremAsync(DirectoryUser user, List<string> excluded, CancellationToken ct)
+    {
+        if (ActiveDirectory is null || string.IsNullOrEmpty(user.OnPremisesImmutableId)) return null;
+        OnPrem.OnPremUser? ad;
+        try
+        {
+            ad = await ActiveDirectory.GetUserByImmutableIdAsync(user.OnPremisesImmutableId, ct).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            excluded.Add($"The AD half — Active Directory could not be reached ({ex.Message})");
+            return null;
+        }
+
+        if (ad is null)
+        {
+            excluded.Add("The AD half — no AD account matches this user's source anchor");
+            return null;
+        }
+
+        var attributes = new Dictionary<string, string?>(StringComparer.Ordinal)
+        {
+            ["department"] = ad.Department,
+            ["title"] = ad.JobTitle,
+            ["company"] = ad.Company,
+            ["physicalDeliveryOfficeName"] = ad.Office,
+            ["l"] = ad.City,
+            ["st"] = ad.State,
+            ["co"] = ad.Country,
+            ["streetAddress"] = ad.StreetAddress,
+            ["postalCode"] = ad.PostalCode,
+        };
+        foreach (var empty in attributes.Where(a => string.IsNullOrWhiteSpace(a.Value)).Select(a => a.Key).ToList()) attributes.Remove(empty);
+
+        return new TemplateOnPrem
+        {
+            OuDn = OnPrem.DistinguishedNames.Parent(ad.DistinguishedName) ?? ad.DistinguishedName,
+            Groups = [.. ad.MemberOfDns.Select(dn => new TemplateAdGroup(dn, OnPrem.DistinguishedNames.FriendlyPath(dn)))],
+            Attributes = attributes,
+            UpnSuffix = ad.UserPrincipalName is { } upn && upn.Contains('@') ? upn[(upn.IndexOf('@') + 1)..] : null,
+        };
+    }
+
+    /// <summary>The mailbox half: regional settings, shared mailboxes the user works in, and addresses as rules (M17.1).</summary>
+    private async Task<(TemplateExchange? Settings, IReadOnlyList<string> Addresses)> SnapshotExchangeAsync(DirectoryUser user, List<string> excluded, CancellationToken ct)
+    {
+        if (ExchangeService is not { IsAvailable: true } exchange) return (null, []);
+        var mailbox = await exchange.GetMailboxAsync(user.Id, ct).ConfigureAwait(false);
+        if (!mailbox.IsSuccess) return (null, []);
+
+        var regional = (await exchange.GetRegionalAsync(user.Id, ct).ConfigureAwait(false)).Value;
+        var access = new List<TemplateMailboxAccess>();
+        if (user.UserPrincipalName is { } upn)
+        {
+            foreach (var shared in Cache?.GetMailboxes(Exchange.MailboxKinds.SharedMailbox).Take(100) ?? [])
+            {
+                var full = await exchange.GetFullAccessAsync(shared.UserId, ct).ConfigureAwait(false);
+                if (full.Value?.Any(e => !e.IsDeny && string.Equals(e.Principal, upn, StringComparison.OrdinalIgnoreCase)) == true)
+                {
+                    access.Add(new TemplateMailboxAccess { MailboxId = shared.UserId, Label = shared.PrimarySmtp, FullAccess = true });
+                }
+            }
+
+            try
+            {
+                foreach (var r in await exchange.GetSendAsGrantedToAsync(upn, ct).ConfigureAwait(false))
+                {
+                    if (r.ObjectId is not { } id || r.RecipientType?.Contains("Mailbox", StringComparison.OrdinalIgnoreCase) != true) continue;
+                    var existing = access.FindIndex(a => a.MailboxId == id);
+                    if (existing >= 0) access[existing] = access[existing] with { SendAs = true };
+                    else access.Add(new TemplateMailboxAccess { MailboxId = id, Label = r.Display, FullAccess = false, SendAs = true });
+                }
+            }
+            catch (Exchange.ExchangeException ex)
+            {
+                excluded.Add($"Send As on other mailboxes — {Exchange.ExchangeErrorText.Friendly(ex)}");
+            }
+        }
+
+        // An extra address becomes a rule when its local part is the person's own: jdoe@contoso.co.uk next to
+        // jdoe@contoso.com is "{alias}@contoso.co.uk"; sales@contoso.com is somebody else's and is left out.
+        var m = mailbox.Value!;
+        var local = m.PrimarySmtp is { } p && p.Contains('@') ? p[..p.IndexOf('@')] : m.Alias;
+        var rules = m.EmailAddresses
+            .Where(a => a.IsSmtp && !a.IsPrimary && a.Address.Contains('@'))
+            .Where(a => string.Equals(a.Address[..a.Address.IndexOf('@')], local, StringComparison.OrdinalIgnoreCase))
+            .Select(a => "{alias}" + a.Address[a.Address.IndexOf('@')..])
+            .Where(r => !r.EndsWith(".mail.onmicrosoft.com", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        return (new TemplateExchange { Language = regional?.Language, TimeZone = regional?.TimeZone, MailboxAccess = access }, rules);
     }
 
     private async Task<(IReadOnlyList<TemplateLicense> Licenses, IReadOnlyList<string> Notes)> SnapshotLicensesAsync(string userId, CancellationToken ct)

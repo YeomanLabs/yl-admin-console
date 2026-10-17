@@ -62,3 +62,27 @@ A **template** is a JSON snapshot of the attributes, licenses, and group members
 
 ## Hybrid note
 Phase 1 creates **cloud-only** users. If the tenant is hybrid (`organization.onPremisesSyncEnabled`), show an InfoBar on the template picker: "This tenant syncs from on-prem AD. Users created here are cloud-only. On-prem creation arrives in Phase 2." Do not block.
+
+## Hybrid templates (M17)
+
+A template with an `onPrem` section creates the person in AD (the dialog's "Create in Active Directory", on by default
+when a DC answers) and finishes the cloud and mailbox halves after Entra Connect:
+
+```json
+"onPrem": {
+  "ouDn": "OU=Staff,DC=contoso,DC=com",
+  "groups": [ { "dn": "CN=VPN Users,OU=Groups,DC=contoso,DC=com", "name": "VPN Users" } ],
+  "attributes": { "department": "Sales", "title": "Account Manager", "physicalDeliveryOfficeName": "Madison" },
+  "samRule": "{first}.{last}",
+  "upnSuffix": "contoso.com",
+  "addressRules": [ "{alias}@contoso.co.uk" ]
+},
+"exchange": {
+  "language": "en-GB", "timeZone": "GMT Standard Time",
+  "mailboxAccess": [ { "mailboxId": "<object id>", "label": "sales@contoso.com", "fullAccess": true, "sendAs": false } ]
+}
+```
+
+Snapshotting a synced user fills both from AD and Exchange. The OU must be inside Entra Connect's sync scope, or the cloud
+half never happens. Pending people are on Home until finished or abandoned.
+

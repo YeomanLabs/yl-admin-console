@@ -615,6 +615,18 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (!IsSessionReady) return;
 
+        // M17.2: whether this create can go to AD, asked before the dialog opens so the form shows the right fields.
+        var directory = _services.GetRequiredService<IDirectoryService>();
+        DirectoryStatus? adStatus = null;
+        try
+        {
+            adStatus = await directory.GetStatusAsync(CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogInformation("AD status unavailable for create: {Message}", ex.Message);
+        }
+
         var dialog = new CreateUserDialogViewModel(
             _services.GetRequiredService<TemplateService>(),
             _services.GetRequiredService<UserProvisioningService>(),
@@ -631,6 +643,9 @@ public sealed partial class ShellViewModel : ObservableObject
                 return Task.CompletedTask;
             }),
             OpenUser = (id, title) => OpenObjectFromPage(ObjectType.User, id, title),
+            Hybrid = _services.GetRequiredService<HybridProvisioningService>(),
+            AdDomain = adStatus is { IsConnected: true } ? adStatus.DomainName : null,
+            AdReason = adStatus?.Reason,
         };
 
         await _services.GetRequiredService<DialogService>().ShowAsync(dialog);

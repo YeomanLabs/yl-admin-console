@@ -246,7 +246,17 @@ public sealed partial class App : Application
         services.AddSingleton(sp => new TemplateService(
             TemplateService.DefaultDirectory,
             sp.GetRequiredService<GraphClient>(),
-            sp.GetRequiredService<ILogger<TemplateService>>()));
+            sp.GetRequiredService<ILogger<TemplateService>>())
+        {
+            ActiveDirectory = sp.GetRequiredService<IDirectoryService>(),
+            ExchangeService = sp.GetRequiredService<ExchangeService>(),
+            Cache = sp.GetRequiredService<CacheDb>(),
+        });
+
+        // Hybrid onboarding (M17): create in AD, finish in the cloud after Entra Connect.
+        services.AddSingleton(_ => new PendingProvisioningStore(PendingProvisioningStore.DefaultDirectory));
+        services.AddSingleton<PendingProvisioningService>();
+        services.AddSingleton<HybridProvisioningService>();
         services.AddSingleton(sp => new OffboardingProfileStore(
             OffboardingProfileStore.DefaultDirectory,
             sp.GetRequiredService<ILogger<OffboardingProfileStore>>()));

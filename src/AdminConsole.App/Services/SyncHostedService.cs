@@ -28,6 +28,20 @@ public sealed class SyncHostedService : BackgroundService
         await WaitForTenantAsync(stoppingToken).ConfigureAwait(false);
         _logger.LogInformation("Tenant loaded; starting sync loop");
         var sync = _services.GetRequiredService<DeltaSyncService>();
+
+        // M17.3: hybrid creates move on after every sync, which is when a newly synced account first appears in the cache.
+        var pending = _services.GetRequiredService<AdminConsole.Core.Templates.PendingProvisioningService>();
+        sync.CycleCompleted += (_, _) => _ = Task.Run(async () =>
+        {
+            try
+            {
+                await pending.ProcessAsync(stoppingToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                _logger.LogWarning(ex, "Processing pending hybrid creates failed");
+            }
+        }, stoppingToken);
         try
         {
             await sync.RunLoopAsync(stoppingToken).ConfigureAwait(false);

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using AdminConsole.Core.Auth;
@@ -170,6 +170,45 @@ public sealed class UserProvisioningService
         "accountEnabled", "displayName", "givenName", "surname", "userPrincipalName",
         "mailNickname", "passwordProfile", "id", "mail", "proxyAddresses",
     };
+
+    /// <summary>
+    /// The cloud half of a hybrid create (M17.3), once Entra Connect has brought the account up: usage location, licences,
+    /// cloud groups. Not the manager — a synced user's manager is mastered in AD and was set there at create.
+    /// </summary>
+    public async Task<IReadOnlyList<CreateStepResult>> FinishCloudAsync(DirectoryUser user, string? usageLocation, IReadOnlyList<string> skuIds,
+        IReadOnlyList<TemplateGroup> groups, CancellationToken ct)
+    {
+        var steps = new List<CreateStepResult>(3);
+        if (!string.IsNullOrWhiteSpace(usageLocation))
+        {
+            try
+            {
+                await _graph.SendAsync(HttpMethod.Patch, $"users/{user.Id}", new Dictionary<string, object?> { ["usageLocation"] = usageLocation }, ct).ConfigureAwait(false);
+                Record(user.Id, user.UserPrincipalName, "user.patch.usageLocation", $"PATCH usageLocation={usageLocation}", ActionOutcome.Success, $"Usage location {usageLocation}");
+                steps.Add(CreateStepResult.Ok("Set the usage location", $"Usage location {usageLocation}"));
+            }
+            catch (GraphException ex)
+            {
+                steps.Add(CreateStepResult.Fail("Set the usage location", GraphErrorText.Friendly(ex), ex));
+            }
+        }
+
+        var request = new CreateUserRequest
+        {
+            DisplayName = user.DisplayName ?? user.UserPrincipalName ?? user.Id,
+            GivenName = string.Empty,
+            Surname = string.Empty,
+            UserPrincipalName = user.UserPrincipalName ?? user.Id,
+            MailNickname = string.Empty,
+            Password = string.Empty,
+            SkuIds = skuIds,
+            Groups = groups,
+            Attributes = usageLocation is null ? new Dictionary<string, object?>() : new Dictionary<string, object?> { ["usageLocation"] = usageLocation },
+        };
+        steps.Add(await AssignLicensesAsync(user, request, ct).ConfigureAwait(false));
+        steps.Add(await AddGroupsAsync(user, request, ct).ConfigureAwait(false));
+        return steps;
+    }
 
     private async Task<CreateStepResult> AssignLicensesAsync(DirectoryUser user, CreateUserRequest request, CancellationToken ct)
     {

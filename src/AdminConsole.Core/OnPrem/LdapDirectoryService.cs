@@ -668,6 +668,48 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
     /// Sends a request. <paramref name="alreadyDone"/> lists result codes that mean the directory is already in the
     /// state being asked for — AD reports those as errors, and the console should not.
     /// </summary>
+    public async Task<CreatedAdUser> CreateUserAsync(NewAdUser user, CancellationToken ct)
+    {
+        var dn = $"CN={DistinguishedNames.Escape(user.Name.Trim())},{user.ParentOuDn}";
+        var add = new AddRequest(dn,
+            new DirectoryAttribute("objectClass", "user"),
+            new DirectoryAttribute("sAMAccountName", user.SamAccountName),
+            new DirectoryAttribute("userPrincipalName", user.UserPrincipalName),
+            new DirectoryAttribute("displayName", user.Name.Trim()),
+            new DirectoryAttribute("givenName", user.GivenName),
+            new DirectoryAttribute("sn", user.Surname),
+            new DirectoryAttribute("userAccountControl", AccountFlags.NewDisabledUser.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        if (!string.IsNullOrWhiteSpace(user.Mail)) add.Attributes.Add(new DirectoryAttribute("mail", user.Mail));
+        if (user.ProxyAddresses.Count > 0) add.Attributes.Add(new DirectoryAttribute("proxyAddresses", [.. user.ProxyAddresses.Cast<object>()]));
+        foreach (var (name, value) in user.Attributes)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) add.Attributes.Add(new DirectoryAttribute(name, value));
+        }
+
+        var created = await SendAsync(add, $"Created {user.Name.Trim()}", "that container", ct).ConfigureAwait(false);
+        if (!created.Success) return new CreatedAdUser(created, null);
+
+        var entry = await ReadByDnAsync(dn, ["objectGUID"], ct).ConfigureAwait(false);
+        if (entry is null || LdapAttributes.Guid(entry, "objectGUID") is not { } guid)
+        {
+            return new CreatedAdUser(DirectoryOutcome.Failed($"Create {user.Name}", 0, "The account was created but could not be read back.", "that user"), null);
+        }
+
+        var password = await SetPasswordAsync(guid, user.Password, user.MustChangePassword, ct).ConfigureAwait(false);
+        if (!password.Success)
+        {
+            // A disabled account with no usable password is worse than none: delete it and say why.
+            await DeleteAsync(guid, ct).ConfigureAwait(false);
+            return new CreatedAdUser(password with { Summary = $"Not created: {password.FriendlyError ?? password.Summary}" }, null);
+        }
+
+        var enabled = await SetEnabledAsync(guid, true, ct).ConfigureAwait(false);
+        var read = await GetUserAsync(guid, ct).ConfigureAwait(false);
+        return new CreatedAdUser(enabled.Success
+            ? DirectoryOutcome.Ok($"Created {user.SamAccountName} in {DistinguishedNames.FriendlyPath(user.ParentOuDn)}")
+            : enabled with { Summary = $"Created {user.SamAccountName}, but it could not be enabled" }, read);
+    }
+
     public async Task<DirectoryOutcome> CreateOuAsync(string name, string parentDn, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(name)) return DirectoryOutcome.Refused("Create OU", "An organisational unit needs a name.");

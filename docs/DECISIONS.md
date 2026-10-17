@@ -498,3 +498,20 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   SharePoint `User.ReadWrite.All` added only for the provisioning probe was removed again, so the registration matches
   the script.
 
+## 2026-10-17 — M17: hybrid onboarding creates in AD and finishes itself after sync
+
+- **In a synced organisation the account is made in AD, never in the cloud first.** A cloud account made first becomes a
+  second identity for the same person once Entra Connect brings the AD one up. The dialog defaults to AD whenever the
+  template has an AD section and a DC answers, and says plainly what a cloud-only create would mean.
+- **Addresses and mail are written to AD** (`mail`, `proxyAddresses`): for a synced user AD masters them, and Exchange
+  would refuse them later.
+- **The cloud half waits for the account, not for a timer.** The queue looks for the source anchor in the cache after
+  every delta sync, so it finishes within one delta interval of Entra Connect, whenever that runs. There is still no
+  sync button (deferred 2026-10-17); the next cycle is shown instead.
+- **The queue is a JSON file per tenant**, like snapshots and profiles: readable by a person, survives a restart, and a
+  damaged file is set aside rather than stopping every sync.
+- **No licence, no mailbox half — and that is not a problem.** Only a licence that was asked for and refused is
+  reported as one; nothing waits forever for a mailbox that can't come.
+- **`AncestorLevel=2` command bindings were wrong.** The template picker and the offboard Retry button both bound to the
+  second `ItemsControl` up the tree; neither ever worked. Found by the M17 gate's UI run with two templates on disk.
+
