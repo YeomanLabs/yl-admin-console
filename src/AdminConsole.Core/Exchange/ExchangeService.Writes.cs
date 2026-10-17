@@ -131,7 +131,7 @@ public sealed partial class ExchangeService
 
     public async Task<WriteOutcome> AddAddressAsync(MailboxRef m, string address, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.address", ct).ConfigureAwait(false);
         address = address.Trim();
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         if (before.EmailAddresses.Any(a => a.IsSmtp && a.Address.Equals(address, StringComparison.OrdinalIgnoreCase)))
@@ -147,7 +147,7 @@ public sealed partial class ExchangeService
 
     public async Task<WriteOutcome> RemoveAddressAsync(MailboxRef m, string address, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.address", ct).ConfigureAwait(false);
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         var existing = before.EmailAddresses.FirstOrDefault(a => a.IsSmtp && a.Address.Equals(address, StringComparison.OrdinalIgnoreCase));
         if (existing is null) return WriteOutcome.NoOp($"{address} is not an address of {m.Label}");
@@ -169,7 +169,7 @@ public sealed partial class ExchangeService
     /// </summary>
     public async Task<WriteOutcome> SetPrimaryAddressAsync(MailboxRef m, string address, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.address", ct).ConfigureAwait(false);
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         if (string.Equals(before.PrimarySmtp, address, StringComparison.OrdinalIgnoreCase))
         {
@@ -210,7 +210,7 @@ public sealed partial class ExchangeService
     /// <summary>Regular ↔ shared. Converting does not touch licences (doc 13 §5); the UI says so before the click.</summary>
     public async Task<WriteOutcome> ConvertAsync(MailboxRef m, bool toShared, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.convert", ct).ConfigureAwait(false);
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         var target = toShared ? MailboxKind.Shared : MailboxKind.User;
         if (before.Kind == target) return WriteOutcome.NoOp($"{m.Label} is already a {MailboxKinds.Describe(target).ToLowerInvariant()}");
@@ -232,7 +232,7 @@ public sealed partial class ExchangeService
     /// <param name="autoMapping">Whether the mailbox appears in the delegate's Outlook on its own.</param>
     public async Task<WriteOutcome> GrantFullAccessAsync(MailboxRef m, string principal, bool autoMapping, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.fullaccess", ct).ConfigureAwait(false);
         var current = await GetFullAccessAsync(m.UserId, ct).ConfigureAwait(false);
         if (current.Value?.Any(e => !e.IsDeny && Same(e.Principal, principal)) == true) return WriteOutcome.NoOp($"{principal} already has Full Access to {m.Label}");
 
@@ -246,7 +246,7 @@ public sealed partial class ExchangeService
 
     public async Task<WriteOutcome> RevokeFullAccessAsync(MailboxRef m, string principal, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.fullaccess", ct).ConfigureAwait(false);
         var current = await GetFullAccessAsync(m.UserId, ct).ConfigureAwait(false);
         if (current.Value is { } entries && !entries.Any(e => Same(e.Principal, principal))) return WriteOutcome.NoOp($"{principal} has no Full Access to {m.Label}");
 
@@ -261,7 +261,7 @@ public sealed partial class ExchangeService
 
     public async Task<WriteOutcome> GrantSendAsAsync(MailboxRef m, string principal, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.sendas", ct).ConfigureAwait(false);
         var current = await GetSendAsAsync(m.UserId, ct).ConfigureAwait(false);
         if (current.Value?.Any(e => !e.IsDeny && Same(e.Principal, principal)) == true) return WriteOutcome.NoOp($"{principal} can already send as {m.Label}");
 
@@ -275,7 +275,7 @@ public sealed partial class ExchangeService
 
     public async Task<WriteOutcome> RevokeSendAsAsync(MailboxRef m, string principal, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.sendas", ct).ConfigureAwait(false);
         var current = await GetSendAsAsync(m.UserId, ct).ConfigureAwait(false);
         if (current.Value is { } entries && !entries.Any(e => Same(e.Principal, principal))) return WriteOutcome.NoOp($"{principal} can't send as {m.Label}");
 
@@ -291,7 +291,7 @@ public sealed partial class ExchangeService
     /// <param name="identity">Object id or UPN to add; for a remove, the <see cref="RecipientRef.Identity"/> the read resolved.</param>
     public async Task<WriteOutcome> ChangeListAsync(MailboxRef m, MailboxList list, string identity, string displayAs, bool add, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, $"exchange.list.{list.ToString().ToLowerInvariant()}", ct).ConfigureAwait(false);
         var (parameter, noun) = list switch
         {
             MailboxList.SendOnBehalf => ("GrantSendOnBehalfTo", "Send on Behalf"),
@@ -329,7 +329,7 @@ public sealed partial class ExchangeService
     /// </summary>
     public async Task<WriteOutcome> SetForwardingAsync(MailboxRef m, string? internalIdentity, string? externalAddress, bool keepCopy, string? displayAs, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.forwarding", ct).ConfigureAwait(false);
         if (internalIdentity is not null && externalAddress is not null)
         {
             throw new ArgumentException("Forward to an internal recipient or an external address, not both.");
@@ -362,7 +362,7 @@ public sealed partial class ExchangeService
     /// <summary>Sets automatic replies to <paramref name="desired"/>. The messages are content: they never reach the action log.</summary>
     public async Task<WriteOutcome> SetAutoReplyAsync(MailboxRef m, AutoReplySettings desired, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.autoreply", ct).ConfigureAwait(false);
         var before = await GetAutoReplyAsync(m.UserId, ct).ConfigureAwait(false);
         if (!before.IsSuccess) return Failed(m, "exchange.autoreply", $"Set automatic replies on {m.Label}", before.Error!);
         var previous = before.Value!;
@@ -393,7 +393,7 @@ public sealed partial class ExchangeService
     /// <param name="localizeFolders">Rename the default folders into the new language. Irreversible in practice, so it is not undone.</param>
     public async Task<WriteOutcome> SetRegionalAsync(MailboxRef m, string language, string timeZone, bool localizeFolders, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.regional", ct).ConfigureAwait(false);
         var before = await GetRegionalAsync(m.UserId, ct).ConfigureAwait(false);
         if (!before.IsSuccess) return Failed(m, "exchange.regional", $"Set regional settings on {m.Label}", before.Error!);
         var previous = before.Value!;
@@ -430,7 +430,7 @@ public sealed partial class ExchangeService
     /// <summary>Not undoable: disabling an archive starts a 30-day countdown to deleting its contents (doc 13 §3).</summary>
     public async Task<WriteOutcome> EnableArchiveAsync(MailboxRef m, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.archive", ct).ConfigureAwait(false);
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         if (before.HasArchive) return WriteOutcome.NoOp($"{m.Label} already has an archive");
         return await WriteAsync(m, "exchange.archive.enable", $"Enabled the archive for {m.Label}", "Enable-Mailbox Archive",
@@ -440,7 +440,7 @@ public sealed partial class ExchangeService
     /// <summary>Not undoable at all: Exchange offers no way to turn auto-expanding archiving off once on.</summary>
     public async Task<WriteOutcome> EnableAutoExpandingArchiveAsync(MailboxRef m, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.archive", ct).ConfigureAwait(false);
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         if (before.AutoExpandingArchive) return WriteOutcome.NoOp($"{m.Label}'s archive already expands automatically");
         if (!before.HasArchive) return Refused(m, "exchange.archive.autoexpand", $"Auto-expand {m.Label}'s archive", "Enable the archive first.");
@@ -451,7 +451,7 @@ public sealed partial class ExchangeService
     /// <param name="days">How long to hold; null for indefinitely.</param>
     public async Task<WriteOutcome> SetLitigationHoldAsync(MailboxRef m, bool enabled, int? days, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.hold", ct).ConfigureAwait(false);
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         if (before.LitigationHold == enabled && (!enabled || DurationOf(before) == days))
         {
@@ -486,7 +486,7 @@ public sealed partial class ExchangeService
     /// <param name="displayAs">The name <c>Get-MailboxFolderPermission</c> will report, which is what confirms it.</param>
     public async Task<WriteOutcome> SetFolderPermissionAsync(MailboxRef m, string folderType, string principal, string displayAs, string? role, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, "exchange.folder", ct).ConfigureAwait(false);
         var read = await GetFolderPermissionsAsync(m.UserId, folderType, ct).ConfigureAwait(false);
         if (!read.IsSuccess) return Failed(m, "exchange.folder", $"Change {folderType} permissions on {m.Label}", read.Error!);
         var folder = read.Value!.Folder;
@@ -526,7 +526,7 @@ public sealed partial class ExchangeService
     private async Task<WriteOutcome> SetFlagAsync(MailboxRef m, string action, string parameter, bool value, Func<MailboxDetail, bool> read,
         string summary, Func<CancellationToken, bool, Task<WriteOutcome>> setBack, CancellationToken ct)
     {
-        await SettleAsync(m.UserId, ct).ConfigureAwait(false);
+        await SettleAsync(m.UserId, action, ct).ConfigureAwait(false);
         var before = await ReadDetailAsync(m.UserId, ct).ConfigureAwait(false);
         if (read(before) == value) return WriteOutcome.NoOp($"{summary} — it already was");
         return await WriteAsync(m, action, summary, $"Set-Mailbox {parameter}={value}", "Set-Mailbox", Params(m, (parameter, value)),
@@ -550,11 +550,11 @@ public sealed partial class ExchangeService
         }
         catch (ExchangeException ex)
         {
-            MarkWritten(m.UserId);
+            MarkWritten(m.UserId, action);
             return Failed(m, action, summary, ex, request);
         }
 
-        MarkWritten(m.UserId);
+        MarkWritten(m.UserId, action);
         confirm ??= verify is null ? null : async token => verify(await ReadDetailAsync(m.UserId, token).ConfigureAwait(false));
         var confirmed = confirm is null || await ConfirmAsync(confirm, ct).ConfigureAwait(false);
         var warning = result.Warnings.Count > 0 ? string.Join(" ", result.Warnings) : null;
@@ -611,27 +611,57 @@ public sealed partial class ExchangeService
     /// primary address set and undone five seconds apart flipped between the two for half a minute, and once settled on
     /// the wrong one. Fifteen seconds apart, it held from the first read (doc 13 §5).
     /// </summary>
-    public TimeSpan TimeUntilSettled(string userId)
+    /// <remarks>
+    /// Kept per setting, not per mailbox: different settings replicate independently, and an offboarding makes a dozen
+    /// changes to one mailbox in a row, which a per-mailbox gap would stretch by three minutes. The flip was only ever
+    /// seen when one setting was written twice — a change and its undo.
+    /// </remarks>
+    public TimeSpan TimeUntilSettled(string userId, string setting)
     {
         lock (_lastWrite)
         {
-            if (!_lastWrite.TryGetValue(userId, out var last)) return TimeSpan.Zero;
+            if (!_lastWrite.TryGetValue(SettleKey(userId, setting), out var last)) return TimeSpan.Zero;
             var wait = last + SettleGap - Time.GetUtcNow();
             return wait > TimeSpan.Zero ? wait : TimeSpan.Zero;
         }
     }
 
-    private async Task SettleAsync(string userId, CancellationToken ct)
+    /// <summary>The longest wait any setting of <paramref name="userId"/>'s mailbox still has — for a "saving…" caption.</summary>
+    public TimeSpan TimeUntilSettled(string userId)
     {
-        var wait = TimeUntilSettled(userId);
+        lock (_lastWrite)
+        {
+            var now = Time.GetUtcNow();
+            var longest = _lastWrite.Where(kv => kv.Key.StartsWith(userId + "|", StringComparison.OrdinalIgnoreCase))
+                .Select(kv => kv.Value + SettleGap - now).DefaultIfEmpty(TimeSpan.Zero).Max();
+            return longest > TimeSpan.Zero ? longest : TimeSpan.Zero;
+        }
+    }
+
+    private async Task SettleAsync(string userId, string setting, CancellationToken ct)
+    {
+        var wait = TimeUntilSettled(userId, setting);
         if (wait <= TimeSpan.Zero) return;
-        _logger.LogInformation("Waiting {Seconds:F0}s for {UserId}'s mailbox to settle before the next write", wait.TotalSeconds, userId);
+        _logger.LogInformation("Waiting {Seconds:F0}s for {Setting} on {UserId}'s mailbox to settle before writing it again", wait.TotalSeconds, setting, userId);
         await Delay(wait, ct).ConfigureAwait(false);
     }
 
-    private void MarkWritten(string userId)
+    private void MarkWritten(string userId, string action)
     {
-        lock (_lastWrite) _lastWrite[userId] = Time.GetUtcNow();
+        lock (_lastWrite) _lastWrite[SettleKey(userId, SettingOf(action))] = Time.GetUtcNow();
+    }
+
+    private static string SettleKey(string userId, string setting) => $"{userId}|{SettingOf(setting)}";
+
+    /// <summary>"exchange.address.add" and "exchange.address.remove" are one setting: the verb is dropped.</summary>
+    private static string SettingOf(string action)
+    {
+        foreach (var verb in new[] { ".add", ".remove", ".primary", ".enable", ".autoexpand" })
+        {
+            if (action.EndsWith(verb, StringComparison.OrdinalIgnoreCase)) return action[..^verb.Length];
+        }
+
+        return action;
     }
 
     private WriteOutcome Failed(MailboxRef m, string action, string summary, ExchangeException ex, string? request = null)

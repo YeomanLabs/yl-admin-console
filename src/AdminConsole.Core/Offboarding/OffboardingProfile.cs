@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+using System.Text.Json.Serialization;
 
 namespace AdminConsole.Core.Offboarding;
 
@@ -54,4 +54,7 @@ public sealed record OffboardingOptions
 
     /// <summary>Overrides for the attribute-stamp step; empty uses doc 06's defaults.</summary>
     public IReadOnlyDictionary<string, string?> AttributeStamps { get; init; } = new Dictionary<string, string?>();
+
+    /// <summary>The automatic reply's text (plain, not HTML); null uses the template that names the delegate.</summary>
+    public string? AutoReplyMessage { get; init; }
 }

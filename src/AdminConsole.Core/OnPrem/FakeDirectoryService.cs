@@ -117,13 +117,13 @@ public sealed class FakeDirectoryService : IDirectoryService
             : DirectoryStatus.Unreachable("This is the in-memory directory, and it has been switched off."));
 
     public Task<OnPremUser?> GetUserAsync(Guid objectGuid, CancellationToken ct) =>
-        Task.FromResult(Get<OnPremUser>(objectGuid));
+        Task.FromResult(Get<OnPremUser>(objectGuid) is { } u ? WithMemberOf(u) : null);
 
     public Task<OnPremUser?> GetUserByImmutableIdAsync(string immutableId, CancellationToken ct)
     {
         // Entra's immutableId is base64 of the AD GUID, which is the whole point of the join.
         if (!TryGuidFromImmutableId(immutableId, out var guid)) return Task.FromResult<OnPremUser?>(null);
-        return Task.FromResult(Get<OnPremUser>(guid));
+        return Task.FromResult(Get<OnPremUser>(guid) is { } u ? WithMemberOf(u) : null);
     }
 
     public Task<IReadOnlyList<OnPremUser>> SearchUsersAsync(string text, int limit, string? searchBaseDn, CancellationToken ct) =>
@@ -133,6 +133,7 @@ public sealed class FakeDirectoryService : IDirectoryService
                 .Where(u => Matches(text, u.SamAccountName, u.DisplayName, u.UserPrincipalName, u.Mail) && Under(u.DistinguishedName, searchBaseDn))
                 .OrderBy(u => u.Primary, StringComparer.OrdinalIgnoreCase)
                 .Take(limit)
+                .Select(WithMemberOf)
         ]);
 
     public Task<OnPremGroup?> GetGroupAsync(Guid objectGuid, CancellationToken ct) =>
@@ -153,6 +154,9 @@ public sealed class FakeDirectoryService : IDirectoryService
     /// not stored on the object. A fake that left it empty would let code pass here and fail against a real DC.
     /// </summary>
     private OnPremGroup WithMemberOf(OnPremGroup group) => group with { MemberOfDns = MemberOf(group.DistinguishedName) };
+
+    /// <summary>The same for a user (found in M15: users came back with an empty <c>memberOf</c>, so nothing could see their groups).</summary>
+    private OnPremUser WithMemberOf(OnPremUser user) => user with { MemberOfDns = MemberOf(user.DistinguishedName) };
 
     public Task<IReadOnlyList<OnPremMember>> GetGroupMembersAsync(Guid objectGuid, CancellationToken ct)
     {

@@ -435,3 +435,31 @@ service's own rule, and the service is the authority on when a link expires.
   archive starts a 30-day countdown to deleting it, auto-expanding cannot be turned off, and renamed folders are not
   renamed back.
 
+## 2026-10-17 — M15: what the finished offboarding does, and what it deliberately leaves alone
+
+- **The snapshot is required, not just halting.** Halting alone was not enough: the dialog drops a step whose preview
+  is blocked from the run, so a failed snapshot preview would have been quietly left out and everything else run. A
+  required step cannot be unticked, and while its preview is failed Run is disabled with the reason.
+- **The run uses the context its preview filled.** The dialog used to build a new context for the run, which left
+  every step that acts on what its preview found with nothing to act on. Found while wiring the snapshot; it predates
+  M15 and no gate caught it, because the gates drove the runner directly with one context.
+- **Built-in AD groups are not skipped.** The plan said "primary and protected groups skipped". The primary group
+  cannot be removed through a membership write at all and is named as staying. Built-in groups such as Domain Admins
+  are the memberships a leaver most needs to lose; they are marked as needing a domain admin, and a refusal fails that
+  group only.
+- **"Remove mailbox permissions" means the leaver's access to other mailboxes.** Send As comes from one tenant-wide
+  `Get-RecipientPermission -Trustee`; Full Access has no tenant-wide read, so it is checked on the cached shared
+  mailboxes, at most 100, four at a time, and the preview says how many were checked. User mailboxes delegated to an
+  assistant are not scanned (BACKLOG).
+- **Inbox rules are turned off, not deleted, and only the ones that send mail elsewhere.** Undo and Restore can turn
+  them back on; rules that file or flag mail keep running for whoever inherits the mailbox.
+- **Irreversible or outward-facing Exchange steps are off by default:** cancelling meetings (attendees are told),
+  litigation hold (a legal decision), auto-reply, forwarding and delegation (they need a delegate). Removing phones is
+  on: it wipes nothing, and a disabled account cannot sync anyway.
+- **Forwarding with no delegate stops forwarding to an outside address** instead of being blocked, because an external
+  forward is how a leaver takes mail along.
+- **The auto-reply text comes from the profile (`options.autoReplyMessage`) or a template naming the delegate**, shown
+  word for word in the preview. There is no editor in the dialog yet (BACKLOG).
+- **Graph membership changes skip distribution lists and mail-enabled security groups** everywhere (group page,
+  templates, offboarding), with the reason. Graph refuses them with a 400; Exchange is the only route.
+

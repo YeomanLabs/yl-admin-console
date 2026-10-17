@@ -120,3 +120,15 @@ Addresses, hiding from address lists, Send on Behalf and forwarding on a dir-syn
 prove it: YeomanLabs has no synced mailbox and the lab forest has no Exchange schema. **To close:** a lab forest with the
 Exchange schema extended, one synced mailbox, then build and gate it the way M12.4 gated the hybrid unlock.
 
+## Offboarding: Full Access on user mailboxes is not scanned (M15)
+
+`remove-mailbox-permissions` checks Full Access on cached shared mailboxes only, up to 100. An assistant's access to an
+executive's user mailbox is not found. Exchange has no tenant-wide Full Access read, so covering every mailbox means
+one call per mailbox inside a preview. **To close:** a background scan that caches Full Access grants with the mailbox
+refresh, so the preview reads the cache.
+
+## Offboarding: the auto-reply text has no editor (M15)
+
+The text is the profile's `options.autoReplyMessage` or the template. **To close:** a text box under the auto-reply
+row in the dialog, saved with the profile.
+

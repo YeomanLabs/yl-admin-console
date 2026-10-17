@@ -1,4 +1,4 @@
-﻿using AdminConsole.Core.Auth;
+using AdminConsole.Core.Auth;
 using AdminConsole.Core.Models;
 
 namespace AdminConsole.Core.Offboarding;
@@ -26,13 +26,38 @@ public sealed class OffboardingContext
     /// Shared between steps within one run (doc 06): a step's preview leaves what it found here so its execute does not
     /// have to read Graph twice, and later steps can see what earlier ones did.
     /// </summary>
+    /// <remarks>Previews run in parallel, so every read and write of it goes through the lock.</remarks>
     public Dictionary<string, object> Scratch { get; } = [];
+
+    /// <summary>The automatic reply the auto-reply step sets; null uses the template in doc 06 step 12.</summary>
+    public string? AutoReplyMessage { get; init; }
 
     public string UserId => User.Id;
 
     public string UserLabel => User.DisplayName ?? User.UserPrincipalName ?? User.Id;
 
-    public T? Get<T>(string key) where T : class => Scratch.TryGetValue(key, out var v) ? v as T : null;
+    public T? Get<T>(string key) where T : class
+    {
+        lock (Scratch) return Scratch.TryGetValue(key, out var v) ? v as T : null;
+    }
 
-    public void Set(string key, object value) => Scratch[key] = value;
+    public void Set(string key, object value)
+    {
+        lock (Scratch) Scratch[key] = value;
+    }
+
+    /// <summary>
+    /// The value under <paramref name="key"/>, made once. Eleven Exchange steps preview at the same moment and all need
+    /// the same mailbox: the first starts the read and the rest await that one task instead of sending ten more.
+    /// </summary>
+    public T GetOrAdd<T>(string key, Func<T> create) where T : class
+    {
+        lock (Scratch)
+        {
+            if (Scratch.TryGetValue(key, out var v) && v is T existing) return existing;
+            var made = create();
+            Scratch[key] = made;
+            return made;
+        }
+    }
 }

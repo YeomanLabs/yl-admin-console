@@ -1,17 +1,21 @@
 using AdminConsole.Core.Cache;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Devices;
+using AdminConsole.Core.Exchange;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Groups;
 using AdminConsole.Core.Licensing;
 using AdminConsole.Core.OnPrem;
+using AdminConsole.Core.Offboarding.Snapshot;
 using AdminConsole.Core.Users;
 
 namespace AdminConsole.Core.Offboarding.Steps;
 
 /// <summary>
-/// The nineteen steps of doc 06 in catalog order. Steps that belong to a later phase are still listed, greyed, with
-/// the reason: the dialog has to show the whole shape of an offboarding, not just the part built so far.
+/// Doc 06's catalog in run order (rewritten in M15). Snapshot first; then sign-in, credentials and groups; then the
+/// mailbox, ahead of the licence step, because converting it and holding it both need the licence still there; then
+/// the rest. Steps still waiting on a later milestone are listed, greyed, with the reason: the dialog has to show the
+/// whole shape of an offboarding, not just the part built so far.
 /// </summary>
 public static class OffboardingCatalog
 {
@@ -27,14 +31,37 @@ public static class OffboardingCatalog
         ActionLog actions,
         TenantContext tenant,
         IDirectoryService directory,
-        LdapOptions onPrem) =>
+        LdapOptions onPrem,
+        ExchangeService exchange,
+        CacheDb db,
+        SnapshotService snapshots,
+        SnapshotStore store) =>
     [
+        new SnapshotStep(snapshots, store, actions),                    // M15.1: first, required, halts
+
         new DisableAccountStep(users),                                  // 1
         new RevokeSessionsStep(users),                                  // 2
         new ResetPasswordStep(users),                                   // 3
+        new ResetAdPasswordStep(directory),                             // M15.2: the reset that works without writeback
         new RemoveAuthMethodsStep(users, graph),                        // 4
         new RemoveManagerStep(graph, actions, tenant),                  // 5
         new RemoveGroupMembershipsStep(groups, graph, tenant),          // 6
+        new RemoveAdGroupMembershipsStep(directory),                    // M15.2: the groups step 6 skips as synced
+        new RemoveFromDistributionListsStep(exchange, graph),           // M15.3: the lists step 6 skips as mail lists
+
+        // The mailbox (M15.3), all before step 7: a mailbox converted or held after losing its licence has already
+        // started its 30-day countdown to deletion.
+        new HideFromGalStep(exchange),                                  // 10
+        new ConvertToSharedStep(exchange),                              // 11
+        new LitigationHoldStep(exchange),
+        new SetAutoReplyStep(exchange),                                 // 12
+        new ForwardMailStep(exchange),                                  // 13
+        new DelegateMailboxStep(exchange),                              // 14
+        new RemoveMailboxPermissionsStep(exchange, db),
+        new RemoveInboxRulesStep(exchange),
+        new CancelOrganizedMeetingsStep(exchange),
+        new RemoveMobileDevicesStep(exchange),
+
         new RemoveLicensesStep(licenses, graph),                        // 7
         new RetireDevicesStep(devices, graph),                          // 8
 
@@ -42,16 +69,9 @@ public static class OffboardingCatalog
         new NotInThisPhaseStep("remove-registered-devices", "Remove Entra device registrations", StepSurface.Graph,
             "Deleting Entra device objects needs Directory.AccessAsUser.All, which this app does not request."),
 
-        new NotInThisPhaseStep("hide-from-gal", "Hide from address lists", StepSurface.Exchange, ExchangePhase, defaultEnabled: true),        // 10
-        new NotInThisPhaseStep("convert-to-shared", "Convert the mailbox to shared", StepSurface.Exchange,                                     // 11
-            $"{ExchangePhase}. It will run before the licence step, because a mailbox has to be converted while it is still licensed."),
-        new NotInThisPhaseStep("set-auto-reply", "Set an out-of-office reply", StepSurface.Exchange, ExchangePhase),                          // 12
-        new NotInThisPhaseStep("forward-mail", "Forward mail to the delegate", StepSurface.Exchange, ExchangePhase),                          // 13
-        new NotInThisPhaseStep("delegate-mailbox", "Grant the delegate mailbox access", StepSurface.Exchange, ExchangePhase),                 // 14
-
-        // 15: investigated 2026-09-09 — no clean endpoint without a Files scope this app does not request.
+        // 15: M16 brings the SharePoint admin host this needs.
         new NotInThisPhaseStep("delegate-onedrive", "Grant the delegate access to OneDrive", StepSurface.Graph,
-            "Sharing a leaver's OneDrive needs the Files.ReadWrite.All permission, which this app does not request. Use the SharePoint admin centre for now."),
+            "OneDrive arrives in M16, with the SharePoint admin permission it needs. Use the SharePoint admin centre for now."),
 
         new RemoveTeamsOwnershipStep(graph, actions, tenant),           // 16
         new UpdateAttributesStep(users),                                // 17

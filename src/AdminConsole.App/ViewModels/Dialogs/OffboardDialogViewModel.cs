@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
@@ -35,6 +35,13 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
 
     private CancellationTokenSource? _cts;
     private OffboardingRun? _run;
+
+    /// <summary>
+    /// The context the last preview filled. The run must use this one: each step's preview leaves what it found in the
+    /// context (the groups, the licences, the snapshot) and its execute acts on exactly that. Found in M15 — the run used
+    /// to build a fresh, empty context, so those steps executed against nothing.
+    /// </summary>
+    private OffboardingContext? _previewed;
     private bool _undone;
     private IReadOnlyList<StepPreview> _previews = [];
 
@@ -91,7 +98,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     {
         foreach (var row in Rows)
         {
-            if (!row.IsBlocked) row.IsEnabled = value.IsEnabled(row.Step);
+            if (!row.IsBlocked) row.IsEnabled = value.IsEnabled(row.Step) || row.Step.IsRequired;
         }
 
         DelegateToManager = value.Options.DelegateToManager;
@@ -107,7 +114,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         var name = NewProfileName.Trim();
         if (name.Length == 0) return;
 
-        var profile = _profiles.Save(OffboardingProfile.From(name, _runner.Steps, EnabledIds, new OffboardingOptions { DelegateToManager = DelegateToManager }));
+        var profile = _profiles.Save(OffboardingProfile.From(name, _runner.Steps, EnabledIds, SelectedProfile.Options with { DelegateToManager = DelegateToManager }));
         Profiles = _profiles.Load(_runner.Steps);
         OnPropertyChanged(nameof(Profiles));
         SelectedProfile = Profiles.FirstOrDefault(p => p.FileName == profile.FileName) ?? Profiles[0];
@@ -178,6 +185,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         Delegate = ChosenDelegate,
         CorrelationId = _correlationId,
         AttributeStamps = SelectedProfile.Options.AttributeStamps,
+        AutoReplyMessage = SelectedProfile.Options.AutoReplyMessage,
     };
 
     // ---- preview --------------------------------------------------------------------------------------------------
@@ -195,11 +203,20 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         {
             // Every step is previewed, not only the ticked ones: a row with no preview would show no reason for being
             // greyed, and the admin could not tell a blocked step from one they simply had not ticked.
-            _previews = await _runner.PreviewAsync(Context(), _runner.Steps.Select(s => s.Id).ToList(), CancellationToken.None);
+            var ctx = Context();
+            _previews = await _runner.PreviewAsync(ctx, _runner.Steps.Select(s => s.Id).ToList(), CancellationToken.None);
+            _previewed = ctx;
             var byId = _previews.ToDictionary(p => p.StepId, StringComparer.Ordinal);
             foreach (var row in Rows)
             {
                 if (byId.TryGetValue(row.Id, out var preview)) row.Apply(preview);
+            }
+
+            // A required step (the snapshot) that could not be previewed stops everything, and says so up front rather
+            // than as the first line of a run that then does nothing.
+            if (Rows.FirstOrDefault(r => r.Step.IsRequired && r.IsBlocked) is { } required)
+            {
+                StatusText = $"Nothing can run: {required.Title.ToLowerInvariant()} failed. {required.Reason}";
             }
         }
         catch (Exception ex)
@@ -222,7 +239,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         OnPropertyChanged(nameof(CanRun));
     }
 
-    public bool CanRun => !IsPreviewing && Rows.Any(r => r.IsEnabled && !r.IsBlocked);
+    public bool CanRun => !IsPreviewing && _previewed is not null && !Rows.Any(r => r.Step.IsRequired && r.IsBlocked) && Rows.Any(r => r.IsEnabled && !r.IsBlocked);
 
     /// <summary>The checklist changed; the footer count follows it.</summary>
     public void OnRowToggled() => RefreshRunLabel();
@@ -267,7 +284,7 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         using (ActionLog.BeginCorrelation(_correlationId))
         {
             var progress = new Progress<StepProgress>(p => Rows.First(r => r.Id == p.StepId).Apply(p));
-            _run = await _runner.ExecuteAsync(Context(), chosen, progress, _cts.Token);
+            _run = await _runner.ExecuteAsync(_previewed!, chosen, progress, _cts.Token);
         }
 
         foreach (var result in _run.Results) Rows.First(r => r.Id == result.StepId).Apply(result);
@@ -334,14 +351,16 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         {
             using (ActionLog.BeginCorrelation(_correlationId))
             {
-                var preview = await row.Step.PreviewAsync(Context(), CancellationToken.None);
+                // One context for the retry's preview and execute, for the same reason the run reuses the preview's.
+                var ctx = Context();
+                var preview = await row.Step.PreviewAsync(ctx, CancellationToken.None);
                 if (!preview.CanRun)
                 {
                     row.Apply(StepResult.Skipped(row.Id, preview.Reason ?? preview.Summary));
                     return;
                 }
 
-                var result = await row.Step.ExecuteAsync(Context(), CancellationToken.None);
+                var result = await row.Step.ExecuteAsync(ctx, CancellationToken.None);
                 row.Apply(result);
                 if (result.Outcome == StepOutcome.Success && _run is not null)
                 {

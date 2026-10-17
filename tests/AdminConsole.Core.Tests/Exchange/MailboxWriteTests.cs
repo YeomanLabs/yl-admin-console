@@ -191,6 +191,32 @@ public sealed class MailboxWriteTests
     }
 
     [Fact]
+    public async Task AWriteToADifferentSettingOfTheSameMailbox_DoesNotWait()
+    {
+        // M15: an offboarding writes eleven settings to one mailbox in a row. The out-of-order landing doc 13 §5 measured
+        // was one attribute flipping back, so the gap is per setting; a gap per mailbox would add minutes to every run.
+        var time = new FakeTimeProvider();
+        var waits = new List<TimeSpan>();
+        var sut = MailboxSummaryTests.Service(_handler, actions: _actions, time: time, delays: waits);
+        _handler.Enqueue(HttpStatusCode.OK, Mailbox()).Enqueue(HttpStatusCode.OK)
+            .Enqueue(HttpStatusCode.OK, Mailbox(r => r["HiddenFromAddressListsEnabled"] = true))
+            .Enqueue(HttpStatusCode.OK, Mailbox(r => r["HiddenFromAddressListsEnabled"] = true));
+        await sut.SetHiddenAsync(Target, true, CancellationToken.None);
+        time.Advance(TimeSpan.FromSeconds(4));
+
+        sut.TimeUntilSettled(UserId, "exchange.hidden").Should().Be(TimeSpan.FromSeconds(11));
+        sut.TimeUntilSettled(UserId, "exchange.hold").Should().Be(TimeSpan.Zero);
+
+        waits.Clear();
+        _handler.Enqueue(HttpStatusCode.OK, Mailbox()).Enqueue(HttpStatusCode.OK)
+            .Enqueue(HttpStatusCode.OK, Mailbox(r => r["LitigationHoldEnabled"] = true))
+            .Enqueue(HttpStatusCode.OK, Mailbox(r => r["LitigationHoldEnabled"] = true));
+        (await sut.SetLitigationHoldAsync(Target, true, null, CancellationToken.None)).Success.Should().BeTrue();
+
+        waits.Should().Equal([TimeSpan.FromMilliseconds(500), TimeSpan.FromSeconds(1.5)], "only the two confirm reads' delays, and no settle wait before the write");
+    }
+
+    [Fact]
     public async Task SendOnBehalf_ChangesTheListByName_NotByReplacingIt()
     {
         _handler

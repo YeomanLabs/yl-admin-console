@@ -1,4 +1,4 @@
-﻿using AdminConsole.Core.Auth;
+using AdminConsole.Core.Auth;
 
 namespace AdminConsole.Core.Offboarding;
 
@@ -24,6 +24,12 @@ public interface IOffboardingStep
 
     /// <summary>A failure here stops the run: later steps would be meaningless or unsafe.</summary>
     bool HaltsOnFailure { get; }
+
+    /// <summary>
+    /// The step cannot be unticked, and when its preview fails nothing may run (M15.1: the snapshot). Only the snapshot
+    /// says yes; every other step keeps the default.
+    /// </summary>
+    bool IsRequired => false;
 
     /// <summary>
     /// Works out exactly what this step would change, naming the real objects. Must not write anything, and must not

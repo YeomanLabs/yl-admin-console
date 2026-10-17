@@ -60,6 +60,12 @@ public sealed class DirectoryGroupTests
         roleAssignable.MembershipChangeBlockedReason(hasPrivilegedRoleAdmin: true).Should().BeNull();
         plain.MembershipChangeBlockedReason().Should().BeNull();
 
+        // M15: Graph refuses member changes on these, so they are skipped with the reason rather than tried and failed.
+        var mailList = DirectoryGroup.FromJson(Fixtures.Parse("""{"id":"d","groupTypes":[],"securityEnabled":false,"mailEnabled":true}"""));
+        var mailSecurity = DirectoryGroup.FromJson(Fixtures.Parse("""{"id":"s","groupTypes":[],"securityEnabled":true,"mailEnabled":true}"""));
+        mailList.MembershipChangeBlockedReason().Should().Be(DirectoryGroup.MailListReason);
+        mailSecurity.MembershipChangeBlockedReason().Should().Be(DirectoryGroup.MailListReason);
+
         dynamic.Badges.Should().Equal("Security", "Dynamic");
         synced.Badges.Should().Equal("Security", "Synced");
         roleAssignable.Badges.Should().Equal("Security", "Role-assignable");

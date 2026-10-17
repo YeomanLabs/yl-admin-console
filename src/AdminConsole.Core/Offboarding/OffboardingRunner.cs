@@ -93,6 +93,18 @@ public sealed class OffboardingRunner
                 continue;
             }
 
+            // A step that halts the run halts it just as surely when its preview could not even be worked out: the
+            // snapshot (M15.1) failing to read is exactly the case where nothing after it may run.
+            if (!preview.CanRun && preview.Failed && step.HaltsOnFailure)
+            {
+                var why = $"Could not run — {preview.Reason ?? "the preview failed"}";
+                results.Add(StepResult.Failed(step.Id, why));
+                Report(progress, step.Id, StepOutcome.Failed, why, TimeSpan.Zero, i + 1, total);
+                _logger.LogWarning("Offboarding halted: {StepId} could not be previewed and halts the run", step.Id);
+                halted = true;
+                continue;
+            }
+
             if (!preview.CanRun)
             {
                 var why = preview.IsNoOp ? preview.Summary : preview.Reason ?? "Skipped";

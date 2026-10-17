@@ -42,6 +42,30 @@ public sealed partial class CacheDb
         };
     }
 
+    /// <summary>Every cached mailbox of one Exchange type (<c>SharedMailbox</c>, say), by address — what offboarding scans (M15.3).</summary>
+    public IReadOnlyList<AdminConsole.Core.Exchange.MailboxSummary> GetMailboxes(string recipientType)
+    {
+        using var conn = OpenConnection();
+        using var cmd = conn.CreateCommand();
+        cmd.CommandText = "SELECT user_id, primary_smtp, hidden, dir_synced FROM mailboxes WHERE recipient_type=$type ORDER BY primary_smtp;";
+        cmd.Parameters.AddWithValue("$type", recipientType);
+        using var r = cmd.ExecuteReader();
+        var list = new List<AdminConsole.Core.Exchange.MailboxSummary>();
+        while (r.Read())
+        {
+            list.Add(new AdminConsole.Core.Exchange.MailboxSummary
+            {
+                UserId = r.GetString(0),
+                RecipientType = recipientType,
+                PrimarySmtp = r.IsDBNull(1) ? null : r.GetString(1),
+                HiddenFromAddressLists = r.GetInt64(2) != 0,
+                DirSynced = r.GetInt64(3) != 0,
+            });
+        }
+
+        return list;
+    }
+
     public EntraDevice? GetEntraDevice(string id) => Parse(GetRaw(CacheEntity.Devices, id), EntraDevice.FromJson);
 
     /// <summary>

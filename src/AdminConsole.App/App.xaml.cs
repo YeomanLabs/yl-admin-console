@@ -26,6 +26,7 @@ using AdminConsole.Core.Search;
 using AdminConsole.Core.Sync;
 using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Offboarding;
+using AdminConsole.Core.Offboarding.Snapshot;
 using AdminConsole.Core.Offboarding.Steps;
 using AdminConsole.Core.Templates;
 using AdminConsole.Core.Users;
@@ -204,8 +205,14 @@ public sealed partial class App : Application
                 sp.GetRequiredService<ActionLog>(),
                 sp.GetRequiredService<TenantContext>(),
                 sp.GetRequiredService<IDirectoryService>(),
-                sp.GetRequiredService<LdapOptions>()),
+                sp.GetRequiredService<LdapOptions>(),
+                sp.GetRequiredService<ExchangeService>(),
+                sp.GetRequiredService<CacheDb>(),
+                sp.GetRequiredService<SnapshotService>(),
+                sp.GetRequiredService<SnapshotStore>()),
             sp.GetRequiredService<ILogger<OffboardingRunner>>()));
+        services.AddSingleton<SnapshotService>();
+        services.AddSingleton(_ => new SnapshotStore(SnapshotStore.DefaultRoot));
         services.AddSingleton(sp => new UserSettingsStore(UserSettingsStore.DefaultPath, sp.GetRequiredService<ILogger<UserSettingsStore>>()));
         services.AddSingleton<UserProvisioningService>();
         services.AddSingleton(sp => new TemplateService(

@@ -8,6 +8,7 @@ public sealed record DirectoryGroup
     public const string DynamicReason = "Dynamic membership — members are computed from the rule";
     public const string SyncedReason = "Mastered in on-prem AD (Phase 2)";
     public const string RoleAssignableReason = "Role-assignable group — needs Privileged Role Administrator";
+    public const string MailListReason = "Distribution list or mail-enabled security group — Exchange manages its members, and Graph refuses the change";
 
     public required string Id { get; init; }
     public string? DisplayName { get; init; }
@@ -46,6 +47,9 @@ public sealed record DirectoryGroup
         if (IsDynamic) return DynamicReason;
         if (OnPremisesSyncEnabled) return SyncedReason;
         if (IsAssignableToRole && !hasPrivilegedRoleAdmin) return RoleAssignableReason;
+
+        // Found in M15: Graph answers 400 for any member change on these, so the cloud step used to try and fail on each.
+        if (Kind == GroupKind.DistributionOrMailSecurity) return MailListReason;
         return null;
     }
 

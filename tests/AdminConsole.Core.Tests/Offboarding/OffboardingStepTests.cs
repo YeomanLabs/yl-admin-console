@@ -11,6 +11,7 @@ using AdminConsole.Core.Licensing;
 using AdminConsole.Core.Models;
 using AdminConsole.Core.Offboarding;
 using AdminConsole.Core.OnPrem;
+using AdminConsole.Core.Offboarding.Snapshot;
 using AdminConsole.Core.Offboarding.Steps;
 using AdminConsole.Core.Tests.Fakes;
 using AdminConsole.Core.Users;
@@ -429,22 +430,33 @@ public sealed class OffboardingStepTests : IDisposable
 
     // ---- the catalog ------------------------------------------------------------------------------------------------
 
-    private IReadOnlyList<IOffboardingStep> Catalog() =>
-        OffboardingCatalog.Build(_users, _groups, _licenses, _devices, _graph, _actions, _tenant, _directory, _onPrem);
+    private IReadOnlyList<IOffboardingStep> Catalog()
+    {
+        var exchange = Exchange.MailboxSummaryTests.Service(new FakeHttpHandler());
+        var snapshots = new SnapshotService(_users, _db, _directory, exchange, NullLogger<SnapshotService>.Instance);
+        var store = new SnapshotStore(Path.Combine(Path.GetTempPath(), "ac-tests", Guid.NewGuid().ToString("N")));
+        return OffboardingCatalog.Build(_users, _groups, _licenses, _devices, _graph, _actions, _tenant, _directory, _onPrem, exchange, _db, snapshots, store);
+    }
 
     [Fact]
-    public void Catalog_HasAllNineteenStepsOfDoc06_InOrder_WithUniqueIds()
+    public void Catalog_RunsSnapshotFirst_AndTheMailboxBeforeTheLicences_WithUniqueIds()
     {
-        var steps = Catalog();
+        var ids = Catalog().Select(s => s.Id).ToList();
 
-        steps.Should().HaveCount(19);
-        steps.Select(s => s.Id).Should().OnlyHaveUniqueItems();
-        steps.Select(s => s.Id).Should().Equal([
-            "disable-account", "revoke-sessions", "reset-password", "remove-auth-methods", "remove-manager",
-            "remove-group-memberships", "remove-licenses", "retire-devices", "remove-registered-devices",
-            "hide-from-gal", "convert-to-shared", "set-auto-reply", "forward-mail", "delegate-mailbox",
-            "delegate-onedrive", "remove-teams-ownership", "update-attributes", "move-ou", "disable-ad-account",
+        ids.Should().OnlyHaveUniqueItems();
+        ids.Should().Equal([
+            "snapshot",
+            "disable-account", "revoke-sessions", "reset-password", "reset-ad-password", "remove-auth-methods", "remove-manager",
+            "remove-group-memberships", "remove-ad-group-memberships", "remove-from-distribution-lists",
+            "hide-from-gal", "convert-to-shared", "litigation-hold", "set-auto-reply", "forward-mail", "delegate-mailbox",
+            "remove-mailbox-permissions", "remove-inbox-rules", "cancel-organized-meetings", "remove-mobile-devices",
+            "remove-licenses", "retire-devices", "remove-registered-devices", "delegate-onedrive",
+            "remove-teams-ownership", "update-attributes", "move-ou", "disable-ad-account",
         ]);
+
+        // M15.3: converting and holding both need the licence still assigned when they run.
+        ids.IndexOf("convert-to-shared").Should().BeLessThan(ids.IndexOf("remove-licenses"));
+        ids.IndexOf("litigation-hold").Should().BeLessThan(ids.IndexOf("remove-licenses"));
     }
 
     [Fact]
@@ -453,28 +465,30 @@ public sealed class OffboardingStepTests : IDisposable
         var on = Catalog().Where(s => s.DefaultEnabled).Select(s => s.Id);
 
         on.Should().Equal([
-            "disable-account", "revoke-sessions", "reset-password", "remove-auth-methods",
-            "remove-group-memberships", "remove-licenses", "hide-from-gal", "move-ou", "disable-ad-account",
+            "snapshot", "disable-account", "revoke-sessions", "reset-password", "reset-ad-password", "remove-auth-methods",
+            "remove-group-memberships", "remove-ad-group-memberships", "remove-from-distribution-lists",
+            "hide-from-gal", "convert-to-shared", "remove-mailbox-permissions", "remove-inbox-rules", "remove-mobile-devices",
+            "remove-licenses", "move-ou", "disable-ad-account",
         ]);
     }
 
     [Fact]
-    public void Catalog_OnlyDisableAccountHaltsTheRun()
+    public void Catalog_OnlyTheSnapshotAndDisableHaltTheRun_AndOnlyTheSnapshotIsRequired()
     {
-        Catalog().Where(s => s.HaltsOnFailure).Select(s => s.Id).Should().Equal(["disable-account"]);
+        Catalog().Where(s => s.HaltsOnFailure).Select(s => s.Id).Should().Equal(["snapshot", "disable-account"]);
+        Catalog().Where(s => s.IsRequired).Select(s => s.Id).Should().Equal(["snapshot"]);
     }
 
     [Fact]
-    public void Catalog_EveryPhase1StepIsAGraphStep_AndTheOthersAreRegisteredNotOmitted()
+    public void Catalog_EveryExchangeStepIsBuilt_AndNeedsTheMailboxPermission()
     {
         var catalog = Catalog();
 
-        catalog.Where(s => s.Surface == StepSurface.Exchange).Should().HaveCount(5, "steps 10-14");
-        catalog.Where(s => s.Surface == StepSurface.OnPremAd).Should().HaveCount(2, "steps 18-19");
+        catalog.Where(s => s.Surface == StepSurface.Exchange).Should().HaveCount(11)
+            .And.OnlyContain(s => !(s is NotInThisPhaseStep) && s.RequiredCapability == Capabilities.ManageMailboxes);
+        catalog.Where(s => s.Surface == StepSurface.OnPremAd).Should().HaveCount(4);
 
-        // M12.7: the two on-prem steps are real now, so seven remain unbuilt rather than nine. They are still
-        // registered rather than omitted — a step an admin cannot see is a step they cannot know exists.
-        catalog.OfType<NotInThisPhaseStep>().Should().HaveCount(7, "5 Exchange, plus device deletion and OneDrive delegation");
-        catalog.Where(s => s.Surface == StepSurface.OnPremAd).Should().NotContain(s => s is NotInThisPhaseStep);
+        // Still registered rather than omitted — a step an admin cannot see is a step they cannot know exists.
+        catalog.OfType<NotInThisPhaseStep>().Select(s => s.Id).Should().Equal(["remove-registered-devices", "delegate-onedrive"]);
     }
 }

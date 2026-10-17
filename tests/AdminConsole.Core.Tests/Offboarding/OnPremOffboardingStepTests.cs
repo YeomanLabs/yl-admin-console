@@ -228,4 +228,82 @@ public sealed class OnPremOffboardingStepTests
         new MoveToDisabledOuStep(new FakeDirectoryService(), new LdapOptions()).HaltsOnFailure.Should().BeFalse();
         new DisableAdAccountStep(new FakeDirectoryService()).HaltsOnFailure.Should().BeFalse();
     }
+
+    // ---- M15.2: the AD password and the AD groups --------------------------------------------------------------
+
+    [Fact]
+    public async Task The_ad_password_is_reset_to_something_nobody_is_shown()
+    {
+        var (ad, leaver, _) = Lab();
+        var step = new ResetAdPasswordStep(ad);
+        var ctx = Context(User(synced: true, AnchorOf(leaver)));
+
+        var preview = await step.PreviewAsync(ctx, Ct);
+        preview.CanRun.Should().BeTrue();
+        preview.Summary.Should().Be("Reset ada.lovelace's AD password to 24 random characters, shown to nobody");
+
+        var result = await step.ExecuteAsync(ctx, Ct);
+
+        result.Outcome.Should().Be(StepOutcome.Success);
+        result.Message.Should().Be("Reset ada.lovelace's AD password to a random value");
+        result.CanUndo.Should().BeFalse("the old password is not known, so there is nothing to put back");
+        (await ad.GetUserAsync(leaver.ObjectGuid, Ct))!.PasswordLastSet.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task A_cloud_only_user_has_no_ad_password_to_reset()
+    {
+        var preview = await new ResetAdPasswordStep(new FakeDirectoryService()).PreviewAsync(Context(User(synced: false, null)), Ct);
+
+        preview.IsNoOp.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Ad_groups_are_emptied_built_in_ones_included_and_the_primary_group_is_said_to_stay()
+    {
+        var (ad, leaver, _) = Lab();
+        var finance = ad.AddGroup("Finance");
+        var vpn = ad.AddGroup("VPN Users");
+        var admins = ad.AddGroup("Domain Admins", critical: true);
+        foreach (var g in new[] { finance, vpn, admins }) (await ad.AddToGroupAsync(g.ObjectGuid, leaver.ObjectGuid, Ct)).Success.Should().BeTrue();
+        var step = new RemoveAdGroupMembershipsStep(ad);
+        var ctx = Context(User(synced: true, AnchorOf(leaver)));
+
+        var preview = await step.PreviewAsync(ctx, Ct);
+
+        preview.Summary.Should().Be("Remove ada.lovelace from 3 AD groups");
+        preview.Details.Should().Contain("Domain Admins — built-in; AD lets only a domain admin change it")
+            .And.Contain("Finance").And.Contain("VPN Users")
+            .And.Contain("Domain Users stays — it is the account's primary group, which every AD account must have");
+
+        var result = await step.ExecuteAsync(ctx, Ct);
+
+        result.Outcome.Should().Be(StepOutcome.Success);
+        (await ad.GetUserAsync(leaver.ObjectGuid, Ct))!.MemberOfDns.Should().BeEmpty();
+
+        var undo = await result.Undo!(Ct);
+        undo.Success.Should().BeTrue();
+        (await ad.GetUserAsync(leaver.ObjectGuid, Ct))!.MemberOfDns.Should().HaveCount(3, "undo puts every removed group back");
+    }
+
+    [Fact]
+    public async Task A_user_in_no_ad_groups_is_nothing_to_do()
+    {
+        var (ad, leaver, _) = Lab();
+
+        var preview = await new RemoveAdGroupMembershipsStep(ad).PreviewAsync(Context(User(synced: true, AnchorOf(leaver))), Ct);
+
+        preview.IsNoOp.Should().BeTrue();
+        preview.Summary.Should().Be("ada.lovelace is in no AD groups beyond its primary group");
+    }
+
+    [Fact]
+    public async Task With_no_domain_controller_both_ad_steps_say_why_rather_than_fail()
+    {
+        var ad = new FakeDirectoryService { IsConnected = false };
+        var ctx = Context(User(synced: true, "AAAAAAAAAAAAAAAAAAAAAA=="));
+
+        (await new ResetAdPasswordStep(ad).PreviewAsync(ctx, Ct)).CanRun.Should().BeFalse();
+        (await new RemoveAdGroupMembershipsStep(ad).PreviewAsync(ctx, Ct)).CanRun.Should().BeFalse();
+    }
 }

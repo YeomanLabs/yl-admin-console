@@ -1,4 +1,5 @@
-﻿using AdminConsole.Core.Graph;
+using AdminConsole.Core.Exchange;
+using AdminConsole.Core.Graph;
 using AdminConsole.Core.Writes;
 
 namespace AdminConsole.Core.Offboarding;
@@ -33,7 +34,12 @@ public sealed record StepResult
 
     public GraphException? Error { get; init; }
 
-    public string? Details => Error is null ? null : GraphErrorText.Details(Error);
+    /// <summary>The Exchange error behind a failed mailbox step (doc 13); null for Graph and AD steps.</summary>
+    public ExchangeException? ExchangeError { get; init; }
+
+    public string? Details => Error is not null ? GraphErrorText.Details(Error)
+        : ExchangeError is not null ? ExchangeErrorText.Details(ExchangeError)
+        : null;
 
     /// <summary>Reverses this step. Null when the step is not reversible or did not change anything.</summary>
     public Func<CancellationToken, Task<WriteOutcome>>? Undo { get; init; }

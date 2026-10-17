@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using AdminConsole.Core.Offboarding;
 
 namespace AdminConsole.App.ViewModels.Dialogs;
@@ -12,7 +12,7 @@ public sealed partial class OffboardStepRow : ObservableObject
     public OffboardStepRow(IOffboardingStep step, bool enabled)
     {
         Step = step;
-        _isEnabled = enabled;
+        _isEnabled = enabled || step.IsRequired;
     }
 
     public IOffboardingStep Step { get; }
@@ -59,7 +59,8 @@ public sealed partial class OffboardStepRow : ObservableObject
     [NotifyPropertyChangedFor(nameof(CanToggle))]
     private bool _isLocked;
 
-    public bool CanToggle => !IsBlocked && !IsLocked;
+    /// <summary>The snapshot is never optional (M15.1), so its box is ticked and stays ticked.</summary>
+    public bool CanToggle => !IsBlocked && !IsLocked && !Step.IsRequired;
 
     [ObservableProperty]
     private bool _isPreviewing = true;
@@ -117,7 +118,7 @@ public sealed partial class OffboardStepRow : ObservableObject
         Details = preview.Details;
         Reason = preview.Reason;
         IsBlocked = !preview.CanRun;
-        if (IsBlocked) IsEnabled = false;
+        if (IsBlocked && !Step.IsRequired) IsEnabled = false;
     }
 
     public void Apply(StepProgress progress)
