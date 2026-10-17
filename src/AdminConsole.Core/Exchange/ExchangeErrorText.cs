@@ -42,6 +42,9 @@ public static class ExchangeErrorText
             case "ManagementObjectAmbiguousException":
                 return "More than one Exchange object matches. This is a bug in the console — it should always address an object by its id.";
 
+            case "CmdletProxyNotAvailableException":
+                return "Exchange sent the request to a server that doesn't hold this mailbox. This is a bug in the console's routing, not something you did.";
+
             case "AmbiguousParameterSetException":
             case "ParameterBindingException":
             case "ParameterBindingValidationException":

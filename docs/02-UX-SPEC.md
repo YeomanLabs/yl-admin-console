@@ -44,7 +44,7 @@ Tabs (lazy-loaded, each shows a skeleton until data arrives):
 2. **Access** — Licenses (checkbox list of tenant SKUs with available/total counts; toggling assigns/removes immediately with undo). Groups (list with type badge: Security / M365 / Dynamic / Synced; remove-X on removable rows; "Add to group…" picker). Directory roles (read-only list). Authentication methods (list with type and detail, e.g. "Authenticator · iPhone", "Phone · +1 ***-***-4412"; delete-X on each; last MFA registration date).
 3. **Devices** — cards for each Intune managed device where this user is primary or registered: name, model, OS/version, compliance badge, encryption badge, last check-in relative time, Autopilot enrolled badge. Click → Device page. Actions per card: Sync, Restart, Retire (with preview), Collect diagnostics.
 4. **Activity** — last interactive and non-interactive sign-in (from signInActivity), account created, last password change, recent audit events for this user (last 20, from directoryAudits filtered by target). If the tenant lacks P1: InfoBar "Sign-in activity requires Entra ID P1".
-5. **Mailbox** — Phase 3. Show a disabled tab with tooltip "Exchange Online integration arrives in Phase 3". Do not build.
+5. **Mailbox** — Phase 3, read-only since M13.5 (doc 13 §2): loaded on first selection; sections load and fail independently; says in words when Exchange is not granted, when there is no mailbox, and when it lives elsewhere.
 
 Sidebar (right, 280 px, collapsible): quick facts — object ID (mono, copy), created, last sync (if synced), source anchor, on-prem DN (if synced), manager, direct reports count.
 

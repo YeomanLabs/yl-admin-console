@@ -1,0 +1,19 @@
+{
+  "error": {
+    "code": "BadRequest",
+    "message": "Cmdlet needs proxy. Current Server FQDN : PH7PR19MB7050.namprd19.prod.outlook.com, Required Server FQDN : CH8PR19MB326380.namprd19.prod.outlook.com",
+    "details": [
+      {
+        "code": "CmdletProxyNotAvailableFailure",
+        "message": "|Microsoft.Exchange.Configuration.Tasks.CmdletProxyNotAvailableException|Cmdlet needs proxy. Current Server FQDN : PH7PR19MB7050.namprd19.prod.outlook.com, Required Server FQDN : CH8PR19MB326380.namprd19.prod.outlook.com",
+        "target": ""
+      }
+    ],
+    "innererror": {
+      "message": "Cmdlet needs proxy. Current Server FQDN : PH7PR19MB7050.namprd19.prod.outlook.com, Required Server FQDN : CH8PR19MB326380.namprd19.prod.outlook.com",
+      "type": "Microsoft.Exchange.Admin.OData.Core.ODataServiceException"
+    },
+    "adminapi.warnings@odata.type": "#Collection(String)",
+    "@adminapi.warnings": []
+  }
+}

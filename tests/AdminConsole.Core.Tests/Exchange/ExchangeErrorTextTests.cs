@@ -25,6 +25,16 @@ public sealed class ExchangeErrorTextTests
     }
 
     [Fact]
+    public void CmdletNeedsProxy_IsOwnedAsARoutingBug()
+    {
+        // Captured live on 2026-10-17: Get-MailboxRegionalConfiguration on someone else's mailbox, routed by the admin's.
+        var ex = From(400, "exchange/error-cmdlet-needs-proxy");
+
+        ex.ExceptionName.Should().Be("CmdletProxyNotAvailableException");
+        ExchangeErrorText.Friendly(ex).Should().Contain("routing");
+    }
+
+    [Fact]
     public void Forbidden_NamesTheRolesThatCan()
     {
         var ex = new ExchangeException(403, "Forbidden", "Access is denied.");

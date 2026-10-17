@@ -51,11 +51,17 @@ public sealed class ExchangeClient
     /// a deliberate act in Exchange just as in Graph.
     /// </summary>
     /// <param name="select">Properties to return. Without it <c>Get-Mailbox</c> answers with 338 of them.</param>
+    /// <param name="anchorMailbox">
+    /// The routing key for a call bound to one mailbox — <see cref="AnchorFor"/>. Omitted, the call is routed by the
+    /// admin's own mailbox, which is right for tenant-wide cmdlets and wrong for anything that must run on the target
+    /// mailbox's server: <c>Get-MailboxRegionalConfiguration</c> answers "Cmdlet needs proxy" (doc 13 §1).
+    /// </param>
     public async Task<ExchangeResult> InvokeAsync(
         string cmdlet,
         IReadOnlyDictionary<string, object?>? parameters,
         CancellationToken ct,
-        IReadOnlyList<string>? select = null)
+        IReadOnlyList<string>? select = null,
+        string? anchorMailbox = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(cmdlet);
         if (string.IsNullOrEmpty(_tenant.TenantId) || string.IsNullOrEmpty(_tenant.SignedInUpn))
@@ -77,7 +83,7 @@ public sealed class ExchangeClient
                     cmdlet: cmdlet);
             }
 
-            using var doc = await SendAsync(url, body, cmdlet, ct).ConfigureAwait(false);
+            using var doc = await SendAsync(url, body, cmdlet, anchorMailbox ?? $"UPN:{_tenant.SignedInUpn}", ct).ConfigureAwait(false);
             url = null;
             if (doc is null) break;
 
@@ -107,6 +113,12 @@ public sealed class ExchangeClient
         return new ExchangeResult { Items = items, Warnings = warnings };
     }
 
+    /// <summary>
+    /// The routing key that sends a call to the server holding <paramref name="userId"/>'s mailbox:
+    /// <c>OID:{object id}@{tenant id}</c>, the form Microsoft documents for the Admin API and proven on this endpoint.
+    /// </summary>
+    public string AnchorFor(string userId) => $"OID:{userId}@{_tenant.TenantId}";
+
     private string BuildUrl(IReadOnlyList<string>? select)
     {
         var url = new Uri(_options.BaseAddress, $"adminapi/beta/{Uri.EscapeDataString(_tenant.TenantId)}/InvokeCommand").AbsoluteUri;
@@ -120,14 +132,14 @@ public sealed class ExchangeClient
         return JsonSerializer.Serialize(new Dictionary<string, object?> { ["CmdletInput"] = input }, BodyOptions);
     }
 
-    private async Task<JsonDocument?> SendAsync(string url, string body, string cmdlet, CancellationToken ct)
+    private async Task<JsonDocument?> SendAsync(string url, string body, string cmdlet, string anchor, CancellationToken ct)
     {
         var token = await _auth.GetTokenAsync(_options.TokenScopes, ct).ConfigureAwait(false);
         var refreshed = false;
 
         for (var attempt = 1; ; attempt++)
         {
-            using var request = BuildRequest(url, body, token);
+            using var request = BuildRequest(url, body, token, anchor);
             HttpResponseMessage response;
 
             await _gate.WaitAsync(ct).ConfigureAwait(false);
@@ -187,15 +199,13 @@ public sealed class ExchangeClient
         }
     }
 
-    private HttpRequestMessage BuildRequest(string url, string body, string token)
+    private HttpRequestMessage BuildRequest(string url, string body, string token, string anchor)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
 
-        // Routing by the admin's own mailbox worked for every cmdlet probed, including ones aimed at other mailboxes
-        // (doc 13 §1). Microsoft suggests routing by the target for latency; revisit only if latency asks for it.
-        request.Headers.TryAddWithoutValidation("X-AnchorMailbox", $"UPN:{_tenant.SignedInUpn}");
+        request.Headers.TryAddWithoutValidation("X-AnchorMailbox", anchor);
         request.Headers.TryAddWithoutValidation("X-ResponseFormat", "json");
         request.Headers.TryAddWithoutValidation("Prefer", $"odata.maxpagesize={_options.PageSize}");
         request.Headers.TryAddWithoutValidation("client-request-id", Guid.NewGuid().ToString());

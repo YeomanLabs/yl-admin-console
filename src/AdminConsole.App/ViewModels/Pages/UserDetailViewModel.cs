@@ -27,6 +27,7 @@ namespace AdminConsole.App.ViewModels.Pages;
 public sealed partial class UserDetailViewModel : ObservableObject, IPageViewModel, IRefreshable, IDisposable
 {
     private const int ActivityTabIndex = 3;
+    private const int MailboxTabIndex = 4;
 
     private readonly UserService _users;
     private readonly IDirectoryService _directory;
@@ -45,8 +46,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     private CancellationTokenSource? _cts;
     private bool _auditRequested;
 
-    public UserDetailViewModel(UserService users, IDirectoryService directory, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, ILogger<UserDetailViewModel> logger)
+    public UserDetailViewModel(UserService users, IDirectoryService directory, CacheDb db, TenantContext tenant, PermissionChecker permissions, ConsentService consent, LicenseService licenses, GroupService groups, ToastService toasts, IDialogService dialogs, OffboardingRunner offboarding, OffboardingProfileStore profiles, ActionLog actions, MailboxTabViewModel mailbox, ILogger<UserDetailViewModel> logger)
     {
+        Mailbox = mailbox;
         _users = users;
         _directory = directory;
         _db = db;
@@ -104,7 +106,8 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     public bool IsAccessLoaded => Live is not null;
     public bool IsActivityLoaded => Live is not null;
 
-    public string MailboxDisabledReason => "Exchange Online integration arrives in Phase 3";
+    /// <summary>The Mailbox tab (M13.5). Its own view model, loaded the first time the tab is selected.</summary>
+    public MailboxTabViewModel Mailbox { get; }
 
     /// <summary>UX §6: consent first, then "not built yet". Recomputed whenever the granted scopes change.</summary>
     [ObservableProperty]
@@ -1019,6 +1022,8 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
 
     partial void OnSelectedTabIndexChanged(int value)
     {
+        if (value == MailboxTabIndex) Mailbox.EnsureLoaded();
+
         if (value == ActivityTabIndex && !_auditRequested)
         {
             _auditRequested = true;
@@ -1078,6 +1083,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     public void Start(string id)
     {
         Id = id;
+        Mailbox.Start(id);
         RecomputeReasons();
         _ = LoadAsync(CancellationToken.None);
     }
@@ -1085,6 +1091,8 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     public Task RefreshAsync(CancellationToken ct)
     {
         _auditRequested = false;
+        Mailbox.Reset();
+        if (SelectedTabIndex == MailboxTabIndex) Mailbox.EnsureLoaded();
         return LoadAsync(ct);
     }
 
@@ -1155,5 +1163,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         }
     }
 
-    public void Dispose() => _cts?.Cancel();
+    public void Dispose()
+    {
+        _cts?.Cancel();
+        Mailbox.Dispose();
+    }
 }

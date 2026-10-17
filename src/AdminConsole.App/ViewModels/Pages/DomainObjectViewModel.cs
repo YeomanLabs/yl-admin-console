@@ -904,9 +904,6 @@ public sealed partial class DomainObjectViewModel : ObservableObject, IPageViewM
     }
 }
 
-/// <summary>One label-and-value line on the AD object page.</summary>
-public sealed record FactRow(string Label, string Value);
-
 /// <summary>One row of an AD object's group membership, carrying the GUID the remove button needs (M12.11).</summary>
 public sealed record AdMembershipRow(string Name, Guid ObjectGuid, string DistinguishedName, string Detail)
 {

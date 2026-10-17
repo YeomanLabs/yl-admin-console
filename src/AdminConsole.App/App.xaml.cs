@@ -232,6 +232,7 @@ public sealed partial class App : Application
         services.AddTransient<GroupsPageViewModel>();
         services.AddTransient<DevicesPageViewModel>();
         services.AddTransient<UserDetailViewModel>();
+        services.AddTransient<MailboxTabViewModel>();
         services.AddTransient<DeviceDetailViewModel>();
         services.AddTransient<GroupDetailViewModel>();
         services.AddTransient<SettingsPageViewModel>();

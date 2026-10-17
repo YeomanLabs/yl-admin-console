@@ -45,9 +45,12 @@ Prefer: odata.maxpagesize=1000
   a user can consent to it and admin consent is not required. The registration lists it and holds an `AllPrincipals`
   grant so nobody sees a consent prompt (M13.3). Consent alone does nothing: Exchange RBAC decides what runs, so the
   admin needs Exchange Administrator, Exchange Recipient Administrator or Global Administrator.
-- **`X-AnchorMailbox`:** the admin's own UPN for every call, including ones that target someone else's mailbox. That was
-  enough for every probe. Microsoft's v2.0 guidance routes mailbox-bound calls by the *target* mailbox for latency;
-  worth doing only if latency demands it.
+- **`X-AnchorMailbox`:** the *target* mailbox for any call about one mailbox — `OID:{object id}@{tenant id}`, proven
+  on this endpoint — and the admin's own (`UPN:{admin}`) only for tenant-wide cmdlets. **Corrected by the M13 gate.**
+  This section first said the admin's UPN was enough for every call, because every probe had targeted the admin's own
+  mailbox. Opened on anyone else's, `Get-MailboxRegionalConfiguration` answers 400 `CmdletProxyNotAvailableException`
+  "Cmdlet needs proxy. Current Server FQDN: … Required Server FQDN: …", because it must run on the server holding that
+  mailbox. Statistics, permissions, auto-replies and folder permissions proxied themselves and hid the problem.
 - **`$select`** is honoured and an unknown name is skipped, not rejected. `Get-Mailbox` without it returns 338 properties.
 - **Identity is the Entra object id** (`ExternalDirectoryObjectId`). Proven for `Get-Mailbox`, `Get-MailboxStatistics`,
   `Get-MailboxFolderStatistics`, `Get-MailboxFolderPermission` (`{oid}:\Calendar`) and `Get-Recipient`. Never use the

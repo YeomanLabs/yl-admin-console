@@ -102,6 +102,48 @@
         <Setter Property="Margin" Value="0,16,0,6" />
     </Style>
 
+    <!-- Mailbox tab (M13.5): one read-only label/value row. -->
+    <DataTemplate x:Key="FactRowTemplate" DataType="{x:Type pages:FactRow}">
+        <Grid MinHeight="28" Margin="0,0,0,2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="210" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Label}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,0" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock x:Name="Value" Text="{Binding Value}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Caption}" Style="{StaticResource Caption}" Visibility="{Binding Caption, Converter={StaticResource NullToCollapsed}}" />
+            </StackPanel>
+        </Grid>
+        <DataTemplate.Triggers>
+            <DataTrigger Binding="{Binding IsMono}" Value="True">
+                <Setter TargetName="Value" Property="FontFamily" Value="{StaticResource AcMono}" />
+            </DataTrigger>
+        </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- A section's body: an error, an empty-state sentence, or rows — never a blank (M9.7). -->
+    <DataTemplate x:Key="MailboxSectionBody" DataType="{x:Type pages:MailboxSection}">
+        <StackPanel>
+            <TextBlock Text="{Binding Error}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" TextWrapping="Wrap"
+                       Visibility="{Binding Error, Converter={StaticResource NullToCollapsed}}" />
+            <TextBlock Text="{Binding EmptyText}" Style="{StaticResource Caption}" Visibility="{Binding ShowEmpty, Converter={StaticResource BoolToVisibility}}" />
+            <ItemsControl ItemsSource="{Binding Facts}" ItemTemplate="{StaticResource FactRowTemplate}" Focusable="False" />
+            <TextBlock Text="{Binding Note}" Style="{StaticResource Caption}" Margin="0,4,0,0" Visibility="{Binding Note, Converter={StaticResource NullToCollapsed}}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="MailboxSectionTemplate" DataType="{x:Type pages:MailboxSection}">
+        <StackPanel>
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Title}" Style="{StaticResource SectionTitle}" />
+                <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="8,16,0,6"
+                                 Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource MailboxSectionBody}" Focusable="False" />
+        </StackPanel>
+    </DataTemplate>
+
 
     <!-- Identity property sheet row (UX §4 tab 1): edit-on-blur, spinner then check, no Save button.
          Read-only rows show the hybrid caption instead of an editor (UX §6). -->
@@ -586,8 +628,39 @@
                         </ScrollViewer>
                     </TabItem>
 
-                    <!-- 5. Mailbox: Phase 3 -->
-                    <TabItem Header="Mailbox" IsEnabled="False" ToolTip="{Binding MailboxDisabledReason}" ToolTipService.ShowOnDisabled="True" />
+                    <!-- 5. Mailbox (M13.5, doc 13): read-only, loaded the first time the tab is selected. -->
+                    <TabItem Header="Mailbox">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" DataContext="{Binding Mailbox}">
+                            <StackPanel Margin="0,0,16,16">
+                                <!-- Loading -->
+                                <ContentControl ContentTemplate="{StaticResource SkeletonBlock}" Focusable="False"
+                                                Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibility}}" />
+
+                                <!-- Why there is nothing else: no permission, no mailbox, or a failure -->
+                                <StackPanel Margin="0,16,0,0" Visibility="{Binding ShowStateMessage, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{Binding StateTitle}" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding StateMessage}" Style="{StaticResource Caption}" Margin="0,6,0,0" MaxWidth="720" HorizontalAlignment="Left" />
+                                    <ui:Button Content="Grant Exchange access" Appearance="Primary" Margin="0,12,0,0" Command="{Binding GrantCommand}"
+                                               Visibility="{Binding ShowGrant, Converter={StaticResource BoolToVisibility}}" />
+                                </StackPanel>
+
+                                <!-- The mailbox -->
+                                <StackPanel Visibility="{Binding ShowSections, Converter={StaticResource BoolToVisibility}}">
+                                    <TextBlock Text="{Binding SummaryText}" Style="{StaticResource Caption}" Margin="0,8,0,0" />
+                                    <ItemsControl ItemsSource="{Binding Sections}" ItemTemplate="{StaticResource MailboxSectionTemplate}" Focusable="False" />
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,16,0,6">
+                                        <TextBlock Text="Folder permissions" Style="{StaticResource SectionTitle}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                                        <ComboBox ItemsSource="{Binding FolderChoices}" DisplayMemberPath="Label" SelectedItem="{Binding SelectedFolder}"
+                                                  Width="180" AutomationProperties.Name="Folder for folder permissions" />
+                                        <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="8,0,0,0"
+                                                         Visibility="{Binding FolderSection.IsLoading, Converter={StaticResource BoolToVisibility}}" />
+                                    </StackPanel>
+                                    <ContentControl Content="{Binding FolderSection}" ContentTemplate="{StaticResource MailboxSectionBody}" Focusable="False" />
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </TabItem>
                 </TabControl>
             </Grid>
 

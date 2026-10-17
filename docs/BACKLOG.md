@@ -106,3 +106,9 @@ how a gate is written: pick the path a person would take who does not know what 
   the lab DC to sync one OU into the tenant. See `docs/12-ENTRA-CONNECT-LAB.md`. Until the first non-staged sync
   completes, the join from a real synced Entra user to its AD object remains proven only against the lab's own
   objects.
+
+### 2026-10-17 — User 360's tab strip wraps onto two rows at 1280 px
+Seen while gating M13.5: at a 1280-wide window with the quick-facts panel open, Identity · Access · Devices sit on one
+row and Activity · Mailbox on a second, with the selected tab drawn as a wide box. It predates M13 — the disabled Mailbox
+tab occupied the same slot — and it is how WPF-UI's TabControl lays out headers that do not fit. **To close:** fixed-width
+headers or a horizontally scrolling strip, checked at 1280 and at Compact density.
