@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace AdminConsole.App.ViewModels.Dialogs;
 
@@ -30,5 +30,15 @@ public sealed partial class TextPromptDialogViewModel : DialogViewModelBase
     [NotifyPropertyChangedFor(nameof(CanConfirm))]
     private string _value = string.Empty;
 
-    public override bool CanConfirm => Value.Trim().Length > 0;
+    /// <summary>For an optional answer, where empty means "use the default" rather than nothing typed yet.</summary>
+    public bool AllowEmpty { get; init; }
+
+    /// <summary>A check on what was typed; the message shows under the box and holds Confirm back.</summary>
+    public Func<string, string?>? Validate { get; init; }
+
+    public string? Problem => Value.Trim().Length == 0 ? null : Validate?.Invoke(Value.Trim());
+
+    public override bool CanConfirm => (AllowEmpty || Value.Trim().Length > 0) && Problem is null;
+
+    partial void OnValueChanged(string value) => OnPropertyChanged(nameof(Problem));
 }

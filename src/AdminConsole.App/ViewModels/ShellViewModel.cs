@@ -1092,8 +1092,9 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     /// <summary>
-    /// Adds a tenant to the switcher. It uses this installation's registration — a multi-tenant one, as the script makes
-    /// it — so all it needs is which tenant: an id or a verified domain. The registration must be consented there.
+    /// Adds a tenant to the switcher: which tenant (an id or a verified domain), and the client id of the registration
+    /// to sign in to it with. Each tenant normally has its own (DECISIONS, M10), made there by the script; left empty,
+    /// the current tenant's registration is used, which works where it has been consented.
     /// </summary>
     [RelayCommand]
     private async Task AddTenantAsync()
@@ -1105,6 +1106,16 @@ public sealed partial class ShellViewModel : ObservableObject
         if (!await Dialogs.ShowAsync(prompt)) return;
 
         var tenant = prompt.Value.Trim();
+        var current = _session?.Profile ?? _profiles.LoadProfiles().Default;
+        var clientPrompt = new TextPromptDialogViewModel("Add a tenant",
+            $"The client ID of {tenant}'s own app registration, made there by scripts/New-AppRegistration.ps1. Leave it empty to use this tenant's registration, if it has been consented there.",
+            current?.ClientId)
+        {
+            AllowEmpty = true,
+            Validate = v => TenantConfig.LooksLikeClientId(v) ? null : "A client ID is a GUID, like 00000000-0000-0000-0000-000000000000.",
+        };
+        if (!await Dialogs.ShowAsync(clientPrompt)) return;
+
         var list = _profiles.LoadProfiles();
         if (list.Profiles.FirstOrDefault(p => string.Equals(p.TenantId, tenant, StringComparison.OrdinalIgnoreCase)) is { } known)
         {
@@ -1112,9 +1123,9 @@ public sealed partial class ShellViewModel : ObservableObject
             return;
         }
 
-        var template = _session?.Profile ?? list.Default;
-        if (template is null) return;
-        var profile = new TenantProfile { Name = tenant, TenantId = tenant, ClientId = template.ClientId, Authority = template.Authority };
+        if (current is null) return;
+        var clientId = clientPrompt.Value.Trim().Length > 0 ? clientPrompt.Value.Trim() : current.ClientId;
+        var profile = new TenantProfile { Name = tenant, TenantId = tenant, ClientId = clientId, Authority = current.Authority };
         list = list.With(profile);
         _profiles.SaveProfiles(list);
         await OpenNewTenantAsync(profile, list);

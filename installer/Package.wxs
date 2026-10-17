@@ -1,0 +1,62 @@
+<!--
+  Admin Console. Silent install for Intune or a script:
+    msiexec /i AdminConsole-<version>-x64.msi /qn
+  Upgrades in place (same UpgradeCode). Uninstall leaves each user's %LOCALAPPDATA%\AdminConsole: the token cache, the
+  caches, tenant.json, templates, snapshots and reports are the admin's, not the program's.
+
+  The package carries no app registration: a new installation opens the setup screen and is pointed at the
+  registration made in its own tenant (docs/08-APP-REGISTRATION.md).
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+  <Package
+    Name="$(ProductName)"
+    Manufacturer="$(Manufacturer)"
+    Version="$(Version)"
+    UpgradeCode="7CFE117A-068B-4092-802D-9CA459F1C17F"
+    Scope="perMachine"
+    Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of $(ProductName) is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!--
+      A running console holds its files, so an upgrade or removal would stall on Windows Installer's "files in use"
+      prompt. First ask it to close, as its close button would (moved before InstallValidate, where the check runs);
+      if it is still running — hung, or no desktop to ask because Intune installs as SYSTEM — Restart Manager closes it
+      (MSIRMSHUTDOWN=1). Nothing is lost: every write is already in the action log and the cache is rebuilt by delta.
+    -->
+    <util:CloseApplication
+      Id="CloseRunningApp"
+      Target="AdminConsole.exe"
+      Description="Closing $(ProductName) so it can be updated."
+      CloseMessage="yes"
+      RebootPrompt="no" />
+    <InstallExecuteSequence>
+      <Custom Action="override Wix4CloseApplications_$(sys.BUILDARCHSHORT)" Before="InstallValidate" Condition="VersionNT &gt; 400" />
+    </InstallExecuteSequence>
+    <Property Id="MSIRMSHUTDOWN" Value="1" />
+
+    <!-- Nothing to choose or repair: install and uninstall only. -->
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="ARPNOREPAIR" Value="1" />
+
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="$(ProductName)">
+        <!-- The whole self-contained publish folder: the exe, .NET 8 and the WPF runtime. -->
+        <Files Include="$(PublishDir)**" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Component Id="StartMenuShortcut">
+        <Shortcut
+          Id="AppShortcut"
+          Name="$(ProductName)"
+          Description="Entra ID, Intune, Exchange Online and Active Directory behind one search box"
+          Target="[INSTALLFOLDER]AdminConsole.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RegistryValue Root="HKLM" Key="Software\$(Manufacturer)\$(ProductName)" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </StandardDirectory>
+  </Package>
+</Wix>

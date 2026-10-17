@@ -88,7 +88,7 @@
         </Style>
     </ui:FluentWindow.Resources>
 
-    <!-- UX §11 keyboard table. Alt+1..6 nav, Alt+← back, Ctrl+T/W/Tab tabs, Ctrl+K palette, Ctrl+N new user, F5 refresh, Ctrl+Shift+S sync, Ctrl+Shift+O offboard, Ctrl+, settings. -->
+    <!-- UX §11 keyboard table. Alt+1..8 nav, Alt+← back, Ctrl+T/W/Tab tabs, Ctrl+K palette, Ctrl+N new user, F5 refresh, Ctrl+Shift+S sync, Ctrl+Shift+O offboard, Ctrl+, settings. -->
     <ui:FluentWindow.InputBindings>
         <KeyBinding Modifiers="Ctrl" Key="K" Command="{Binding OpenPaletteCommand}" />
         <KeyBinding Modifiers="Ctrl" Key="N" Command="{Binding NewUserCommand}" />

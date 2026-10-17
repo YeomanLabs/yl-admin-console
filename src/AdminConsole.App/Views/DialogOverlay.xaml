@@ -149,6 +149,8 @@
                         <KeyBinding Key="Return" Command="{Binding ConfirmCommand}" />
                     </ui:TextBox.InputBindings>
                 </ui:TextBox>
+                <TextBlock Text="{Binding Problem}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" Foreground="{DynamicResource SystemFillColorCriticalBrush}"
+                           Visibility="{Binding Problem, Converter={StaticResource NullToCollapsed}}" />
             </StackPanel>
         </DataTemplate>
 

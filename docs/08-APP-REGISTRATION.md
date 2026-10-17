@@ -167,10 +167,10 @@ showing the unverified warning. A per-tenant registration created by the tenant'
 
 ## More than one tenant (M20)
 
-The registration the script creates is multi-tenant, so one installation can open several tenants: the title bar's
-tenant name is the switcher, and "Add a tenant…" asks for the tenant's id or one of its domains. The registration must
-be consented in that tenant first — run the script there with `-Update` (it finds the existing service principal or
-creates one), or have that tenant's Global Administrator open
+One installation can open several tenants: the title bar's tenant name is the switcher, and "Add a tenant…" asks for
+the tenant's id or one of its domains, then the client ID of that tenant's own registration — made there by running the
+script in that tenant, as for the first. Left empty, the current tenant's registration is used, which works only where
+it has been consented; for that, have the other tenant's Global Administrator open
 
 ```
 https://login.microsoftonline.com/{tenant}/adminconsent?client_id={client id}

@@ -562,8 +562,9 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **Shared rather than per tenant:** the action log (rows carry their tenant; Activity filters to the tab's), user
   settings, branding, and offboarding profiles (options, not people). **Per tenant:** caches, snapshots, pending
   creates, reports — which already were — and now templates, whose group and licence ids mean nothing elsewhere.
-- **One registration for every tenant.** The script makes it multi-tenant; adding a tenant needs only its id or domain,
-  and its admin's consent. A profile can still carry its own client id for a tenant that insists on its own.
+- **Each profile names its own registration** (M10 still holds: one per tenant, owned there). "Add a tenant" asks for
+  the tenant and its registration's client id; left empty, the current registration is used, which works where it has
+  been consented — the YeomanLabs lab, or a partner tenant set up that way.
 - **The authority is pinned to the tenant once known**, and the account last used for that tenant is the one taken from
   the token cache. A partner admin's one account reaches several tenants; asking `organizations` would hand back
   whichever tenant the account is homed in.
@@ -573,4 +574,17 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   after sign-in added a second copy. Found in the live run; the stray copy was removed from the test machine's file.
 - **Several domains go through a router, and cross-domain operations are refused, not attempted.** A move to another
   domain and a cross-domain membership by GUID are different AD operations from the ones the console sends.
-- **The gate waits for a second test tenant.** Testing is confined to YeomanLabs; the owner provides the second one.
+- **The gate was bypassed at the owner's request** (2026-10-17): the owner runs the two-tenant test against their second
+  tenant. Automated testing stays confined to YeomanLabs.
+
+## 2026-10-17 — First release: v0.3.0 MSI
+
+- **WiX 5.0.2, per machine, self-contained**, as FieldKit: no runtime prerequisite, one file for Intune
+  (`msiexec /i … /qn`), upgrades in place, closes a running console first.
+- **The release ships no registration.** M10 moved the client id out of the shipped `appsettings.json`, but the file
+  still carried the development one; the release script blanks it, so a new installation opens the setup screen and
+  is pointed at its own tenant's registration. An existing installation keeps its `tenant.json`.
+- **Nothing local reaches the package.** `appsettings.local.json` (the lab credential) is copied to Debug output only,
+  and the script refuses to build an MSI whose publish folder holds that file or any JSON with a password in it.
+- **Unsigned for now.** There is no code-signing certificate; SmartScreen will say so. Signing is the first thing a
+  client deployment needs.

@@ -1,0 +1,29 @@
+<!--
+  The console's MSI: per machine, into Program Files\Admin Console, with a Start menu shortcut. Built by
+  scripts\Build-Release.ps1 from a self-contained publish folder (PublishDir), once per platform.
+
+  WiX 5.0.2, not 7: WiX 7 needs its Open Source Maintenance Fee EULA accepted before it builds. 5.0.2 is MS-RL
+  licensed with no such step (the same choice as the FieldKit installer).
+
+  White-label (M11): the product and manufacturer default to "Admin Console". A branded build passes its own with
+  -p:ProductName=… -p:Manufacturer=…; nothing here names a company.
+-->
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <PropertyGroup>
+    <OutputName>AdminConsole</OutputName>
+    <Platforms>x64;ARM64</Platforms>
+    <InstallerPlatform Condition="'$(Platform)' == 'ARM64'">arm64</InstallerPlatform>
+    <InstallerPlatform Condition="'$(Platform)' != 'ARM64'">x64</InstallerPlatform>
+    <Version Condition="'$(Version)' == ''">0.0.0</Version>
+    <ProductName Condition="'$(ProductName)' == ''">Admin Console</ProductName>
+    <Manufacturer Condition="'$(Manufacturer)' == ''">Admin Console</Manufacturer>
+    <DefineConstants>Version=$(Version);PublishDir=$(PublishDir);ProductName=$(ProductName);Manufacturer=$(Manufacturer)</DefineConstants>
+    <!-- No ICE validation run: it needs the Windows SDK's msi tools; the release script checks the result instead. -->
+    <SuppressValidation>true</SuppressValidation>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- util:CloseApplication: close a running console before upgrading or removing it. -->
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+</Project>

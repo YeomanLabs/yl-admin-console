@@ -9,7 +9,7 @@
     <RootNamespace>AdminConsole.App</RootNamespace>
     <AssemblyName>AdminConsole</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.1.0</Version>
+    <Version>0.3.0</Version>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="WPF-UI" Version="3.0.5" />
@@ -21,6 +21,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Update="appsettings.json"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
-    <None Update="appsettings.local.json" Condition="Exists('appsettings.local.json')"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
+    <!-- Local overrides (a lab DC credential, say) reach Debug output only: a Release publish is what the MSI is made
+         of, and Build-Release.ps1 refuses to package one that carries this file anyway. -->
+    <None Update="appsettings.local.json" Condition="Exists('appsettings.local.json') And '$(Configuration)' == 'Debug'"><CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory></None>
   </ItemGroup>
 </Project>

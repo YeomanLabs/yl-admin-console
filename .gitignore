@@ -3,3 +3,6 @@ obj/
 .vs/
 *.user
 appsettings.local.json
+artifacts/
+installer/bin/
+installer/obj/
