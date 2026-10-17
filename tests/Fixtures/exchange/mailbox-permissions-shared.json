@@ -1,0 +1,71 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "IsOwner": false,
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "FullAccess, ReadPermission"
+      ],
+      "Deny": false,
+      "InheritanceType": "None",
+      "User": "NT AUTHORITY\\SELF",
+      "UserWithDisplayName@odata.type": "#Collection(String)",
+      "UserWithDisplayName": [],
+      "UserSid": "S-1-5-10",
+      "Identity": "Contoso Info",
+      "IsInherited": false,
+      "IsValid": true
+    },
+    {
+      "IsOwner": false,
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "FullAccess, ExternalAccount, ReadPermission"
+      ],
+      "Deny": false,
+      "InheritanceType": "Descendents",
+      "User": "NT AUTHORITY\\SELF",
+      "UserWithDisplayName@odata.type": "#Collection(String)",
+      "UserWithDisplayName": [],
+      "UserSid": "S-1-5-10",
+      "Identity": "Contoso Info",
+      "IsInherited": false,
+      "IsValid": true
+    },
+    {
+      "IsOwner": false,
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "FullAccess"
+      ],
+      "Deny": false,
+      "InheritanceType": "All",
+      "User": "Adele@contoso.com",
+      "UserWithDisplayName@odata.type": "#Collection(String)",
+      "UserWithDisplayName": [],
+      "UserSid": "S-1-5-21-1000-2000-3000-1000",
+      "Identity": "Contoso Info",
+      "IsInherited": false,
+      "IsValid": true
+    },
+    {
+      "IsOwner": false,
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "FullAccess"
+      ],
+      "Deny": false,
+      "InheritanceType": "All",
+      "User": "Megan@contoso.com",
+      "UserWithDisplayName@odata.type": "#Collection(String)",
+      "UserWithDisplayName": [],
+      "UserSid": "S-1-5-21-1000-2000-3000-1001",
+      "Identity": "Contoso Info",
+      "IsInherited": false,
+      "IsValid": true
+    }
+  ]
+}

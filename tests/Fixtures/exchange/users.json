@@ -1,0 +1,87 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "UserPrincipalName": "Adele@contoso.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000104",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "DiscoverySearchMailbox{D919BA05-46A6-415f-80AD-7E09334BB852}@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "",
+      "RecipientTypeDetails": "DiscoveryMailbox"
+    },
+    {
+      "UserPrincipalName": "bg-adelev@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000164",
+      "RecipientTypeDetails": "User"
+    },
+    {
+      "UserPrincipalName": "Lynne.Robbins@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000111",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Lidia.Holloway@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000110",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Alex.Wilber@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000107",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Megan@contoso.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000108",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Lee.Gu@contoso.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000109",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "info@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000115",
+      "RecipientTypeDetails": "SharedMailbox"
+    },
+    {
+      "UserPrincipalName": "Nestor.Wilke@contoso.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000112",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "adele@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000113",
+      "RecipientTypeDetails": "SharedMailbox"
+    },
+    {
+      "UserPrincipalName": "joni.sherman@contoso.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000165",
+      "RecipientTypeDetails": "User"
+    },
+    {
+      "UserPrincipalName": "Sync_DC01_173d63696f6d@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000166",
+      "RecipientTypeDetails": "User"
+    },
+    {
+      "UserPrincipalName": "adlab.hybrid1@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000167",
+      "RecipientTypeDetails": "User"
+    },
+    {
+      "UserPrincipalName": "adlab.hybrid2@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000168",
+      "RecipientTypeDetails": "User"
+    },
+    {
+      "UserPrincipalName": "ap@contoso.onmicrosoft.com",
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000114",
+      "RecipientTypeDetails": "SharedMailbox"
+    }
+  ]
+}

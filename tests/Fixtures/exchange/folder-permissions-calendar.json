@@ -1,0 +1,29 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "Identity": "AdeleVance:\\Calendar",
+      "FolderName": "Calendar",
+      "User": "Default",
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "AvailabilityOnly"
+      ],
+      "SharingPermissionFlags": null,
+      "IsValid": true
+    },
+    {
+      "Identity": "AdeleVance:\\Calendar",
+      "FolderName": "Calendar",
+      "User": "Anonymous",
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "None"
+      ],
+      "SharingPermissionFlags": null,
+      "IsValid": true
+    }
+  ]
+}

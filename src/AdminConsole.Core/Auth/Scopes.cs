@@ -35,6 +35,10 @@ public static class Scopes
     public const string BitLockerKeyReadAll = "BitlockerKey.Read.All";
     public const string DeviceLocalCredentialReadAll = "DeviceLocalCredential.Read.All";
 
+    // Exchange Online (Phase 3, doc 13). A different resource from Graph, so it never appears in a Graph token's `scp`
+    // and is asked for with its resource prefix.
+    public const string ExchangeManage = "https://outlook.office365.com/Exchange.Manage";
+
     public static readonly IReadOnlyList<string> Read =
     [
         OpenId, Profile, OfflineAccess,

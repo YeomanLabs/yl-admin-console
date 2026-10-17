@@ -1,0 +1,18 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "DateFormat": "M/d/yyyy",
+      "Language": "en-US",
+      "DefaultFolderNameMatchingUserLanguage": false,
+      "TimeFormat": "h:mm tt",
+      "TimeZone": "Central Standard Time",
+      "Schema": "Microsoft.Exchange.Data.Storage.Management.MailboxRegionalConfigurationSchema",
+      "Identity": "AdeleVance",
+      "Principal": "LegacyDn: /o=ExchangeLabs/ou=Exchange Administrative Group (FYDIBOHF23SPDLT)/cn=Recipients/cn=00000000000000000000000000000001-mailbox1, RecipientType: UserMailbox, RecipientTypeDetails: UserMailbox, Selected Mailbox: Display Name: Adele Vance, Mailbox Guid: 00000000-0000-0000-0000-000000000101, Mailbox Database Guid: 00000000-0000-0000-0000-000000000100, Location: ServerFqdn: PH7PR19MB7050.namprd19.prod.outlook.com, ServerVersion: 1943372298, DatabaseName: NAMPR19DG408-db318, HomePublicFolderDatabaseGuid: 00000000-0000-0000-0000-000000000000",
+      "IsValid": true
+    }
+  ]
+}

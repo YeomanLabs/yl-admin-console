@@ -1,0 +1,28 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "Name": "Calendar",
+      "FolderPath": "/Calendar",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAENAAAC",
+      "FolderType": "Calendar",
+      "Identity": "00000000-0000-0000-0000-000000000104\\Calendar"
+    },
+    {
+      "Name": "Birthdays",
+      "FolderPath": "/Birthdays",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAUMZqHAAAC",
+      "FolderType": "BirthdayCalendar",
+      "Identity": "00000000-0000-0000-0000-000000000104\\Birthdays"
+    },
+    {
+      "Name": "United States holidays",
+      "FolderPath": "/United States holidays",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAUMZqIAAAC",
+      "FolderType": "User Created",
+      "Identity": "00000000-0000-0000-0000-000000000104\\United States holidays"
+    }
+  ]
+}

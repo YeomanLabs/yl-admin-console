@@ -1,0 +1,31 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "AutoDeclineFutureRequestsWhenOOF": false,
+      "AutoReplyState": "Disabled",
+      "CreateOOFEvent": false,
+      "DeclineAllEventsForScheduledOOF": false,
+      "DeclineEventsForScheduledOOF": false,
+      "EventsToDeleteIDs": null,
+      "EndTime@data.type": "System.DateTime",
+      "EndTime": "2026-10-18T11:00:00.0000000+00:00",
+      "ExternalAudience": "All",
+      "ExternalMessage": "",
+      "InternalMessage": "",
+      "DeclineMeetingMessage": "",
+      "OOFEventSubject": "",
+      "StartTime@data.type": "System.DateTime",
+      "StartTime": "2026-10-17T11:00:00.0000000+00:00",
+      "Recipients": null,
+      "ReminderMinutesBeforeStart@data.type": "System.Int32",
+      "ReminderMinutesBeforeStart": 0,
+      "ReminderMessage": "",
+      "MailboxOwnerId": "nampr19a017.prod.outlook.com/Microsoft Exchange Hosted Organizations/contoso.onmicrosoft.com/AdeleVance",
+      "Identity": "nampr19a017.prod.outlook.com/Microsoft Exchange Hosted Organizations/contoso.onmicrosoft.com/AdeleVance",
+      "IsValid": true
+    }
+  ]
+}

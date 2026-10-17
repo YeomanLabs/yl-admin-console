@@ -79,6 +79,11 @@ Prefer: odata.maxpagesize=1000
 page. A 3-row page walked 11 mailboxes in four calls. The link expires in 5–10 minutes, so a walk runs to the end and
 never resumes. `ResultSize = "Unlimited"` still pages at the `Prefer` size.
 
+Every page that carries a nextLink also carries the warning *"There are more results available than are currently
+displayed. To view them, increase the value for the ResultSize parameter."* That is PowerShell advice to a person, and
+it stops being true once the link is followed, so the client drops it from pages it follows and keeps it anywhere else,
+where it would mean real truncation.
+
 ### Errors (proven)
 
 ```

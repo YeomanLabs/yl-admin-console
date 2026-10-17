@@ -1,0 +1,23 @@
+{
+  "error": {
+    "code": "NotFound",
+    "message": "Error executing cmdlet",
+    "details": [
+      {
+        "code": "Context",
+        "message": "Ex6F9304|Microsoft.Exchange.Configuration.Tasks.ManagementObjectNotFoundException|The operation couldn't be performed because object 'no-such-person-7f3a@contoso.com' couldn't be found on 'MW4PR19A17DC006.nampr19a017.prod.outlook.com'.",
+        "target": ""
+      }
+    ],
+    "innererror": {
+      "message": "Error executing cmdlet",
+      "type": "Microsoft.Exchange.Admin.OData.Core.ODataServiceException",
+      "internalexception": {
+        "message": "Exception of type 'Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException' was thrown.",
+        "type": "Microsoft.Exchange.Management.PSDirectInvoke.DirectInvokeCmdletExecutionException"
+      }
+    },
+    "adminapi.warnings@odata.type": "#Collection(String)",
+    "@adminapi.warnings": []
+  }
+}

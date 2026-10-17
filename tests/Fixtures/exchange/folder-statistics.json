@@ -1,0 +1,192 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "Name": "Top of Information Store",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEIAAAB",
+      "FolderType": "Root"
+    },
+    {
+      "Name": "Archive",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaRAAAB",
+      "FolderType": "Archive"
+    },
+    {
+      "Name": "Calendar",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAENAAAC",
+      "FolderType": "Calendar"
+    },
+    {
+      "Name": "Birthdays",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAUMZqHAAAC",
+      "FolderType": "BirthdayCalendar"
+    },
+    {
+      "Name": "United States holidays",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAUMZqIAAAC",
+      "FolderType": "User Created"
+    },
+    {
+      "Name": "Contacts",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEOAAAD",
+      "FolderType": "Contacts"
+    },
+    {
+      "Name": "{00000000-0000-0000-0000-000000000160}",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaFAAAD",
+      "FolderType": "QuickContacts"
+    },
+    {
+      "Name": "{00000000-0000-0000-0000-000000000161}",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAFEAAAD",
+      "FolderType": "ImContactList"
+    },
+    {
+      "Name": "Companies",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAFCAAAD",
+      "FolderType": "CompanyContacts"
+    },
+    {
+      "Name": "GAL Contacts",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAFDAAAD",
+      "FolderType": "GalContacts"
+    },
+    {
+      "Name": "Organizational Contacts",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAFFAAAD",
+      "FolderType": "OrganizationalContacts"
+    },
+    {
+      "Name": "PeopleCentricConversation Buddies",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAFGAAAD",
+      "FolderType": "PeopleCentricConversationBuddies"
+    },
+    {
+      "Name": "Recipient Cache",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAFHAAAD",
+      "FolderType": "RecipientCache"
+    },
+    {
+      "Name": "Conversation Action Settings",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAE5AAAB",
+      "FolderType": "ConversationActions"
+    },
+    {
+      "Name": "Conversation History",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaKAAAB",
+      "FolderType": "CommunicatorHistory"
+    },
+    {
+      "Name": "Team Chat",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaLAAAB",
+      "FolderType": "TeamChat"
+    },
+    {
+      "Name": "Deleted Items",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEKAAAB",
+      "FolderType": "DeletedItems"
+    },
+    {
+      "Name": "Drafts",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEPAAAB",
+      "FolderType": "Drafts"
+    },
+    {
+      "Name": "ExternalContacts",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaEAAAD",
+      "FolderType": "ExternalContacts"
+    },
+    {
+      "Name": "Files",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJbbAAAB",
+      "FolderType": "Files"
+    },
+    {
+      "Name": "Inbox",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEMAAAB",
+      "FolderType": "Inbox"
+    },
+    {
+      "Name": "Journal",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEQAAAG",
+      "FolderType": "Journal"
+    },
+    {
+      "Name": "Junk Email",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEcAAAB",
+      "FolderType": "JunkEmail"
+    },
+    {
+      "Name": "Notes",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAERAAAF",
+      "FolderType": "Notes"
+    },
+    {
+      "Name": "Outbox",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAELAAAB",
+      "FolderType": "Outbox"
+    },
+    {
+      "Name": "Sent Items",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEJAAAB",
+      "FolderType": "SentItems"
+    },
+    {
+      "Name": "Tasks",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAESAAAE",
+      "FolderType": "Tasks"
+    },
+    {
+      "Name": "Yammer Root",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaNAAAB",
+      "FolderType": "YammerRoot"
+    },
+    {
+      "Name": "Feeds",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaQAAAB",
+      "FolderType": "YammerFeeds"
+    },
+    {
+      "Name": "Inbound",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaOAAAB",
+      "FolderType": "YammerInbound"
+    },
+    {
+      "Name": "Outbound",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJaPAAAB",
+      "FolderType": "YammerOutbound"
+    },
+    {
+      "Name": "Recoverable Items",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEsAAAB",
+      "FolderType": "RecoverableItemsRoot"
+    },
+    {
+      "Name": "Calendar Logging",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJawAAAB",
+      "FolderType": "CalendarLogging"
+    },
+    {
+      "Name": "Deletions",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJatAAAB",
+      "FolderType": "RecoverableItemsDeletions"
+    },
+    {
+      "Name": "Purges",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJavAAAB",
+      "FolderType": "RecoverableItemsPurges"
+    },
+    {
+      "Name": "SubstrateHolds",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAAEtAAAB",
+      "FolderType": "RecoverableItemsSubstrateHolds"
+    },
+    {
+      "Name": "Versions",
+      "FolderId": "LgAAAADHQg+ViPUDTYA/rib+sKPoAQCgf42I9nZBQK6v6okCXVGAAAAAAJauAAAB",
+      "FolderType": "RecoverableItemsVersions"
+    }
+  ]
+}

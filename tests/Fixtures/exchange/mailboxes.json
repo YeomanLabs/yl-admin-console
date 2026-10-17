@@ -1,0 +1,95 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "UserPrincipalName": "Adele@contoso.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000104",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "Adele@contoso.com",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Alex.Wilber@contoso.onmicrosoft.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000107",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "Alex.Wilber@contoso.onmicrosoft.com",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Megan@contoso.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000108",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "Megan@contoso.com",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "DiscoverySearchMailbox{D919BA05-46A6-415f-80AD-7E09334BB852}@contoso.onmicrosoft.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "",
+      "HiddenFromAddressListsEnabled": true,
+      "PrimarySmtpAddress": "DiscoverySearchMailbox{D919BA05-46A6-415f-80AD-7E09334BB852}@contoso.onmicrosoft.com",
+      "RecipientTypeDetails": "DiscoveryMailbox"
+    },
+    {
+      "UserPrincipalName": "Lee.Gu@contoso.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000109",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "Lee.Gu@contoso.com",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Lidia.Holloway@contoso.onmicrosoft.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000110",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "Lidia.Holloway@contoso.onmicrosoft.com",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Lynne.Robbins@contoso.onmicrosoft.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000111",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "Lynne.Robbins@contoso.onmicrosoft.com",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "Nestor.Wilke@contoso.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000112",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "Nestor.Wilke@contoso.com",
+      "RecipientTypeDetails": "UserMailbox"
+    },
+    {
+      "UserPrincipalName": "adele@contoso.onmicrosoft.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000113",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "adele@fabrikam.com",
+      "RecipientTypeDetails": "SharedMailbox"
+    },
+    {
+      "UserPrincipalName": "ap@contoso.onmicrosoft.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000114",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "ap@contoso.com",
+      "RecipientTypeDetails": "SharedMailbox"
+    },
+    {
+      "UserPrincipalName": "info@contoso.onmicrosoft.com",
+      "IsDirSynced": false,
+      "ExternalDirectoryObjectId": "00000000-0000-0000-0000-000000000115",
+      "HiddenFromAddressListsEnabled": false,
+      "PrimarySmtpAddress": "info@contoso.com",
+      "RecipientTypeDetails": "SharedMailbox"
+    }
+  ]
+}

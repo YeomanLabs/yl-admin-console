@@ -1,0 +1,52 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "Identity": "Contoso Info",
+      "Trustee": "NT AUTHORITY\\SELF",
+      "AccessControlType": "Allow",
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "SendAs"
+      ],
+      "IsInherited": false,
+      "InheritanceType": "All",
+      "TrusteeSidString": "S-1-5-10",
+      "PrimarySmtpAddress": null,
+      "TrusteeWithPrimarySmtpAddress": null,
+      "IsValid": true
+    },
+    {
+      "Identity": "Contoso Info",
+      "Trustee": "Adele@contoso.com",
+      "AccessControlType": "Allow",
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "SendAs"
+      ],
+      "IsInherited": false,
+      "InheritanceType": "None",
+      "TrusteeSidString": "S-1-5-21-1000-2000-3000-1000",
+      "PrimarySmtpAddress": null,
+      "TrusteeWithPrimarySmtpAddress": null,
+      "IsValid": true
+    },
+    {
+      "Identity": "Contoso Info",
+      "Trustee": "Megan@contoso.com",
+      "AccessControlType": "Allow",
+      "AccessRights@odata.type": "#Collection(String)",
+      "AccessRights": [
+        "SendAs"
+      ],
+      "IsInherited": false,
+      "InheritanceType": "None",
+      "TrusteeSidString": "S-1-5-21-1000-2000-3000-1001",
+      "PrimarySmtpAddress": null,
+      "TrusteeWithPrimarySmtpAddress": null,
+      "IsValid": true
+    }
+  ]
+}

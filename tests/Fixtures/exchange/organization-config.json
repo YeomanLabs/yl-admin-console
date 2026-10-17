@@ -1,0 +1,12 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [],
+  "value": [
+    {
+      "Name": "contoso.onmicrosoft.com",
+      "DisplayName": "Contoso",
+      "IsDehydrated": false
+    }
+  ]
+}

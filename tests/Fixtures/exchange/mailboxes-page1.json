@@ -1,0 +1,19 @@
+{
+  "@odata.context": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/$metadata#Collection(Exchange.GenericHashTable)",
+  "@odata.nextLink": "https://outlook.office365.com/adminapi/beta/00000000-0000-0000-0000-000000000001/InvokeCommand?%24select=UserPrincipalName&%24skiptoken=ADNzQwNmUyZjBmZTU1NDRiN2FlMWQ1ZjJkYzAxNDA0NzNQSDdQUjE5TUI3MDUw",
+  "adminapi.warnings@odata.type": "#Collection(String)",
+  "@adminapi.warnings": [
+    "There are more results available than are currently displayed. To view them, increase the value for the ResultSize parameter."
+  ],
+  "value": [
+    {
+      "UserPrincipalName": "Adele@contoso.com"
+    },
+    {
+      "UserPrincipalName": "Alex.Wilber@contoso.onmicrosoft.com"
+    },
+    {
+      "UserPrincipalName": "Megan@contoso.com"
+    }
+  ]
+}
