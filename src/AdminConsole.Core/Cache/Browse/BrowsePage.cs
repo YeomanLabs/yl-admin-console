@@ -8,6 +8,9 @@ public sealed record BrowsePage<T>(IReadOnlyList<T> Rows, int Total, int Skip)
 {
     public static BrowsePage<T> Empty => new([], 0, 0);
 
+    /// <summary>What the filter box asked for that could not be used — an unknown field, a bad value (M18.4).</summary>
+    public IReadOnlyList<string> Problems { get; init; } = [];
+
     /// <summary>True when there are rows after this page.</summary>
     public bool HasMore => Skip + Rows.Count < Total;
 }

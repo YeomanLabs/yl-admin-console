@@ -3,6 +3,18 @@ namespace AdminConsole.Core.Cache.Browse;
 /// <summary>The filters and sorts a Groups list offers, chosen around what makes a group editable or not.</summary>
 public static class GroupBrowse
 {
+    /// <summary>The <c>key=value</c> fields the filter box understands (M18.4).</summary>
+    public static IReadOnlyList<BrowseField> Fields { get; } =
+    [
+        BrowseField.Text("name", "display_name LIKE @v ESCAPE '\\'", "Name contains"),
+        BrowseField.Text("mail", "mail LIKE @v ESCAPE '\\'", "Email address contains"),
+        BrowseField.Text("kind", "kind LIKE @v ESCAPE '\\'", "Security, M365 or Distribution"),
+        BrowseField.Flag("dynamic", "dynamic = 1", "dynamic = 0", "Membership from a rule"),
+        BrowseField.Flag("synced", "synced = 1", "synced = 0", "Synced from AD"),
+        BrowseField.Flag("empty", "member_count = 0", "member_count > 0", "No members"),
+        BrowseField.Flag("roleassignable", "role_assignable = 1", "role_assignable = 0", "Can hold a directory role", "role"),
+    ];
+
     public static readonly BrowseFilter Security =
         new("security", "Security", "kind", "kind = 'Security'", "Used for access, not mail");
 

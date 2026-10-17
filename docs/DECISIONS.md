@@ -515,3 +515,24 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **`AncestorLevel=2` command bindings were wrong.** The template picker and the offboard Retry button both bound to the
   second `ItemsControl` up the tree; neither ever worked. Found by the M17 gate's UI run with two templates on disk.
 
+## 2026-10-17 — M18: TAP, PIM, bulk edit, field queries, export
+
+- **A synced user's AD fields are always written in a bulk edit, never judged "already set" from the cloud copy.** The
+  cloud copy trails AD by up to a sync cycle, so a correction within half an hour of a bad edit would be skipped as
+  already right — the gate's UI run showed exactly that. Replacing an AD value with itself is harmless; the preview
+  says the "from" value is the cloud copy's.
+- **Bulk edit is a fixed sheet of eleven fields.** Names, sign-in names and phone numbers are absent: the same value
+  on twenty accounts is a mistake, not an edit. Four people at a time, one PATCH per person.
+- **A Temporary Access Pass is looked for before one is issued.** Graph allows one per user and refuses a second with a
+  bare 400; naming the existing pass is the useful answer. The lifetime list goes to three days and the tenant policy
+  decides; Graph's refusal states the range and is passed through.
+- **PIM is the admin's own roles only**, through `filterByCurrentUser` and `selfActivate`. It needs no role of its own,
+  and a tenant without P2 says so instead of showing an empty list. The policy is read for the dialog; when it cannot
+  be, Entra's defaults are shown marked as assumed, and the activation still follows the real policy.
+- **A missing role the admin is eligible for is named, with Activate beside it.** Roles stay advisory (Graph decides),
+  so this is a caption and a button, not a block.
+- **Field queries bind values as parameters and match whole values where partial ones lie** (`compliance=compliant`
+  must not find `noncompliant`). An unknown key is reported under the filter box; the rest of the query still applies.
+- **Export writes every matching row, not the page on screen**, with a formula guard: a cell starting `= + - @` is
+  prefixed with an apostrophe, because a display name is whatever someone typed.
+- **The YeomanLabs registration was extended live** with the three PIM scopes, so it matches the script.

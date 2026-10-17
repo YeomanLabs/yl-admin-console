@@ -257,6 +257,8 @@ public sealed partial class App : Application
         services.AddSingleton(_ => new PendingProvisioningStore(PendingProvisioningStore.DefaultDirectory));
         services.AddSingleton<PendingProvisioningService>();
         services.AddSingleton<HybridProvisioningService>();
+        services.AddSingleton<AdminConsole.Core.Users.BulkEdit.BulkEditService>();
+        services.AddSingleton<AdminConsole.Core.Pim.PimService>();
         services.AddSingleton(sp => new OffboardingProfileStore(
             OffboardingProfileStore.DefaultDirectory,
             sp.GetRequiredService<ILogger<OffboardingProfileStore>>()));

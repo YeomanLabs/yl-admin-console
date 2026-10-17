@@ -140,6 +140,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     /// <summary>Enables Reset password and Revoke sessions in the header.</summary>
     public bool CanRunActions => HasUser && ActionsDisabledReason is null;
 
+    /// <summary>M18.1: the same permission as removing a method, so the same grey rule and caption.</summary>
+    public bool CanIssueTap => HasUser && AuthDeleteReason is null;
+
     [ObservableProperty]
     private string? _authDeleteReason;
 
@@ -155,6 +158,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         ActionsDisabledReason = GreyRule.Reason(_permissions, [Capabilities.ResetPassword, Capabilities.RevokeSessions], null);
         OffboardDisabledReason = null;
         AuthDeleteReason = GreyRule.Reason(_permissions, Capabilities.DeleteAuthMethod, null);
+        OnPropertyChanged(nameof(CanIssueTap));
         foreach (var row in AuthMethods) row.BlockedReason = AuthDeleteReason;
     }
 
@@ -863,6 +867,32 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         var outcome = await _users.DeleteAuthMethodAsync(Id, row.Method, CancellationToken.None);
         _toasts.Show(outcome.Success ? outcome.Summary : outcome.FriendlyError ?? outcome.Summary);
         if (outcome.Success) await RefreshAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Issue a Temporary Access Pass (M18.1). The pass is in memory only between the POST and the show-once dialog
+    /// closing; the authentication methods list re-reads so the new pass appears there, without its code.
+    /// </summary>
+    [RelayCommand]
+    private async Task IssueTapAsync()
+    {
+        var dialog = new TapDialogViewModel(UserLabel);
+        if (!await _dialogs.ShowAsync(dialog)) return;
+        if (!await EnsureAsync(Capabilities.IssueTap)) return;
+
+        var result = await _users.IssueTemporaryAccessPassAsync(Id, dialog.LifetimeMinutes, dialog.UsableOnce, dialog.Start, CancellationToken.None);
+        if (!result.Outcome.Success || result.Pass is not { } pass)
+        {
+            _toasts.Show(result.Outcome.FriendlyError ?? result.Outcome.Summary);
+            return;
+        }
+
+        await _dialogs.ShowAsync(new SecretRevealDialogViewModel($"Temporary Access Pass for {UserLabel}", [new SecretRow("Pass", pass, result.Caption)])
+        {
+            Message = "This is the only time it is shown. Nothing here is written to the cache or the activity log.",
+        });
+        _toasts.Show(result.Outcome.Summary);
+        await RefreshAsync(CancellationToken.None);
     }
 
     /// <summary>

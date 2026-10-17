@@ -122,7 +122,13 @@ $SensitiveScopes = @(
 $FilesScopes = @(
     'Files.Read.All'
 )
-$AllScopes = $ReadScopes + $WriteScopes + $SensitiveScopes + $FilesScopes
+# PIM tier (M18.2) — the admin's own eligible roles, their policies, and self-activation.
+$PimScopes = @(
+    'RoleEligibilitySchedule.Read.Directory'
+    'RoleAssignmentSchedule.ReadWrite.Directory'
+    'RoleManagementPolicy.Read.Directory'
+)
+$AllScopes = $ReadScopes + $WriteScopes + $SensitiveScopes + $FilesScopes + $PimScopes
 # Exchange Online tier (Phase 3, docs/13-EXCHANGE-ONLINE.md) — a different resource from Graph. Still delegated: the
 # console runs cmdlets as the admin, and Exchange's own role-based access control decides which.
 $ExchangeScopes = @(

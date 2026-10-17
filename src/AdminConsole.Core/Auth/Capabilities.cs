@@ -75,6 +75,28 @@ public static class Capabilities
         RoleHint = "Authentication Administrator",
     };
 
+    /// <summary>M18.1: a Temporary Access Pass is an authentication method, so it is the same permission and roles.</summary>
+    public static readonly Capability IssueTap = new()
+    {
+        Id = "auth.tap",
+        Title = "Issue Temporary Access Passes",
+        Scopes = [Scopes.AuthMethodReadWriteAll],
+        RoleTemplateIds = [DirectoryRoleRef.AuthenticationAdministrator, DirectoryRoleRef.PrivilegedAuthenticationAdministrator],
+        RoleHint = "Authentication Administrator",
+    };
+
+    /// <summary>
+    /// M18.2: list my eligible roles and activate one. Self-activation needs no role — the eligibility is the
+    /// permission — so there is nothing for the role hint to warn about.
+    /// </summary>
+    public static readonly Capability ActivateRole = new()
+    {
+        Id = "pim.activate",
+        Title = "Activate my eligible roles (PIM)",
+        Scopes = [Scopes.RoleEligibilityScheduleReadDirectory, Scopes.RoleAssignmentScheduleReadWriteDirectory, Scopes.RoleManagementPolicyReadDirectory],
+        RoleTemplateIds = [],
+    };
+
     public static readonly Capability EditDevice = new()
     {
         Id = "device.edit",
@@ -154,7 +176,7 @@ public static class Capabilities
     public static readonly IReadOnlyList<Capability> All =
     [
         EditUser, CreateUser, ResetPassword, RevokeSessions, AssignLicense,
-        ChangeGroupMembership, EditGroup, DeleteAuthMethod, EditDevice, DeviceActions,
+        ChangeGroupMembership, EditGroup, DeleteAuthMethod, IssueTap, ActivateRole, EditDevice, DeviceActions,
         ManageMailboxes, ManageOneDrive, ExportOneDrive, RevealBitLocker, RevealLaps,
     ];
 

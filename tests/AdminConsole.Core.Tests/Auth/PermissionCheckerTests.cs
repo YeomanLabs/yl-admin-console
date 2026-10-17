@@ -48,7 +48,7 @@ public sealed class PermissionCheckerTests
     [Fact]
     public void GlobalAdmin_SatisfiesEveryRoleRequirement()
     {
-        var all = Scopes.Read.Concat(Scopes.Write).Concat(Scopes.Sensitive).Concat(Scopes.Exchange).Concat(Scopes.SharePoint).Concat(Scopes.Files).ToList();
+        var all = Scopes.Read.Concat(Scopes.Write).Concat(Scopes.Sensitive).Concat(Scopes.Exchange).Concat(Scopes.SharePoint).Concat(Scopes.Files).Concat(Scopes.Pim).ToList();
         var checker = new PermissionChecker(Context(all, DirectoryRoleRef.GlobalAdministrator));
 
         Capabilities.All.Should().OnlyContain(c => checker.Check(c).State == PermissionState.Allowed);

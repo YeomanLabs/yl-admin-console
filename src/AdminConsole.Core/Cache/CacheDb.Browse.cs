@@ -40,7 +40,7 @@ public sealed partial class CacheDb
     public BrowsePage<UserListRow> BrowseUsers(BrowseQuery query) => Browse(
         "users",
         "id, upn, display_name, mail, job_title, department, account_enabled, licensed, synced, user_type, created",
-        UserBrowse.Filters, UserBrowse.Sorts, UserBrowse.DefaultSort, UserBrowse.TextColumns, query,
+        UserBrowse.Filters, UserBrowse.Sorts, UserBrowse.DefaultSort, UserBrowse.TextColumns, UserBrowse.Fields, query,
         r => new UserListRow
         {
             Id = r.GetString(0),
@@ -59,7 +59,7 @@ public sealed partial class CacheDb
     public BrowsePage<GroupListRow> BrowseGroups(BrowseQuery query) => Browse(
         "groups",
         "id, display_name, description, mail, kind, dynamic, synced, role_assignable, member_count",
-        GroupBrowse.Filters, GroupBrowse.Sorts, GroupBrowse.DefaultSort, GroupBrowse.TextColumns, query,
+        GroupBrowse.Filters, GroupBrowse.Sorts, GroupBrowse.DefaultSort, GroupBrowse.TextColumns, GroupBrowse.Fields, query,
         r => new GroupListRow
         {
             Id = r.GetString(0),
@@ -77,7 +77,7 @@ public sealed partial class CacheDb
         $"({DeviceUnion})",
         "id, source, device_name, serial, model, manufacturer, os, os_version, compliance, encrypted, " +
         "primary_user_id, primary_user_name, primary_user_upn, last_activity, enrolled, autopilot, owner_type, trust_type",
-        DeviceBrowse.Filters, DeviceBrowse.Sorts, DeviceBrowse.DefaultSort, DeviceBrowse.TextColumns, query,
+        DeviceBrowse.Filters, DeviceBrowse.Sorts, DeviceBrowse.DefaultSort, DeviceBrowse.TextColumns, DeviceBrowse.Fields, query,
         r => new DeviceListRow
         {
             Id = r.GetString(0),
@@ -103,13 +103,13 @@ public sealed partial class CacheDb
     /// <summary>How many rows each filter would leave, so the chips can show a count instead of the admin ticking one
     /// to find out it matches nothing. Counted against the other groups' filters, the way a faceted list should.</summary>
     public IReadOnlyDictionary<string, int> CountUserFilters(BrowseQuery query) =>
-        CountFilters("users", UserBrowse.Filters, UserBrowse.TextColumns, query);
+        CountFilters("users", UserBrowse.Filters, UserBrowse.TextColumns, UserBrowse.Fields, query);
 
     public IReadOnlyDictionary<string, int> CountGroupFilters(BrowseQuery query) =>
-        CountFilters("groups", GroupBrowse.Filters, GroupBrowse.TextColumns, query);
+        CountFilters("groups", GroupBrowse.Filters, GroupBrowse.TextColumns, GroupBrowse.Fields, query);
 
     public IReadOnlyDictionary<string, int> CountDeviceFilters(BrowseQuery query) =>
-        CountFilters($"({DeviceUnion})", DeviceBrowse.Filters, DeviceBrowse.TextColumns, query);
+        CountFilters($"({DeviceUnion})", DeviceBrowse.Filters, DeviceBrowse.TextColumns, DeviceBrowse.Fields, query);
 
     // ---- the shared machinery ---------------------------------------------------------------------------------
 
@@ -120,10 +120,11 @@ public sealed partial class CacheDb
         IReadOnlyList<BrowseSort> sorts,
         BrowseSort defaultSort,
         IReadOnlyList<string> textColumns,
+        IReadOnlyList<BrowseField> fields,
         BrowseQuery query,
         Func<SqliteDataReader, T> read)
     {
-        var (where, parameters) = BuildWhere(catalog, textColumns, query);
+        var (where, parameters, problems) = BuildWhere(catalog, textColumns, fields, query);
         var sort = sorts.FirstOrDefault(s => s.Key == query.SortKey) ?? defaultSort;
         var take = Math.Clamp(query.Take, 1, 5000);
         var skip = Math.Max(0, query.Skip);
@@ -151,11 +152,11 @@ public sealed partial class CacheDb
         using var reader = cmd.ExecuteReader();
         while (reader.Read()) rows.Add(read(reader));
 
-        return new BrowsePage<T>(rows, total, skip);
+        return new BrowsePage<T>(rows, total, skip) { Problems = problems };
     }
 
     private IReadOnlyDictionary<string, int> CountFilters(
-        string from, IReadOnlyList<BrowseFilter> catalog, IReadOnlyList<string> textColumns, BrowseQuery query)
+        string from, IReadOnlyList<BrowseFilter> catalog, IReadOnlyList<string> textColumns, IReadOnlyList<BrowseField> fields, BrowseQuery query)
     {
         var counts = new Dictionary<string, int>(StringComparer.Ordinal);
         using var conn = OpenConnection();
@@ -165,7 +166,7 @@ public sealed partial class CacheDb
             // Every group except this filter's own, so ticking a second chip in the same group adds rather than
             // subtracts — the count says what would happen, not what a different filter model would do.
             var others = query with { FilterKeys = [.. query.FilterKeys.Where(k => Group(catalog, k) != filter.Group)] };
-            var (where, parameters) = BuildWhere(catalog, textColumns, others);
+            var (where, parameters, _) = BuildWhere(catalog, textColumns, fields, others);
             var glue = where.Length == 0 ? "WHERE" : "AND";
 
             using var cmd = conn.CreateCommand();
@@ -184,8 +185,8 @@ public sealed partial class CacheDb
     /// Builds the WHERE clause: filters OR-ed within a group and AND-ed across groups, then the free text AND-ed on
     /// top. Filter SQL comes only from the catalog; the text is always a parameter.
     /// </summary>
-    private static (string Sql, List<(string Name, object Value)> Parameters) BuildWhere(
-        IReadOnlyList<BrowseFilter> catalog, IReadOnlyList<string> textColumns, BrowseQuery query)
+    private static (string Sql, List<(string Name, object Value)> Parameters, IReadOnlyList<string> Problems) BuildWhere(
+        IReadOnlyList<BrowseFilter> catalog, IReadOnlyList<string> textColumns, IReadOnlyList<BrowseField> fields, BrowseQuery query)
     {
         var clauses = new List<string>();
         var parameters = new List<(string, object)>();
@@ -202,7 +203,23 @@ public sealed partial class CacheDb
             clauses.Add(ors.Count == 1 ? ors[0] : "(" + string.Join(" OR ", ors) + ")");
         }
 
-        var text = query.Text?.Trim();
+        // M18.4: key=value parts become fixed fragments with bound values; what is left is the free text.
+        var parsed = FieldQuery.Parse(query.Text, fields);
+        for (var i = 0; i < parsed.Conditions.Count; i++)
+        {
+            var (sql, value, whole) = parsed.Conditions[i];
+            if (value is null)
+            {
+                clauses.Add(sql);
+                continue;
+            }
+
+            var name = $"$f{i}";
+            parameters.Add((name, whole ? Escape(value) : "%" + Escape(value) + "%"));
+            clauses.Add("(" + sql.Replace("@v", name, StringComparison.Ordinal) + ")");
+        }
+
+        var text = parsed.FreeText.Trim();
         if (!string.IsNullOrEmpty(text))
         {
             // Substring, not prefix: an admin narrowing a device list types the middle of an asset tag as often as
@@ -212,7 +229,7 @@ public sealed partial class CacheDb
             clauses.Add("(" + string.Join(" OR ", ors) + ")");
         }
 
-        return (clauses.Count == 0 ? string.Empty : "WHERE " + string.Join(" AND ", clauses), parameters);
+        return (clauses.Count == 0 ? string.Empty : "WHERE " + string.Join(" AND ", clauses), parameters, parsed.Problems);
     }
 
     private static string Escape(string value) =>

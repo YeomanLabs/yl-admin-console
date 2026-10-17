@@ -33,6 +33,17 @@ public sealed class PermissionChecker
             return new PermissionResult { Capability = capability, State = PermissionState.Allowed };
         }
 
+        if (_tenant.EligibleFor(capability.RoleTemplateIds) is { } eligible)
+        {
+            return new PermissionResult
+            {
+                Capability = capability,
+                State = PermissionState.AllowedWithRoleWarning,
+                EligibleRole = eligible,
+                Reason = $"You are eligible for {eligible.DisplayName} — activate it to do this",
+            };
+        }
+
         return new PermissionResult
         {
             Capability = capability,

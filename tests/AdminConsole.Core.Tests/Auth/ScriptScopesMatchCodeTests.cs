@@ -27,6 +27,7 @@ public sealed class ScriptScopesMatchCodeTests
         Array("WriteScopes", script).Should().BeEquivalentTo(Scopes.Write, "the write tier is asked for on the first write");
         Array("SensitiveScopes", script).Should().BeEquivalentTo(Scopes.Sensitive, "the sensitive tier is asked for at a reveal");
         Array("FilesScopes", script).Should().BeEquivalentTo(Scopes.Files, "the files tier is asked for at the first export");
+        Array("PimScopes", script).Should().BeEquivalentTo(Scopes.Pim, "the PIM tier is asked for when My roles is opened");
 
         // The script names Exchange's permission as the registration does; the app asks MSAL for it by resource URI.
         Array("ExchangeScopes", script).Should().BeEquivalentTo(Scopes.Exchange.Select(Scopes.ShortName),

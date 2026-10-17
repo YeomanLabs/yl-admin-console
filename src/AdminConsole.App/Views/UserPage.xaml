@@ -532,7 +532,12 @@
                                                         <ItemsControl ItemsSource="{Binding Roles}" ItemTemplate="{StaticResource RoleRowTemplate}" />
                                                         <TextBlock Text="No directory roles" Style="{StaticResource Caption}" Visibility="{Binding Roles.Count, Converter={StaticResource ZeroToVisible}}" />
 
-                                                        <TextBlock Text="Authentication methods" Style="{StaticResource SectionTitle}" />
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="Authentication methods" Style="{StaticResource SectionTitle}" />
+                                                            <ui:Button Content="Issue Temporary Access Pass…" Command="{Binding IssueTapCommand}" Padding="10,2" Margin="12,16,0,6"
+                                                                       IsEnabled="{Binding CanIssueTap}" ToolTip="{Binding AuthDeleteReason}"
+                                                                       AutomationProperties.Name="Issue a Temporary Access Pass" />
+                                                        </StackPanel>
                                                         <TextBlock Text="{Binding AuthMethodsError}" Style="{StaticResource Caption}" Visibility="{Binding AuthMethodsError, Converter={StaticResource NullToCollapsed}}" />
                                                         <ItemsControl ItemsSource="{Binding AuthMethods}" ItemTemplate="{StaticResource AuthMethodRowTemplate}" />
                                                         <TextBlock Text="Nothing registered. This account has no second factor and cannot be reached for one." Style="{StaticResource Caption}"

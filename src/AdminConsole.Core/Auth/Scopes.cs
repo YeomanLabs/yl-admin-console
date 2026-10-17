@@ -48,6 +48,11 @@ public static class Scopes
     /// <summary>Graph: read the files of a drive the admin can open — what a OneDrive export downloads with.</summary>
     public const string FilesReadAll = "Files.Read.All";
 
+    // PIM (M18.2): the admin's own eligible roles, the policy each one carries, and self-activation.
+    public const string RoleEligibilityScheduleReadDirectory = "RoleEligibilitySchedule.Read.Directory";
+    public const string RoleAssignmentScheduleReadWriteDirectory = "RoleAssignmentSchedule.ReadWrite.Directory";
+    public const string RoleManagementPolicyReadDirectory = "RoleManagementPolicy.Read.Directory";
+
     public static readonly IReadOnlyList<string> Read =
     [
         OpenId, Profile, OfflineAccess,
@@ -83,6 +88,12 @@ public static class Scopes
     public static readonly IReadOnlyList<string> Files =
     [
         FilesReadAll,
+    ];
+
+    /// <summary>The PIM tier (M18.2): asked for the first time the admin opens My roles.</summary>
+    public static readonly IReadOnlyList<string> Pim =
+    [
+        RoleEligibilityScheduleReadDirectory, RoleAssignmentScheduleReadWriteDirectory, RoleManagementPolicyReadDirectory,
     ];
 
     /// <summary>Graph scopes are matched case-insensitively by the service; do the same locally.</summary>

@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -56,7 +56,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
         LoadSettings();
         LoadBranding();
 
-        Permissions = Capabilities.All.Select(c => new PermissionRow(c, _checker.Check(c), GrantAsync)).ToList();
+        Permissions = Capabilities.All.Select(c => new PermissionRow(c, _checker.Check(c), GrantAsync, ActivateEligibleAsync)).ToList();
         _tenant.Changed += (_, _) => RefreshPermissions();
         Refresh();
     }
@@ -79,6 +79,103 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
 
     [ObservableProperty]
     private string _licenseText = string.Empty;
+
+    // ---- My roles (M18.2) -------------------------------------------------------------------------------------------
+
+    public System.Collections.ObjectModel.ObservableCollection<PimRoleRow> PimRoles { get; } = [];
+
+    [ObservableProperty]
+    private string? _pimCaption = "Not checked yet.";
+
+    [ObservableProperty]
+    private bool _isLoadingPim;
+
+    [RelayCommand]
+    private async Task LoadPimAsync()
+    {
+        if (IsLoadingPim) return;
+        IsLoadingPim = true;
+        try
+        {
+            var permission = _checker.Check(Capabilities.ActivateRole);
+            if (permission.NeedsConsent)
+            {
+                try
+                {
+                    permission = await _consent.EnsureAsync(Capabilities.ActivateRole, CancellationToken.None);
+                }
+                catch (SignInException)
+                {
+                    PimCaption = "The PIM permissions were not granted, so your roles cannot be read.";
+                    return;
+                }
+
+                if (!permission.CanRun)
+                {
+                    PimCaption = permission.Reason;
+                    return;
+                }
+            }
+
+            var pim = _services.GetRequiredService<AdminConsole.Core.Pim.PimService>();
+            var read = await pim.GetMyRolesAsync(CancellationToken.None);
+            PimRoles.Clear();
+            if (!read.IsAvailable)
+            {
+                PimCaption = read.Unavailable;
+                return;
+            }
+
+            foreach (var role in read.Roles) PimRoles.Add(new PimRoleRow(role, ActivateAsync));
+            PimCaption = read.Roles.Count == 0 ? "You have no PIM-eligible roles in this tenant." : null;
+        }
+        finally
+        {
+            IsLoadingPim = false;
+        }
+    }
+
+    /// <summary>From a permission row: find the eligible role's PIM entry, then activate it as from My roles.</summary>
+    private async Task ActivateEligibleAsync(DirectoryRoleRef role)
+    {
+        var known = PimRoles.FirstOrDefault(r => string.Equals(r.Role.RoleTemplateId, role.RoleTemplateId, StringComparison.OrdinalIgnoreCase));
+        if (known is null)
+        {
+            await LoadPimAsync();
+            known = PimRoles.FirstOrDefault(r => string.Equals(r.Role.RoleTemplateId, role.RoleTemplateId, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (known is null)
+        {
+            _toasts.Show($"{role.DisplayName} is no longer listed as eligible. Check My roles.");
+            return;
+        }
+
+        await ActivateAsync(known.Role);
+    }
+
+    private async Task ActivateAsync(AdminConsole.Core.Pim.PimRole role)
+    {
+        var pim = _services.GetRequiredService<AdminConsole.Core.Pim.PimService>();
+        var policy = await pim.GetPolicyAsync(role.RoleDefinitionId, CancellationToken.None);
+        var dialog = new PimActivateDialogViewModel(role, policy);
+        if (!await _dialogs.ShowAsync(dialog)) return;
+
+        var outcome = await pim.ActivateAsync(new AdminConsole.Core.Pim.PimActivation
+        {
+            Role = role,
+            Duration = dialog.DurationValue,
+            Justification = dialog.Justification,
+            TicketNumber = dialog.TicketNumber,
+            TicketSystem = dialog.TicketSystem,
+        }, CancellationToken.None);
+        _toasts.Show(outcome.Success ? outcome.Summary : outcome.FriendlyError ?? outcome.Summary);
+        if (!outcome.Success) return;
+
+        // Activation provisions within seconds but not instantly; one re-read a little later shows it as active.
+        await Task.Delay(TimeSpan.FromSeconds(4));
+        await LoadPimAsync();
+    }
 
     // ---- Permissions (UX §12) ---------------------------------------------------------------------------------------
 

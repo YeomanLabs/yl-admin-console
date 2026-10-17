@@ -8,11 +8,13 @@ namespace AdminConsole.App.ViewModels.Pages;
 public sealed partial class PermissionRow : ObservableObject
 {
     private readonly Func<Capability, Task> _grant;
+    private readonly Func<DirectoryRoleRef, Task>? _activate;
 
-    public PermissionRow(Capability capability, PermissionResult result, Func<Capability, Task> grant)
+    public PermissionRow(Capability capability, PermissionResult result, Func<Capability, Task> grant, Func<DirectoryRoleRef, Task>? activate = null)
     {
         Capability = capability;
         _grant = grant;
+        _activate = activate;
         Apply(result);
     }
 
@@ -31,6 +33,21 @@ public sealed partial class PermissionRow : ObservableObject
     [ObservableProperty]
     private string? _reason;
 
+    /// <summary>M18.2: the missing role is PIM-eligible, so the row offers activation rather than a dead end.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanActivateRole), nameof(ActivateName))]
+    private DirectoryRoleRef? _eligibleRole;
+
+    public bool CanActivateRole => EligibleRole is not null && _activate is not null;
+
+    public string ActivateName => EligibleRole is { } r ? $"Activate {r.DisplayName}" : string.Empty;
+
+    [RelayCommand]
+    private async Task ActivateRoleAsync()
+    {
+        if (EligibleRole is { } role && _activate is not null) await _activate(role);
+    }
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(GrantCommand))]
     private bool _isGranting;
@@ -43,6 +60,7 @@ public sealed partial class PermissionRow : ObservableObject
     {
         State = result.State;
         Reason = result.Reason;
+        EligibleRole = result.EligibleRole;
     }
 
     [RelayCommand(CanExecute = nameof(CanGrant))]

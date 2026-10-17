@@ -71,6 +71,26 @@ public static class UserBrowse
 
     public static BrowseSort DefaultSort => Sorts[0];
 
+    /// <summary>The <c>key=value</c> fields the filter box understands (M18.4). Fixed SQL; the value is always a parameter.</summary>
+    public static IReadOnlyList<BrowseField> Fields { get; } =
+    [
+        BrowseField.Text("dep", "department LIKE @v ESCAPE '\\'", "Department contains", "department"),
+        BrowseField.Text("title", "job_title LIKE @v ESCAPE '\\'", "Job title contains", "job", "jobtitle"),
+        BrowseField.Text("name", "display_name LIKE @v ESCAPE '\\'", "Display name contains"),
+        BrowseField.Text("upn", "upn LIKE @v ESCAPE '\\'", "Sign-in name contains"),
+        BrowseField.Text("mail", "mail LIKE @v ESCAPE '\\'", "Email address contains"),
+        BrowseField.Text("emp", "employee_id LIKE @v ESCAPE '\\'", "Employee ID contains", "employeeid"),
+        BrowseField.Text("lic",
+            "EXISTS (SELECT 1 FROM json_each(users.raw, '$.assignedLicenses') j JOIN skus s ON s.sku_id = json_extract(j.value, '$.skuId') " +
+            "WHERE s.part_number LIKE @v ESCAPE '\\' OR s.friendly_name LIKE @v ESCAPE '\\')",
+            "Has a licence whose name contains (e5, E3, visio)", "licence", "license", "sku"),
+        BrowseField.Flag("disabled", "account_enabled = 0", "account_enabled = 1", "Sign-in blocked"),
+        BrowseField.Flag("enabled", "account_enabled = 1", "account_enabled = 0", "Sign-in allowed"),
+        BrowseField.Flag("guest", "user_type = 'Guest'", "(user_type IS NULL OR user_type <> 'Guest')", "Invited from outside"),
+        BrowseField.Flag("synced", "synced = 1", "synced = 0", "Synced from AD"),
+        BrowseField.Flag("licensed", "licensed = 1", "licensed = 0", "Has any licence"),
+    ];
+
     /// <summary>Columns the filter box narrows on. Kept to what an admin would type looking for a person.</summary>
     public static IReadOnlyList<string> TextColumns =>
         ["display_name", "upn", "mail", "job_title", "department", "employee_id"];

@@ -17,6 +17,16 @@ public partial class ListPageView : UserControl
 {
     public ListPageView() => InitializeComponent();
 
+    /// <summary>A page's own bar above the rows: the Users page's selection bar (M18.3).</summary>
+    public static readonly DependencyProperty HeaderContentProperty =
+        DependencyProperty.Register(nameof(HeaderContent), typeof(object), typeof(ListPageView), new PropertyMetadata(null));
+
+    public object? HeaderContent
+    {
+        get => GetValue(HeaderContentProperty);
+        set => SetValue(HeaderContentProperty, value);
+    }
+
     public static readonly DependencyProperty RowsContentProperty =
         DependencyProperty.Register(nameof(RowsContent), typeof(object), typeof(ListPageView), new PropertyMetadata(null));
 

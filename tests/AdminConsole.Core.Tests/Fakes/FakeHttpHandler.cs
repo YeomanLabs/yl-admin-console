@@ -10,6 +10,9 @@ public sealed class FakeHttpHandler : HttpMessageHandler
 
     public List<RecordedRequest> Requests { get; } = [];
 
+    /// <summary>Answers anything the queue does not, for requests whose order is not fixed (a parallel bulk edit).</summary>
+    public Func<HttpRequestMessage, HttpResponseMessage>? Responder { get; set; }
+
     public FakeHttpHandler Enqueue(Func<HttpRequestMessage, HttpResponseMessage> responder)
     {
         _responders.Enqueue(responder);
@@ -34,14 +37,19 @@ public sealed class FakeHttpHandler : HttpMessageHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellationToken);
-        Requests.Add(new RecordedRequest(request.Method, request.RequestUri!, body, request.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value))));
+        Func<HttpRequestMessage, HttpResponseMessage>? next;
+        lock (_responders)
+        {
+            Requests.Add(new RecordedRequest(request.Method, request.RequestUri!, body, request.Headers.ToDictionary(h => h.Key, h => string.Join(",", h.Value))));
+            next = _responders.Count > 0 ? _responders.Dequeue() : Responder;
+        }
 
-        if (_responders.Count == 0)
+        if (next is null)
         {
             throw new InvalidOperationException($"No scripted response for {request.Method} {request.RequestUri}");
         }
 
-        return _responders.Dequeue()(request);
+        return next(request);
     }
 
     public sealed record RecordedRequest(HttpMethod Method, Uri Uri, string? Body, IReadOnlyDictionary<string, string> Headers);

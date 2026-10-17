@@ -165,3 +165,14 @@ showing the unverified warning. A per-tenant registration created by the tenant'
 - **Microsoft Graph — `Files.Read.All` (delegated).** The OneDrive export. Asked for at the first export, not at sign-in.
 - Existing registrations: `New-AppRegistration.ps1 -Update` adds both and extends the admin consent.
 
+## PIM (M18.2)
+
+**Microsoft Graph, delegated — asked for the first time the admin opens Settings › My roles**
+```
+RoleEligibilitySchedule.Read.Directory      RoleAssignmentSchedule.ReadWrite.Directory
+RoleManagementPolicy.Read.Directory
+```
+Only the admin's own roles are read (`filterByCurrentUser`) and only `selfActivate` is sent; nothing here can change
+another person's roles. A tenant without Entra ID P2 or ID Governance answers with `AadPremiumLicenseRequired`, and
+the console says the tenant has no PIM rather than listing nothing.
+

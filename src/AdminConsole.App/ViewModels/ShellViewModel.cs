@@ -20,6 +20,7 @@ using AdminConsole.Core.Groups;
 using AdminConsole.Core.Sync;
 using AdminConsole.Core.Templates;
 using AdminConsole.Core.Users;
+using AdminConsole.Core.Users.BulkEdit;
 using AdminConsole.Core.Search;
 using AdminConsole.Core.Offboarding;
 
@@ -157,6 +158,9 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is UsersPageViewModel users)
         {
             users.OpenRow = r => OpenObjectFromPage(ObjectType.User, r.Id, r.Primary);
+            users.Files = _services.GetRequiredService<FilePicker>();
+            users.ReportStatus = text => RunOnUi(() => ShowStatusMessage(text, 8));
+            users.BulkEdit = ids => BulkEditAsync(users, ids);
             if (filters is not null) users.ApplyFilters(filters);
             users.Start();
         }
@@ -164,6 +168,8 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is GroupsPageViewModel groups)
         {
             groups.OpenRow = r => OpenObjectFromPage(ObjectType.Group, r.Id, r.Primary);
+            groups.Files = _services.GetRequiredService<FilePicker>();
+            groups.ReportStatus = text => RunOnUi(() => ShowStatusMessage(text, 8));
             if (filters is not null) groups.ApplyFilters(filters);
             groups.Start();
         }
@@ -171,6 +177,8 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is DevicesPageViewModel devices)
         {
             devices.OpenRow = r => OpenObjectFromPage(ObjectType.Device, r.Id, r.Primary);
+            devices.Files = _services.GetRequiredService<FilePicker>();
+            devices.ReportStatus = text => RunOnUi(() => ShowStatusMessage(text, 8));
             if (filters is not null) devices.ApplyFilters(filters);
             devices.Start();
         }
@@ -546,6 +554,23 @@ public sealed partial class ShellViewModel : ObservableObject
         _pendingPersonPick = person => OpenObjectFromPage(ObjectType.User, person.Id, person.Label);
         Palette.OpenPicker(ObjectType.User, "Choose the user to offboard");
         ShowStatusMessage("Choose a user, then press Ctrl+Shift+O on their page.");
+    }
+
+    /// <summary>M18.3: the selected people, edited together. The list re-reads afterwards so it shows what was written.</summary>
+    private async Task BulkEditAsync(UsersPageViewModel users, IReadOnlyList<string> ids)
+    {
+        if (!IsSessionReady || ids.Count == 0) return;
+        var dialog = new BulkEditDialogViewModel(
+            _services.GetRequiredService<BulkEditService>(),
+            ids,
+            _services.GetRequiredService<PermissionChecker>(),
+            _services.GetRequiredService<ConsentService>());
+        await Dialogs.ShowAsync(dialog);
+        if (dialog.HasRun)
+        {
+            users.ClearSelectionCommand.Execute(null);
+            await users.RefreshAsync(CancellationToken.None);
+        }
     }
 
     /// <summary>

@@ -22,6 +22,12 @@ public sealed record PermissionResult
     /// <summary>Scopes still missing; empty unless <see cref="State"/> is <see cref="PermissionState.NeedsConsent"/>.</summary>
     public IReadOnlyList<string> MissingScopes { get; init; } = [];
 
+    /// <summary>
+    /// M18.2: the missing role is one the admin is eligible for. The caption says so and the UI offers activation in
+    /// place, rather than a dead end that sends them to the portal.
+    /// </summary>
+    public DirectoryRoleRef? EligibleRole { get; init; }
+
     /// <summary>UX §6 caption, or null when nothing needs explaining.</summary>
     public string? Reason { get; init; }
 

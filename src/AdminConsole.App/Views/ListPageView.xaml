@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AdminConsole.App.Views.ListPageView"
+<UserControl x:Class="AdminConsole.App.Views.ListPageView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -33,6 +33,8 @@
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ui:TextBox Margin="0,0,8,0" PlaceholderText="{Binding SearchPlaceholder}"
                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
@@ -44,9 +46,34 @@
                       AutomationProperties.Name="Sort the list by" />
             <CheckBox Grid.Column="3" IsChecked="{Binding Descending}" Content="Reverse" VerticalAlignment="Center"
                       AutomationProperties.Name="Reverse the sort order" />
+            <!-- M18.5: which columns are shown and exported, and the export itself. -->
+            <ToggleButton Grid.Column="4" x:Name="ColumnsToggle" Content="Columns" Margin="10,0,0,0" Padding="10,4"
+                          AutomationProperties.Name="Choose columns" />
+            <Popup PlacementTarget="{Binding ElementName=ColumnsToggle}" IsOpen="{Binding IsChecked, ElementName=ColumnsToggle}" StaysOpen="False"
+                   Placement="Bottom" AllowsTransparency="True">
+                <Border Padding="10" CornerRadius="4" Background="{DynamicResource ApplicationBackgroundBrush}"
+                        BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                    <ItemsControl ItemsSource="{Binding Columns}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pages:ColumnChoice}">
+                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn}" Margin="0,2"
+                                          AutomationProperties.Name="{Binding Label, StringFormat=Column {0}}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </Border>
+            </Popup>
+            <ui:Button Grid.Column="5" Content="Export" Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0"
+                       Command="{Binding ExportCommand}" AutomationProperties.Name="Export the list to CSV" />
         </Grid>
 
         <StackPanel Grid.Row="2" Margin="0,0,0,10">
+            <ContentPresenter Content="{Binding HeaderContent, ElementName=Root}" />
+            <!-- M18.4: a field the filter box did not understand is said, not silently ignored. -->
+            <TextBlock Text="{Binding QueryProblem}" FontSize="12" Margin="0,0,0,8" TextWrapping="Wrap"
+                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                       AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding QueryProblem}"
+                       Visibility="{Binding QueryProblem, Converter={StaticResource NullToCollapsed}}" />
             <ItemsControl ItemsSource="{Binding ChipGroups}" AutomationProperties.Name="Filters">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>

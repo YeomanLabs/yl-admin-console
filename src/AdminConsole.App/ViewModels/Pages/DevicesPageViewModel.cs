@@ -20,7 +20,7 @@ public sealed class DevicesPageViewModel : ListPageViewModel<DeviceRow>
 
     public override string Subtitle => "Everything registered in Entra or enrolled in Intune. Click a device to open it.";
 
-    public override string SearchPlaceholder => "Filter by device name, serial, model or user";
+    public override string SearchPlaceholder => "Filter by device name, serial, model or user — or os=windows compliance=noncompliant encrypted=false";
 
     protected override string EmptyWhenNothingCached => "No devices cached yet";
 
@@ -30,8 +30,22 @@ public sealed class DevicesPageViewModel : ListPageViewModel<DeviceRow>
     protected override BrowsePage<DeviceRow> Load(BrowseQuery query)
     {
         var page = _cache.BrowseDevices(query);
-        return new BrowsePage<DeviceRow>([.. page.Rows.Select(r => new DeviceRow(r))], page.Total, page.Skip);
+        return new BrowsePage<DeviceRow>([.. page.Rows.Select(r => new DeviceRow(r))], page.Total, page.Skip) { Problems = page.Problems };
     }
+
+    protected override IReadOnlyList<ListColumn<DeviceRow>> ColumnCatalog { get; } =
+    [
+        new("name", "Device", r => r.Primary),
+        new("user", "Primary user", r => r.Model.PrimaryUserUpn ?? r.Model.PrimaryUserName),
+        new("os", "OS", r => r.OsText),
+        new("compliance", "Compliance", r => r.Model.Compliance),
+        new("lastseen", "Last seen", r => r.Model.LastActivity?.LocalDateTime.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture)),
+        new("serial", "Serial", r => r.Model.Serial),
+        new("model", "Model", r => r.Model.Model, DefaultOn: false),
+        new("encrypted", "Encrypted", r => r.Model.Encrypted is { } e ? (e ? "Yes" : "No") : null, DefaultOn: false),
+        new("source", "Managed by", r => r.Model.Source.ToString(), DefaultOn: false),
+        new("id", "Object ID", r => r.Id, DefaultOn: false),
+    ];
 
     protected override IReadOnlyDictionary<string, int> CountChips(BrowseQuery query) => _cache.CountDeviceFilters(query);
 }

@@ -28,6 +28,15 @@ public sealed class TenantContext
     public bool HasP1 { get; private set; }
     public bool HasP2 { get; private set; }
 
+    /// <summary>
+    /// Roles the admin could activate through PIM but has not (M18.2). Filled by <see cref="Pim.PimService"/> when it
+    /// reads them; empty until then, and on a tenant without PIM.
+    /// </summary>
+    public IReadOnlyList<DirectoryRoleRef> EligibleRoles { get; private set; } = [];
+
+    public DirectoryRoleRef? EligibleFor(IEnumerable<string> roleTemplateIds) =>
+        EligibleRoles.FirstOrDefault(e => roleTemplateIds.Contains(e.RoleTemplateId, StringComparer.OrdinalIgnoreCase));
+
     /// <summary>Raised after <see cref="Update"/>; may fire on any thread.</summary>
     public event EventHandler? Changed;
 
@@ -51,9 +60,18 @@ public sealed class TenantContext
         SignedInDisplayName = snapshot.SignedInDisplayName;
         GrantedScopes = snapshot.GrantedScopes;
         Roles = snapshot.Roles;
+        EligibleRoles = [];
         HasP1 = snapshot.HasP1;
         HasP2 = snapshot.HasP2;
         IsLoaded = true;
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>After a PIM read or an activation: what is active and what is merely eligible.</summary>
+    public void UpdateRoles(IReadOnlyList<DirectoryRoleRef> active, IReadOnlyList<DirectoryRoleRef> eligible)
+    {
+        Roles = active;
+        EligibleRoles = eligible;
         Changed?.Invoke(this, EventArgs.Empty);
     }
 

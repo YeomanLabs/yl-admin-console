@@ -49,6 +49,99 @@ public abstract partial class ListPageViewModel<TRow> : ObservableObject, IPageV
     /// <summary>Set by the shell: opens the object a row points at.</summary>
     public Action<TRow>? OpenRow { get; set; }
 
+    /// <summary>Set by the shell: the save dialog the export asks (M18.5).</summary>
+    public Services.FilePicker? Files { get; set; }
+
+    /// <summary>Set by the shell: the status bar.</summary>
+    public Action<string>? ReportStatus { get; set; }
+
+    // ---- columns and export (M18.5) ------------------------------------------------------------------------------
+
+    /// <summary>Every column this list can export, in order.</summary>
+    protected abstract IReadOnlyList<ListColumn<TRow>> ColumnCatalog { get; }
+
+    private ObservableCollection<ColumnChoice>? _columns;
+
+    public ObservableCollection<ColumnChoice> Columns =>
+        _columns ??= [.. ColumnCatalog.Select(c => new ColumnChoice(c.Key, c.Label, c.DefaultOn, OnColumnsChanged))];
+
+    /// <summary>The chosen columns, in catalog order.</summary>
+    protected IReadOnlyList<ListColumn<TRow>> SelectedColumns =>
+        [.. ColumnCatalog.Where(c => Columns.FirstOrDefault(x => x.Key == c.Key)?.IsOn == true)];
+
+    /// <summary>A chosen column the row does not draw itself shows as an extra line, so the screen matches the export.</summary>
+    protected IReadOnlyList<ListColumn<TRow>> ExtraColumns => [.. SelectedColumns.Where(c => !c.OnRow)];
+
+    private void OnColumnsChanged() => QueueReload();
+
+    [ObservableProperty]
+    private bool _isExporting;
+
+    [RelayCommand]
+    private async Task ExportAsync()
+    {
+        if (Files is null || IsExporting) return;
+        var filters = Chips.Where(c => c.IsOn).Select(c => c.Label).ToList();
+        if (SearchText.Trim().Length > 0) filters.Add(SearchText.Trim());
+        var suggested = $"{Title}{(filters.Count == 0 ? string.Empty : " - " + string.Join(", ", filters))} {DateTime.Now:yyyy-MM-dd}.csv";
+        suggested = string.Join("_", suggested.Split(System.IO.Path.GetInvalidFileNameChars()));
+        if (Files.SaveAs(suggested, "CSV (*.csv)|*.csv", $"Export {Title}") is not { } path) return;
+
+        IsExporting = true;
+        try
+        {
+            var columns = SelectedColumns;
+            var rows = await LoadAllMatchingAsync().ConfigureAwait(true);
+            var count = await Task.Run(() =>
+            {
+                using var writer = new System.IO.StreamWriter(path, append: false, Core.Export.CsvExport.Utf8WithBom);
+                Core.Export.CsvExport.Write(writer, [.. columns.Select(c => c.Label)], rows.Select(r => (IReadOnlyList<string?>)[.. columns.Select(c => c.Value(r))]));
+                return rows.Count;
+            });
+            ReportStatus?.Invoke($"Exported {count:N0} {Title.ToLowerInvariant()} to {path}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Export of {Page} failed", Title);
+            ReportStatus?.Invoke($"The export failed: {ex.Message}");
+        }
+        finally
+        {
+            IsExporting = false;
+        }
+    }
+
+    /// <summary>
+    /// Every row the current filters match, not just the page on screen: a page at a time from the same query the list
+    /// ran, off the UI thread. What an export writes and what "select all matching" selects.
+    /// </summary>
+    protected Task<List<TRow>> LoadAllMatchingAsync()
+    {
+        var baseQuery = new BrowseQuery
+        {
+            Text = SearchText,
+            FilterKeys = [.. Chips.Where(c => c.IsOn).Select(c => c.Key)],
+            SortKey = SelectedSort.Key,
+            Descending = Descending,
+        };
+        return Task.Run(() =>
+        {
+            var rows = new List<TRow>();
+            for (var skip = 0; ; skip += 5000)
+            {
+                var page = Load(baseQuery with { Skip = skip, Take = 5000 });
+                rows.AddRange(page.Rows);
+                if (!page.HasMore || page.Rows.Count == 0) break;
+            }
+
+            return rows;
+        });
+    }
+
+    /// <summary>What the filter box asked for that could not be used (M18.4); null when everything was understood.</summary>
+    [ObservableProperty]
+    private string? _queryProblem;
+
     // ---- what the admin has asked for ---------------------------------------------------------------------------
 
     [ObservableProperty]
@@ -206,6 +299,7 @@ public abstract partial class ListPageViewModel<TRow> : ObservableObject, IPageV
 
             Total = page.Total;
             HasMore = page.HasMore;
+            QueryProblem = page.Problems.Count == 0 ? null : string.Join(" ", page.Problems);
             foreach (var chip in Chips) chip.Count = counts.TryGetValue(chip.Key, out var n) ? n : 0;
         }
         catch (OperationCanceledException)

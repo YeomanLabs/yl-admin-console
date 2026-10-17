@@ -6,6 +6,21 @@ namespace AdminConsole.Core.Cache.Browse;
 /// </summary>
 public static class DeviceBrowse
 {
+    /// <summary>The <c>key=value</c> fields the filter box understands (M18.4).</summary>
+    public static IReadOnlyList<BrowseField> Fields { get; } =
+    [
+        BrowseField.Text("name", "device_name LIKE @v ESCAPE '\\'", "Device name contains"),
+        BrowseField.Text("serial", "serial LIKE @v ESCAPE '\\'", "Serial number contains"),
+        BrowseField.Text("model", "model LIKE @v ESCAPE '\\'", "Model contains"),
+        BrowseField.Text("os", "os LIKE @v ESCAPE '\\'", "Operating system contains"),
+        BrowseField.Text("user", "(primary_user_upn LIKE @v ESCAPE '\\' OR primary_user_name LIKE @v ESCAPE '\\')", "Primary user contains"),
+        BrowseField.Whole("compliance", "compliance LIKE @v ESCAPE '\\'", "compliant, noncompliant, unknown…"),
+        BrowseField.Whole("owner", "owner_type LIKE @v ESCAPE '\\'", "company or personal"),
+        BrowseField.Flag("encrypted", "encrypted = 1", "encrypted = 0", "Disk encrypted"),
+        BrowseField.Flag("autopilot", "autopilot = 1", "autopilot = 0", "Registered with Autopilot"),
+        BrowseField.Flag("intune", "source = 'intune'", "source = 'entra'", "Managed by Intune"),
+    ];
+
     public static readonly BrowseFilter Compliant =
         new("compliant", "Compliant", "compliance", "compliance = 'compliant'", "Meets its Intune compliance policies");
 

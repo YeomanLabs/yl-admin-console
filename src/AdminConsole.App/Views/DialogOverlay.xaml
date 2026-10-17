@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AdminConsole.App.Views.DialogOverlay"
+<UserControl x:Class="AdminConsole.App.Views.DialogOverlay"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
@@ -49,6 +49,47 @@
                 </StackPanel>
 
                 <CheckBox Content="Require a change at next sign-in" IsChecked="{Binding ForceChangeNextSignIn}" Margin="0,12,0,0" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- PIM activation (M18.2): duration within the policy, and what the policy asks for. -->
+        <DataTemplate DataType="{x:Type dlg:PimActivateDialogViewModel}">
+            <StackPanel Margin="0,4,0,0">
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Active for" FontSize="12" Margin="0,0,0,4" />
+                <ComboBox ItemsSource="{Binding Durations}" SelectedItem="{Binding Duration}" DisplayMemberPath="Label"
+                          HorizontalAlignment="Left" MinWidth="160" AutomationProperties.Name="Active for" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding MaximumText}" FontSize="11" Margin="0,4,0,0" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding JustificationLabel}" FontSize="12" Margin="0,12,0,4" />
+                <ui:TextBox Text="{Binding Justification, UpdateSourceTrigger=PropertyChanged}" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="56"
+                            AutomationProperties.Name="{Binding JustificationLabel}" />
+                <StackPanel Visibility="{Binding ShowTicket, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Ticket number (required)" FontSize="12" Margin="0,12,0,4" />
+                    <ui:TextBox Text="{Binding TicketNumber, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Ticket number" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Ticket system" FontSize="12" Margin="0,8,0,4" />
+                    <ui:TextBox Text="{Binding TicketSystem, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Ticket system" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding Notes}" Margin="0,12,0,0" Visibility="{Binding HasNotes, Converter={StaticResource BoolToVisibility}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding}" FontSize="11" TextWrapping="Wrap" Margin="0,0,0,4" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Temporary Access Pass (M18.1): lifetime, one-time use, start day. -->
+        <DataTemplate DataType="{x:Type dlg:TapDialogViewModel}">
+            <StackPanel Margin="0,4,0,0">
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Lasts for" FontSize="12" Margin="0,0,0,4" />
+                <ComboBox ItemsSource="{x:Static dlg:TapDialogViewModel.Lifetimes}" SelectedItem="{Binding Lifetime}" DisplayMemberPath="Label"
+                          HorizontalAlignment="Left" MinWidth="160" AutomationProperties.Name="Lasts for" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+                           Text="Your tenant's Temporary Access Pass policy sets the allowed range; a lifetime outside it is refused with the range." />
+                <CheckBox Content="One sign-in only" IsChecked="{Binding UsableOnce}" Margin="0,12,0,0" AutomationProperties.Name="One sign-in only" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Starts" FontSize="12" Margin="0,12,0,4" />
+                <DatePicker SelectedDate="{Binding StartDate}" HorizontalAlignment="Left" MinWidth="160" AutomationProperties.Name="Start day" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding StartCaption}" FontSize="11" Margin="0,4,0,0" />
             </StackPanel>
         </DataTemplate>
 
@@ -108,6 +149,83 @@
                         <KeyBinding Key="Return" Command="{Binding ConfirmCommand}" />
                     </ui:TextBox.InputBindings>
                 </ui:TextBox>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Bulk edit (M18.3): fields on the left, the per-person preview (then the results) on the right. -->
+        <DataTemplate DataType="{x:Type dlg:BulkEditDialogViewModel}">
+            <StackPanel Margin="0,4,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="300" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ItemsControl ItemsSource="{Binding Fields}" IsEnabled="{Binding IsEditing}" Margin="0,0,16,0"
+                                  AutomationProperties.Name="Fields to change">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type dlg:BulkFieldRow}">
+                                <Grid Margin="0,0,0,6">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="110" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <CheckBox IsChecked="{Binding IsOn}" MinWidth="0" VerticalAlignment="Center"
+                                              AutomationProperties.Name="{Binding ChangeName}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Label}" FontSize="12" VerticalAlignment="Center" Margin="4,0,6,0" />
+                                    <ui:TextBox Grid.Column="2" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="Leave empty to clear"
+                                                AutomationProperties.Name="{Binding Label}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Summary}" FontSize="12" FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding Summary}" />
+                        <TextBlock Text="{Binding Problem}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,6"
+                                   Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                   AutomationProperties.LiveSetting="Assertive" AutomationProperties.Name="{Binding Problem}"
+                                   Visibility="{Binding Problem, Converter={StaticResource NullToCollapsed}}" />
+                        <ui:ProgressRing IsIndeterminate="True" Width="16" Height="16" HorizontalAlignment="Left" Margin="0,0,0,6"
+                                         AutomationProperties.Name="Applying"
+                                         Visibility="{Binding IsRunning, Converter={StaticResource BoolToVisibility}}" />
+                        <ItemsControl ItemsSource="{Binding Lines}" AutomationProperties.Name="People">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type dlg:BulkResultRow}">
+                                    <Grid Margin="0,0,0,5" AutomationProperties.Name="{Binding AccessibleName}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="SemiBold" Margin="0,0,6,0" MinWidth="40">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="{DynamicResource AcTextSecondary}" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsFailure}" Value="True">
+                                                            <Setter Property="Foreground" Value="{DynamicResource SystemFillColorCriticalBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Label}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Detail}" FontSize="11" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
+                    <ui:Button Content="{Binding CloseText}" Margin="0,0,8,0" Command="{Binding CloseCommand}"
+                               AutomationProperties.Name="{Binding CloseText}" />
+                    <ui:Button Content="{Binding ApplyText}" Appearance="Primary" Command="{Binding ApplyCommand}"
+                               Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibility}}"
+                               AutomationProperties.Name="{Binding ApplyText}" />
+                </StackPanel>
             </StackPanel>
         </DataTemplate>
 
