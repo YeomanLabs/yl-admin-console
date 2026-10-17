@@ -21,6 +21,7 @@ public sealed record DirectoryRoleRef(string DisplayName, string RoleTemplateId)
     public const string ReportsReader = "4a5d8f65-41da-4de4-8968-e035b65339cf";
     public const string DirectoryReaders = "88d8e3e3-8f55-4a1e-953a-9b9898b8876b";
     public const string ExchangeAdministrator = "29232cdf-9323-42fd-ade2-1d097af3e4de";
+    public const string ExchangeRecipientAdministrator = "31392ffb-586c-42d1-9346-e59415a2cc4e";
     public const string SharePointAdministrator = "f28a1f50-f6e7-4571-818b-6a12f2af6b6c";
     public const string TeamsAdministrator = "69091246-20e8-4a56-aa4d-066075b2a7a8";
     public const string ApplicationAdministrator = "9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3";
@@ -50,6 +51,7 @@ public sealed record DirectoryRoleRef(string DisplayName, string RoleTemplateId)
         [ReportsReader] = "Reports Reader",
         [DirectoryReaders] = "Directory Readers",
         [ExchangeAdministrator] = "Exchange Administrator",
+        [ExchangeRecipientAdministrator] = "Exchange Recipient Administrator",
         [SharePointAdministrator] = "SharePoint Administrator",
         [TeamsAdministrator] = "Teams Administrator",
         [ApplicationAdministrator] = "Application Administrator",

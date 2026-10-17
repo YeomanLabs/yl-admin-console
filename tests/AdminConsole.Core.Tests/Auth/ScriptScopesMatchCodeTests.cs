@@ -26,6 +26,22 @@ public sealed class ScriptScopesMatchCodeTests
         Array("ReadScopes", script).Should().BeEquivalentTo(Scopes.Read, "the read tier is consented at first sign-in");
         Array("WriteScopes", script).Should().BeEquivalentTo(Scopes.Write, "the write tier is asked for on the first write");
         Array("SensitiveScopes", script).Should().BeEquivalentTo(Scopes.Sensitive, "the sensitive tier is asked for at a reveal");
+
+        // The script names Exchange's permission as the registration does; the app asks MSAL for it by resource URI.
+        Array("ExchangeScopes", script).Should().BeEquivalentTo(Scopes.Exchange.Select(Scopes.ShortName),
+            "Exchange Online is its own resource with its own consent");
+    }
+
+    [Fact]
+    public void TheScriptWritesConfigWhereTheConsoleReadsIt()
+    {
+        // M11 moved %LOCALAPPDATA%\YeomanLabs\AdminConsole to %LOCALAPPDATA%\AdminConsole and the script kept writing to
+        // the old one, so -WriteConfig produced a tenant.json the console never read.
+        var script = File.ReadAllText(ScriptPath);
+        var expected = Path.GetFileName(AdminConsole.Core.AppPaths.Root);
+
+        script.Should().Contain($"Join-Path $env:LOCALAPPDATA '{expected}'");
+        script.Should().NotContain(@"'YeomanLabs\AdminConsole'");
     }
 
     [Fact]

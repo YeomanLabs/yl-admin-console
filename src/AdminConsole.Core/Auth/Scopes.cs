@@ -58,6 +58,28 @@ public static class Scopes
         BitLockerKeyReadAll, DeviceLocalCredentialReadAll,
     ];
 
+    /// <summary>The Exchange Online tier (doc 13). Its own resource, so its own consent prompt and its own token.</summary>
+    public static readonly IReadOnlyList<string> Exchange =
+    [
+        ExchangeManage,
+    ];
+
     /// <summary>Graph scopes are matched case-insensitively by the service; do the same locally.</summary>
     public static bool Matches(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The resource a scope belongs to, as the prefix MSAL needs (<c>https://outlook.office365.com/</c>), or empty for a
+    /// bare name, which MSAL treats as Microsoft Graph. One interactive request may only name one resource.
+    /// </summary>
+    public static string ResourceOf(string scope) =>
+        Uri.TryCreate(scope, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
+            ? $"{uri.Scheme}://{uri.Host}/"
+            : string.Empty;
+
+    /// <summary>The name a token's <c>scp</c> claim and an app registration use: <c>Exchange.Manage</c>, not the URI.</summary>
+    public static string ShortName(string scope)
+    {
+        var resource = ResourceOf(scope);
+        return resource.Length == 0 ? scope : scope[resource.Length..];
+    }
 }

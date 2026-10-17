@@ -113,12 +113,26 @@ public static class Capabilities
         IsSensitive = true,
     };
 
+    /// <summary>
+    /// Reading and changing mailboxes (doc 13). One delegated scope covers both, because Exchange's own role-based access
+    /// control decides what the admin may actually run — a token with this scope and no Exchange role reads little more
+    /// than the admin's own mailbox.
+    /// </summary>
+    public static readonly Capability ManageMailboxes = new()
+    {
+        Id = "exchange.manage",
+        Title = "Read and manage mailboxes (Exchange Online)",
+        Scopes = [Scopes.ExchangeManage],
+        RoleTemplateIds = [DirectoryRoleRef.ExchangeAdministrator, DirectoryRoleRef.ExchangeRecipientAdministrator],
+        RoleHint = "Exchange Administrator or Exchange Recipient Administrator",
+    };
+
     /// <summary>Everything the Permissions page lists, in display order.</summary>
     public static readonly IReadOnlyList<Capability> All =
     [
         EditUser, CreateUser, ResetPassword, RevokeSessions, AssignLicense,
         ChangeGroupMembership, EditGroup, DeleteAuthMethod, EditDevice, DeviceActions,
-        RevealBitLocker, RevealLaps,
+        ManageMailboxes, RevealBitLocker, RevealLaps,
     ];
 
     /// <summary>Every write-tier scope, for the one-shot consent prompt on the first write (doc 03 §Auth flow item 2).</summary>

@@ -23,6 +23,17 @@ console calls itself — an admin looking at their app registrations should reco
 
 It prints a client ID. Start the console and paste it into the setup screen — or pass `-WriteConfig` and skip that.
 
+**Already have a registration from an earlier version?** Don't create another. Bring it up to date:
+
+```powershell
+.\scripts\New-AppRegistration.ps1 -Update -WhatIf     # what it lacks
+.\scripts\New-AppRegistration.ps1 -Update             # add it
+```
+
+`-Update` adds whatever this version uses that the registration lacks — Phase 3's Exchange Online permission, for a
+registration made before it — and extends the consent grants to match. It never removes anything, and every machine
+keeps the client ID it already has.
+
 Undoing it is one command, which the script prints when it finishes:
 
 ```powershell
@@ -49,8 +60,8 @@ gone by itself after that. To remove it immediately:
 | Type | Public client — **no secret**, and none can be added |
 | Sign-in audience | Multi-tenant by default; `-SingleTenant` restricts it to the one tenant |
 | Redirect URIs | `ms-appx-web://microsoft.aad.brokerplugin/{client-id}` (Windows broker), the native-client URI, and `http://localhost` |
-| Permissions | 22 **delegated** Graph permissions, listed below. No application permissions, ever |
-| Consent | Granted for the tenant unless `-NoConsent` |
+| Permissions | 22 **delegated** Graph permissions and Exchange Online's delegated `Exchange.Manage`, listed below. No application permissions, ever |
+| Consent | Granted for the tenant unless `-NoConsent` — one grant per resource, Graph and Exchange |
 
 The script resolves every permission against Microsoft Graph *before* it creates anything, so a typo or a permission
 that only exists application-only fails with nothing half-built behind it. It also refuses to silently create a second
@@ -67,6 +78,7 @@ registration with a name already in use.
 | `-WriteConfig` | Write the client ID into this machine's `tenant.json`, so there is nothing to paste |
 | `-Name` | A different display name |
 | `-Force` | Create another even though one with that name exists |
+| `-Update` | Add what an existing registration lacks instead of creating one; `-ClientId` picks it when names collide |
 
 ## The permissions, and why each tier exists
 
@@ -98,6 +110,15 @@ DeviceManagementManagedDevices.PrivilegedOperations.All
 BitlockerKey.Read.All        DeviceLocalCredential.Read.All
 ```
 
+**Exchange Online (Phase 3, doc 13) — its own resource, `Office 365 Exchange Online`**
+```
+Exchange.Manage
+```
+One delegated permission covers reading and changing mailboxes, because Exchange's role-based access control decides
+what the admin can actually run. It is user-consentable, but the script grants it for the tenant so nobody meets a
+prompt. A tenant without Exchange Online has no service principal for it; the script says so and carries on, and the
+console's Mailbox tab stays unavailable there.
+
 `Directory.ReadWrite.All` and `Directory.AccessAsUser.All` are deliberately absent: the granular scopes above are
 sufficient and review far better.
 
@@ -118,13 +139,14 @@ when one is missing, naming the role rather than showing a bare 403.
 | Assign licences | License Administrator |
 | Reveal BitLocker keys and LAPS passwords | Cloud Device Administrator |
 | Remove authentication methods | Authentication Administrator |
+| Read and manage mailboxes | Exchange Administrator or Exchange Recipient Administrator |
 
 ## Doing it by hand
 
 Only if the script cannot be used. Entra admin center → App registrations → New registration; multitenant; then
 Authentication → Add a platform → Mobile and desktop applications with the three redirect URIs above and **Allow
-public client flows: Yes**; then API permissions → Microsoft Graph → Delegated, adding all 22 above; then Grant admin
-consent. Copy the Application (client) ID into the console's setup screen.
+public client flows: Yes**; then API permissions → Microsoft Graph → Delegated, adding all 22 above, and Office 365 Exchange Online → Delegated →
+`Exchange.Manage`; then Grant admin consent. Copy the Application (client) ID into the console's setup screen.
 
 This is the six-step click-through the script replaced. It is easy to get subtly wrong — a missing broker redirect URI
 fails only on the machines that use the broker, which is all of them.

@@ -20,7 +20,7 @@ public sealed class PermissionChecker
                 Capability = capability,
                 State = PermissionState.NeedsConsent,
                 MissingScopes = missing,
-                Reason = $"Needs the '{missing[0]}' permission — click to grant",
+                Reason = $"Needs the '{Scopes.ShortName(missing[0])}' permission — click to grant",
             };
         }
 

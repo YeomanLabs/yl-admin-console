@@ -80,31 +80,36 @@ public sealed class AuthService : IAuthService
         var pca = await GetPcaAsync(ct).ConfigureAwait(false);
         var account = await ResolveAccountAsync(pca, ct).ConfigureAwait(false);
 
-        await _interactiveLock.WaitAsync(ct).ConfigureAwait(false);
-        try
+        // One interactive request may name only one resource, so Graph and Exchange scopes are asked for separately.
+        foreach (var resource in missing.GroupBy(Scopes.ResourceOf))
         {
-            var builder = pca.AcquireTokenInteractive(scopes);
-            builder = account is not null
-                ? builder.WithAccount(account)
-                : builder.WithAccount(PublicClientApplication.OperatingSystemAccount);
-            var result = await builder.ExecuteAsync(ct).ConfigureAwait(false);
-            SetAccount(result.Account);
-        }
-        catch (MsalException msal)
-        {
-            var mapped = Map(msal);
-            _logger.LogWarning("Consent failed: {Kind} ({ErrorCode})", mapped.Kind, mapped.ErrorCode);
-            throw mapped;
-        }
-        finally
-        {
-            _interactiveLock.Release();
+            await _interactiveLock.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                var builder = pca.AcquireTokenInteractive(resource.ToList());
+                builder = account is not null
+                    ? builder.WithAccount(account)
+                    : builder.WithAccount(PublicClientApplication.OperatingSystemAccount);
+                var result = await builder.ExecuteAsync(ct).ConfigureAwait(false);
+                SetAccount(result.Account);
+                account = result.Account;
+            }
+            catch (MsalException msal)
+            {
+                var mapped = Map(msal);
+                _logger.LogWarning("Consent failed: {Kind} ({ErrorCode})", mapped.Kind, mapped.ErrorCode);
+                throw mapped;
+            }
+            finally
+            {
+                _interactiveLock.Release();
+            }
         }
 
         // The pre-consent access token is still cached and would satisfy a silent request for a subset of scopes,
         // so force a refresh before reading `scp` back — otherwise the new grants look absent.
-        var refreshed = await GetTokenAsync([Scopes.UserRead], ct, forceRefresh: true).ConfigureAwait(false);
-        var now = AccessTokenClaims.GetScopes(refreshed);
+        await GetTokenAsync([Scopes.UserRead], ct, forceRefresh: true).ConfigureAwait(false);
+        var now = await GetGrantedScopesAsync(ct).ConfigureAwait(false);
         _logger.LogInformation("Consent complete; {Count} scope(s) granted", now.Count);
         return now;
     }
@@ -166,13 +171,41 @@ public sealed class AuthService : IAuthService
     {
         // A Graph access token carries every scope the user has consented to for this app in `scp`,
         // regardless of which subset was requested, so asking for the smallest scope is enough.
+        IReadOnlyList<string> graph;
         try
         {
             var token = await GetTokenAsync([Scopes.UserRead], ct).ConfigureAwait(false);
-            return AccessTokenClaims.GetScopes(token);
+            graph = AccessTokenClaims.GetScopes(token);
         }
         catch (SignInRequiredException)
         {
+            return [];
+        }
+
+        // A Graph token knows nothing about another resource, so Exchange is asked for separately and silently. No
+        // token means not granted, never an error: an install whose registration predates Phase 3 is a normal state.
+        return [.. graph, .. await GetResourceScopesAsync(Scopes.ExchangeManage, ct).ConfigureAwait(false)];
+    }
+
+    /// <summary>
+    /// The scopes granted on another resource, written as full URIs (<c>https://outlook.office365.com/Exchange.Manage</c>)
+    /// so they can never be mistaken for a Graph scope of the same name.
+    /// </summary>
+    private async Task<IReadOnlyList<string>> GetResourceScopesAsync(string probeScope, CancellationToken ct)
+    {
+        var resource = Scopes.ResourceOf(probeScope);
+        try
+        {
+            var token = await GetTokenAsync([probeScope], ct).ConfigureAwait(false);
+            return [.. AccessTokenClaims.GetScopes(token).Select(s => resource + s)];
+        }
+        catch (SignInRequiredException)
+        {
+            return [];
+        }
+        catch (MsalException ex)
+        {
+            _logger.LogInformation("No token for {Resource} ({ErrorCode}); treating as not granted", resource, ex.ErrorCode);
             return [];
         }
     }
