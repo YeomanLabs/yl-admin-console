@@ -17,13 +17,17 @@
     pwsh scripts\Build-Release.ps1
 .EXAMPLE
     pwsh scripts\Build-Release.ps1 -Platforms x64
+.EXAMPLE
+    pwsh scripts\Build-Release.ps1 -ProductName "Contoso IT Console" -Manufacturer "Contoso" -IconPath .\contoso.ico
 #>
 param(
     [string]$Version,
     [ValidateSet('x64', 'ARM64')]
     [string[]]$Platforms = @('x64', 'ARM64'),
     [string]$ProductName = 'Admin Console',
-    [string]$Manufacturer = 'Admin Console'
+    [string]$Manufacturer = 'Admin Console',
+    # A branded build's own icon (.ico): the exe, window, Start menu and Apps & features all take it.
+    [string]$IconPath
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +35,12 @@ $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $app = Join-Path $repo 'src\AdminConsole.App\AdminConsole.App.csproj'
 if (-not $Version) { $Version = ([xml](Get-Content $app -Raw)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1 }
 $out = Join-Path $repo "artifacts\$Version"
+$iconArgs = @()
+if ($IconPath) {
+    $IconPath = (Resolve-Path $IconPath).Path
+    if ([IO.Path]::GetExtension($IconPath) -ne '.ico') { throw "-IconPath must be an .ico file." }
+    $iconArgs = @("-p:AppIconPath=$IconPath")
+}
 if (Test-Path $out) { Remove-Item $out -Recurse -Force }
 New-Item -ItemType Directory -Force $out | Out-Null
 
@@ -42,7 +52,7 @@ foreach ($platform in $Platforms) {
 
     "== ${platform}: publish $Version"
     dotnet publish $app -c Release -r $rid --self-contained -p:Version=$Version -p:InformationalVersion=$Version `
-        -p:DebugType=None -p:DebugSymbols=false -o $publish -v:minimal
+        -p:DebugType=None -p:DebugSymbols=false @iconArgs -o $publish -v:minimal
     if ($LASTEXITCODE -ne 0) { throw "Publish failed for $platform." }
     if (-not (Test-Path (Join-Path $publish 'AdminConsole.exe'))) { throw "No AdminConsole.exe in $publish." }
 
@@ -62,7 +72,7 @@ foreach ($platform in $Platforms) {
 
     "== ${platform}: msi"
     dotnet build (Join-Path $repo 'installer\AdminConsole.Installer.wixproj') -c Release -p:Platform=$platform `
-        -p:Version=$Version -p:ProductName="$ProductName" -p:Manufacturer="$Manufacturer" -p:PublishDir="$publish\" `
+        -p:Version=$Version -p:ProductName="$ProductName" -p:Manufacturer="$Manufacturer" -p:PublishDir="$publish\" @(if ($IconPath) { "-p:IconPath=$IconPath" }) `
         -o (Join-Path $repo "artifacts\installer\$arch") -v:minimal
     if ($LASTEXITCODE -ne 0) { throw "MSI build failed for $platform." }
     Copy-Item (Join-Path $repo "artifacts\installer\$arch\AdminConsole.msi") (Join-Path $out "AdminConsole-$Version-$arch.msi")

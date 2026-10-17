@@ -1,5 +1,7 @@
 # Admin Console
 
+<img src="docs/images/app-icon.png" width="96" align="right" alt="" />
+
 A Windows desktop console that puts Entra ID, Intune, Exchange Online, OneDrive and on-prem Active Directory behind one
 search box.
 
@@ -78,7 +80,7 @@ Download the MSI for your machine from the [releases](https://github.com/YeomanL
 for most PCs, `arm64` for Windows on Arm. It is self-contained: no .NET runtime to install first.
 
 ```powershell
-msiexec /i AdminConsole-0.3.0-x64.msi /qn      # silent, e.g. as an Intune Win32 app (installs per machine)
+msiexec /i AdminConsole-0.3.1-x64.msi /qn      # silent, e.g. as an Intune Win32 app (installs per machine)
 ```
 
 It installs to `Program Files\Admin Console` with a Start menu entry, upgrades in place, and closes a running console
@@ -196,7 +198,11 @@ registration, pass a matching `-Name` so it is recognisable in the tenant's app 
 .\scripts\New-AppRegistration.ps1 -Name "Contoso IT Console" -WriteConfig
 ```
 
-**What is not brandable.** There is no logo slot and no font override. Two colours and a name cover what a console
+**The icon** is neutral too — the default slate and blue, a magnifier over a person. A branded build carries its own:
+`scripts\Build-Release.ps1 -IconPath .\contoso.ico` puts it on the exe, the window, the Start menu and Apps & features.
+The source of the default is `scripts/icon/New-AppIcon.py`.
+
+**What is not brandable at run time.** There is no logo slot and no font override. Two colours and a name cover what a console
 needs to feel like the organisation's own; more surface than that is more ways to make it unreadable, and the contrast
 work recorded in `docs/ACCESSIBILITY.md` only holds because the palette is small.
 
@@ -240,7 +246,7 @@ src/AdminConsole.Core/    no WPF, fully testable — Auth, Graph, Cache, Sync, S
 src/AdminConsole.App/     the WPF shell, view-models and views
 tests/AdminConsole.Core.Tests/
 installer/                the WiX MSI
-scripts/                  the app registration and the release build
+scripts/                  the app registration, the release build, and the icon's source
 docs/                     the specification this was built from
 ```
 
@@ -266,7 +272,7 @@ our control — see [docs/04-GRAPH-REFERENCE.md](docs/04-GRAPH-REFERENCE.md).
 
 ## Status
 
-**v0.3.0** — Phases 1 to 3 are built: the cloud console, on-prem AD, and Exchange Online, OneDrive, hybrid onboarding,
+**v0.3.1** — Phases 1 to 3 are built: the cloud console, on-prem AD, and Exchange Online, OneDrive, hybrid onboarding,
 reports and several tenants. Each milestone was verified against a live tenant and a lab domain; every gate and what it
 actually proved is in [docs/09-PLAN.md](docs/09-PLAN.md), including the places where a gate could not be met in full
 and why. Three gates are the owner's to run, because they cannot be simulated: a workday of real helpdesk tasks, a

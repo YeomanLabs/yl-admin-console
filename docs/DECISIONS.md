@@ -588,3 +588,13 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   and the script refuses to build an MSI whose publish folder holds that file or any JSON with a password in it.
 - **Unsigned for now.** There is no code-signing certificate; SmartScreen will say so. Signing is the first thing a
   client deployment needs.
+
+## 2026-10-17 — v0.3.1: an app icon
+
+- **Neutral, like the rest of the default (M11).** The default palette's slate and blue, a magnifier over a person —
+  "type a name, land on the person". No company mark. A branded build replaces it with `Build-Release.ps1 -IconPath`,
+  which reaches the exe, the window, the Start menu and Apps & features; it is build-time, not `branding.json`,
+  because Windows reads an exe's icon before the app runs.
+- **Drawn per size, from code** (`scripts/icon/New-AppIcon.py`): each size rendered at 8x and scaled down rather than one
+  image shrunk. Below 32 px the person is left out and the strokes thicken; a faint rim keeps the tile's edge on a dark
+  taskbar. Sizes below 256 are classic DIB entries, which every shell reads; 256 is PNG.

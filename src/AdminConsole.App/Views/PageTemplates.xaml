@@ -206,6 +206,8 @@
     <DataTemplate DataType="{x:Type pages:SignInPageViewModel}">
         <Grid>
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="440">
+                <Image Source="{Binding Source='/Assets/AppIcon.ico', Converter={StaticResource IconFrame}, ConverterParameter=64}" Width="64" Height="64" HorizontalAlignment="Center" Margin="0,0,0,14"
+                       RenderOptions.BitmapScalingMode="HighQuality" AutomationProperties.Name="" Focusable="False" />
                 <TextBlock Text="{Binding DataContext.ProductName, RelativeSource={RelativeSource AncestorType=Window}}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
                 <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding DataContext.Tagline, RelativeSource={RelativeSource AncestorType=Window}}" HorizontalAlignment="Center" Margin="0,6,0,28" />
 

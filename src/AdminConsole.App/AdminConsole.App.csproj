@@ -9,8 +9,15 @@
     <RootNamespace>AdminConsole.App</RootNamespace>
     <AssemblyName>AdminConsole</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
+    <!-- The app icon (scripts/icon/New-AppIcon.py). A branded build swaps it with -p:AppIconPath=<file.ico>, which
+         Build-Release.ps1 -IconPath passes; the exe, the window and the title bar all take it from here. -->
+    <AppIconPath Condition="'$(AppIconPath)' == ''">Assets\AppIcon.ico</AppIconPath>
+    <ApplicationIcon>$(AppIconPath)</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="$(AppIconPath)" Link="Assets\AppIcon.ico" />
+  </ItemGroup>
   <ItemGroup>
     <PackageReference Include="WPF-UI" Version="3.0.5" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />

@@ -36,6 +36,7 @@
 
     <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
     <conv:NullToCollapsedConverter x:Key="NullToCollapsed" />
+    <conv:IconFrameConverter x:Key="IconFrame" />
     <conv:NullToBoolConverter x:Key="NullToBool" />
     <conv:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibility" />
     <conv:SecondsConverter x:Key="Seconds" />

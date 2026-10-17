@@ -36,6 +36,10 @@
     </InstallExecuteSequence>
     <Property Id="MSIRMSHUTDOWN" Value="1" />
 
+    <!-- The icon in Apps & features and on the Start menu entry. -->
+    <Icon Id="AppIcon.ico" SourceFile="$(IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+
     <!-- Nothing to choose or repair: install and uninstall only. -->
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPNOREPAIR" Value="1" />
@@ -54,7 +58,8 @@
           Name="$(ProductName)"
           Description="Entra ID, Intune, Exchange Online and Active Directory behind one search box"
           Target="[INSTALLFOLDER]AdminConsole.exe"
-          WorkingDirectory="INSTALLFOLDER" />
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon.ico" />
         <RegistryValue Root="HKLM" Key="Software\$(Manufacturer)\$(ProductName)" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </StandardDirectory>

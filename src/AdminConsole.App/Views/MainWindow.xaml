@@ -10,6 +10,7 @@
                  mc:Ignorable="d"
                  d:DataContext="{d:DesignInstance Type=vm:ShellViewModel}"
                  Title="{Binding ProductName}"
+                 Icon="/Assets/AppIcon.ico"
                  Width="1280" Height="800" MinWidth="960" MinHeight="600"
                  WindowStartupLocation="CenterScreen"
                  ExtendsContentIntoTitleBar="True"
@@ -123,6 +124,9 @@
 
         <!-- Title bar: app name · tenant · sync pill · account (UX §2) -->
         <ui:TitleBar Grid.Row="0" Title="{Binding ProductName}" ShowMaximize="True" ShowMinimize="True" AutomationProperties.Name="Window controls">
+            <ui:TitleBar.Icon>
+                <ui:ImageIcon Source="{Binding Source='/Assets/AppIcon.ico', Converter={StaticResource IconFrame}, ConverterParameter=16}" Width="16" Height="16" />
+            </ui:TitleBar.Icon>
             <ui:TitleBar.Header>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,12,0"
                             TextElement.Foreground="{DynamicResource AcOnChrome}">

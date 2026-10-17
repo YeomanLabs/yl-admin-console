@@ -17,7 +17,8 @@
     <Version Condition="'$(Version)' == ''">0.0.0</Version>
     <ProductName Condition="'$(ProductName)' == ''">Admin Console</ProductName>
     <Manufacturer Condition="'$(Manufacturer)' == ''">Admin Console</Manufacturer>
-    <DefineConstants>Version=$(Version);PublishDir=$(PublishDir);ProductName=$(ProductName);Manufacturer=$(Manufacturer)</DefineConstants>
+    <IconPath Condition="'$(IconPath)' == ''">$(MSBuildThisFileDirectory)..\src\AdminConsole.App\Assets\AppIcon.ico</IconPath>
+    <DefineConstants>Version=$(Version);PublishDir=$(PublishDir);ProductName=$(ProductName);Manufacturer=$(Manufacturer);IconPath=$(IconPath)</DefineConstants>
     <!-- No ICE validation run: it needs the Windows SDK's msi tools; the release script checks the result instead. -->
     <SuppressValidation>true</SuppressValidation>
   </PropertyGroup>
