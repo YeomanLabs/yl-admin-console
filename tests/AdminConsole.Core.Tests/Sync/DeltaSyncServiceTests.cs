@@ -155,6 +155,40 @@ public sealed class DeltaSyncServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DeltaLinkOlderThan30Days_ClearsEntityAndRewalks()
+    {
+        // The body Graph actually returned on 2026-10-17 for a link left unused for five weeks.
+        _handler
+            .Enqueue(HttpStatusCode.OK, "2")
+            .Enqueue(HttpStatusCode.OK, $$"""{"value":[{{User("u1", "Ada")}}],"@odata.deltaLink":"{{UsersDelta1}}"}""")
+            .Enqueue(HttpStatusCode.BadRequest, """{"error":{"code":"Request_UnsupportedQuery","message":"DeltaLink older than 30 days is not supported."}}""")
+            .Enqueue(HttpStatusCode.OK, "1")
+            .Enqueue(HttpStatusCode.OK, $$"""{"value":[{{User("u9", "Fresh")}}],"@odata.deltaLink":"{{UsersDelta2}}"}""");
+
+        await _sut.SyncEntityAsync(CacheEntity.Users, CancellationToken.None);
+        await _sut.SyncEntityAsync(CacheEntity.Users, CancellationToken.None);
+
+        _db.GetRaw(CacheEntity.Users, "u9").Should().NotBeNull();
+        _db.GetRaw(CacheEntity.Users, "u1").Should().BeNull("the rebuild starts from an empty table");
+        _db.GetSyncState(CacheEntity.Users)!.DeltaLink.Should().Be(UsersDelta2);
+    }
+
+    [Fact]
+    public async Task AnOrdinaryUnsupportedQuery_IsNotMistakenForAStaleLink()
+    {
+        _handler
+            .Enqueue(HttpStatusCode.OK, "1")
+            .Enqueue(HttpStatusCode.OK, $$"""{"value":[{{User("u1", "Ada")}}],"@odata.deltaLink":"{{UsersDelta1}}"}""")
+            .Enqueue(HttpStatusCode.BadRequest, """{"error":{"code":"Request_UnsupportedQuery","message":"Unsupported select property."}}""");
+
+        await _sut.SyncEntityAsync(CacheEntity.Users, CancellationToken.None);
+        var act = () => _sut.SyncEntityAsync(CacheEntity.Users, CancellationToken.None);
+
+        await act.Should().ThrowAsync<GraphException>("a real query error must surface, not trigger a silent rebuild");
+        _db.GetRaw(CacheEntity.Users, "u1").Should().NotBeNull("nothing was cleared");
+    }
+
+    [Fact]
     public async Task ManagedDevices_RefreshUpsertsAndDeletesStaleRows()
     {
         _db.Write(w =>

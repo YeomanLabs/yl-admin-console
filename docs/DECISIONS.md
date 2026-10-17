@@ -405,3 +405,14 @@ step: with the OneDrive tab and export in M16, it is no longer one step.
 The one-button Entra Connect delta sync was considered and **deferred**. It needs WinRM to the sync server and the
 admin in `ADSyncOperators`, which is a remote-execution surface rather than another API. Hybrid onboarding (M17) waits
 for the scheduled cycle instead, and says when the next one is due.
+
+## 2026-10-17 — a delta link older than 30 days is a resync, recognised by its message
+
+Graph has two ways of saying a stored delta link is unusable. The documented one is 410 / `syncStateNotFound`, which the
+sync already handled by clearing the entity and walking it again. The other is what a link older than 30 days gets:
+400 `Request_UnsupportedQuery` with the message "DeltaLink older than 30 days is not supported." Nothing else in the
+response distinguishes it from a genuinely bad query, so the sync treats a 400 as a resync only when that message is
+present. Keying on the error code alone would turn a real query bug (a mistyped `$select`) into a silent rebuild every
+cycle; keying on nothing left an install that sat unused for a month unable ever to refresh, which is what the dev
+install was until today. A proactive check on `last_delta_sync` was considered and not added: it would duplicate the
+service's own rule, and the service is the authority on when a link expires.

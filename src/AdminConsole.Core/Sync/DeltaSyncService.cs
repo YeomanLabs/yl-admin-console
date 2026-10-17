@@ -395,10 +395,18 @@ public sealed class DeltaSyncService : ISyncStatus
         }
     }
 
+    /// <remarks>
+    /// Graph signals an unusable delta link two ways. A 410 (or <c>syncStateNotFound</c>) is the documented one. A link
+    /// older than 30 days instead answers 400 <c>Request_UnsupportedQuery</c> "DeltaLink older than 30 days is not
+    /// supported" — found on 2026-10-17, when an install left unused for five weeks failed users, groups and devices on
+    /// every cycle and would never have recovered. The message is the only thing that distinguishes it from a genuine
+    /// query error, which must still surface.
+    /// </remarks>
     private static bool IsResyncRequired(GraphException ex) =>
         ex.StatusCode == 410 ||
         string.Equals(ex.ErrorCode, "syncStateNotFound", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(ex.ErrorCode, "resyncRequired", StringComparison.OrdinalIgnoreCase);
+        string.Equals(ex.ErrorCode, "resyncRequired", StringComparison.OrdinalIgnoreCase) ||
+        (ex.StatusCode == 400 && ex.Message.Contains("DeltaLink older than", StringComparison.OrdinalIgnoreCase));
 
     private async Task Guard(CacheEntity entity, Func<Task> work, CancellationToken ct)
     {
