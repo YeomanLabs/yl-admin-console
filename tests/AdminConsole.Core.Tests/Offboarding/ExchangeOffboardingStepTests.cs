@@ -302,7 +302,7 @@ public sealed class ExchangeOffboardingStepTests : IDisposable
         var ctx = Context();
 
         var preview = await step.PreviewAsync(ctx, Ct);
-        preview.Summary.Should().Be("Turn off 1 inbox rule that send mail elsewhere");
+        preview.Summary.Should().Be("Turn off 1 inbox rule that sends mail elsewhere");
         preview.Details.Should().Equal("Falcon updates", "File newsletters — left on: it doesn't send mail anywhere");
 
         var result = await step.ExecuteAsync(ctx, Ct);

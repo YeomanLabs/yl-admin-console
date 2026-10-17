@@ -51,7 +51,7 @@ public sealed class RemoveInboxRulesStep : IOffboardingStep
         return new StepPreview
         {
             StepId = Id,
-            Summary = $"Turn off {ExchangeStep.Plural(off.Count, "inbox rule")} that send mail elsewhere",
+            Summary = $"Turn off {ExchangeStep.Plural(off.Count, "inbox rule")} that {(off.Count == 1 ? "sends" : "send")} mail elsewhere",
             Details = [.. off.Select(r => r.Name), .. kept],
             Reason = "Turned off, not deleted, so Undo can turn them back on.",
         };
