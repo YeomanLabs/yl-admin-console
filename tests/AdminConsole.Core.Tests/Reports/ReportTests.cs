@@ -139,6 +139,13 @@ public sealed class ReportTests : IDisposable
         report.Skus.Should().NotContain(s => s.IsSuspended);
         report.Flagged.Select(f => f.DisplayName).Should().Equal(["Blocked", "Quiet"], "blocked first, then the quietest");
         report.Flagged[1].Reason.Should().StartWith("No sign-in since");
+
+        // 0.3.3: a subscription lists everyone who holds it, and how.
+        report.Holders.Select(h => h.DisplayName).Should().Equal(["Active", "Blocked", "Quiet"], "everyone licensed, by name; the unlicensed account is not a holder");
+        report.HoldersOf("e3").Should().HaveCount(3);
+        report.HoldersOf("flow").Should().BeEmpty();
+        report.Holders.Single(h => h.DisplayName == "Blocked").HowHeld("e3").Should().Be("Group");
+        report.Holders.Single(h => h.DisplayName == "Active").Reason.Should().StartWith("Last signed in");
         report.QuietUnavailable.Should().BeNull();
         _http.Requests[1].Uri.ToString().Should().Contain("signInActivity");
     }
@@ -204,6 +211,21 @@ public sealed class ReportTests : IDisposable
         report.Delegated.Should().Be(1);
         report.TotalBytes.Should().Be(3_221_225_472L + 1_572_864L);
         _http.Requests.Count(r => r.Body!.Contains("Get-RecipientPermission")).Should().Be(1, "Send As is one tenant-wide call");
+    }
+
+    [Fact]
+    public void ReportRows_AreEqualOnlyToThemselves_SoARebuiltListStaysReachableToAScreenReader()
+    {
+        // WPF keys a list's automation peers by item equality; a rebuilt row equal by value to the old one took over
+        // the old row's detached peer, and the row dropped out of UI Automation (found in the 0.3.3 screenshot run).
+        var a = new LicenceSkuRow { SkuId = "e3", PartNumber = "SPE_E3", Name = "Microsoft 365 E3", Enabled = 3, Consumed = 3 };
+        var b = a with { };
+
+        a.Equals(b).Should().BeFalse();
+        a.Equals(a).Should().BeTrue();
+        new MfaRow { UserId = "u", DisplayName = "U", Upn = "u@c", Status = MfaStatus.Ready, Detail = "d" }
+            .Equals(new MfaRow { UserId = "u", DisplayName = "U", Upn = "u@c", Status = MfaStatus.Ready, Detail = "d" }).Should().BeFalse();
+        a.ToString().Should().Be("Microsoft 365 E3, 3 of 3 seats assigned", "what a screen reader reads for the row, not a record dump");
     }
 
     // ---- store ----------------------------------------------------------------------------------------------------

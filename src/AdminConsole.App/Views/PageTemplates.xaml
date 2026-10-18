@@ -375,8 +375,16 @@
             <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
                 <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,0,0,8"
                             IsOpen="{Binding HasLoadError, Mode=OneWay}" Message="{Binding LoadError}" />
-                <ui:InfoBar Severity="Informational" IsClosable="False" Margin="0,0,0,8"
-                            IsOpen="{Binding IsHybridTenant, Mode=OneWay}" Message="{Binding HybridNote}" />
+                <!-- A plain note rather than an InfoBar: the InfoBar has no automation peer, so a screen reader could not read
+                     what it said, and it does not draw content given in place of Message. -->
+                <Border CornerRadius="4" Padding="12,10" Margin="0,0,0,8" BorderThickness="1"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        Visibility="{Binding IsHybridTenant, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <ui:SymbolIcon Symbol="Info24" Foreground="{DynamicResource AcAccent}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                        <TextBlock Text="{Binding HybridNote}" TextWrapping="Wrap" AutomationProperties.Name="{Binding HybridNote}" />
+                    </DockPanel>
+                </Border>
             </StackPanel>
 
             <Border Grid.Row="2" Grid.Column="0" Margin="0,0,12,0" CornerRadius="6" Padding="4"
@@ -708,7 +716,7 @@
     <!-- Reports (M19). One shape for all three: what it answers, when it was built, the headline figures, a filter,
          the rows, and Export. Rows pick their template by type. -->
     <DataTemplate DataType="{x:Type rep:MfaRow}">
-        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+        <Button Style="{StaticResource ListRowButton}" Command="{Binding DataContext.OpenRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
                 AutomationProperties.Name="{Binding DisplayName}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -729,15 +737,15 @@
                         <TextBlock Text="Admin" FontSize="11" />
                     </Border>
                     <Border Style="{StaticResource RowBadge}">
-                        <TextBlock Text="{Binding Status}" FontSize="11" />
+                        <TextBlock Text="{Binding StatusText}" FontSize="11" />
                     </Border>
                 </StackPanel>
             </Grid>
-        </Border>
+        </Button>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type rep:LicenceSkuRow}">
-        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+        <Button Style="{StaticResource ListRowButton}" Command="{Binding DataContext.ShowHoldersCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
                 AutomationProperties.Name="{Binding Name}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -759,11 +767,11 @@
                     </TextBlock>
                 </StackPanel>
             </Grid>
-        </Border>
+        </Button>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type rep:LicensedUserRow}">
-        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+        <Button Style="{StaticResource ListRowButton}" Command="{Binding DataContext.OpenRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
                 AutomationProperties.Name="{Binding DisplayName}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -779,11 +787,36 @@
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding LicencesText}" FontSize="11" TextWrapping="Wrap" />
                 </StackPanel>
             </Grid>
-        </Border>
+        </Button>
+    </DataTemplate>
+
+    <DataTemplate DataType="{x:Type pages:LicenceHolderRow}">
+        <Button Style="{StaticResource ListRowButton}" Command="{Binding DataContext.OpenRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                AutomationProperties.Name="{Binding}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="300" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="{Binding User.DisplayName}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding User.Upn}" FontSize="11" FontFamily="{StaticResource AcMono}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Margin="10,0">
+                    <TextBlock Text="{Binding HowHeld}" FontSize="12" />
+                    <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding User.Reason}" FontSize="11" />
+                </StackPanel>
+                <Border Grid.Column="2" Style="{StaticResource RowBadge}" Background="{StaticResource AcDangerFill}" VerticalAlignment="Center"
+                        Visibility="{Binding IsBlocked, Converter={StaticResource BoolToVisibility}}">
+                    <TextBlock Text="Sign-in blocked" FontSize="11" Foreground="White" />
+                </Border>
+            </Grid>
+        </Button>
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type rep:MailboxReportRow}">
-        <Border Padding="10,6" Margin="0,0,0,2" CornerRadius="4" Background="{DynamicResource ControlFillColorDefaultBrush}"
+        <Button Style="{StaticResource ListRowButton}" Command="{Binding DataContext.OpenRowCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
                 AutomationProperties.Name="{Binding Name}">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -805,7 +838,7 @@
                                Visibility="{Binding Problem, Converter={StaticResource NullToCollapsed}}" />
                 </StackPanel>
             </Grid>
-        </Border>
+        </Button>
     </DataTemplate>
 
     <DataTemplate x:Key="ReportSectionTemplate">
@@ -872,6 +905,9 @@
                           AutomationProperties.Name="Show" />
                 <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding CountText}" FontSize="12" VerticalAlignment="Center" Margin="12,0,0,0"
                            AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding CountText}" />
+                <ui:HyperlinkButton Content="{Binding BackText}" Command="{Binding BackCommand}" Padding="4,2" Margin="12,0,0,0" FontSize="12"
+                                    Visibility="{Binding BackText, Converter={StaticResource NullToCollapsed}}"
+                                    AutomationProperties.Name="{Binding BackText}" />
             </StackPanel>
             <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding Rows}" AutomationProperties.Name="Report rows" />

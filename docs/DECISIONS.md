@@ -620,3 +620,21 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   a byte-order mark and UTF-16 with one; otherwise the Windows ANSI code page, which Excel's plain "CSV" save writes —
   without it "Müller" would never match. The file is read while Excel still has it open, and anything over 10 MB is
   refused as the wrong file. No package: the reader is plain Core code, and code pages are .NET's own provider.
+
+## 2026-10-18 — After 0.3.2: licence holders, clickable report rows, a README to match
+
+- **A subscription lists its holders.** The licence report already walked every licensed account; it now keeps all of
+  them (`Holders`), not only the flagged ones, so clicking a subscription shows who holds it, how (directly or through
+  a group) and when they last signed in. A report built before this says to rebuild rather than showing nobody.
+- **Every report row that is a person opens them**, as list rows do everywhere else in the console.
+- **List items that are records compare by identity.** WPF keys a list's automation peers by item equality: a rebuilt
+  row equal by value to the old one took over the old row's detached peer and dropped out of UI Automation — a screen
+  reader lost the whole list after Rebuild. Found while taking the README's screenshots; fixed for the report rows and
+  every other display record shown in a refilled list (badges, facts, bulk-edit lines, Domain rows). Pickers keep value
+  equality, because selection depends on it.
+- **The Templates note says where people will be created.** It still read "On-prem creation arrives in Phase 2" after
+  M17 built exactly that. It is a plain note now, not an InfoBar: the InfoBar exposes no automation peer, so its text
+  was unreadable to a screen reader, and it does not draw content given in place of Message.
+- **`ADMINCONSOLE_SOFTWARE_RENDERING=1`** makes WPF draw in software: the usual remedy for drawing glitches over Remote
+  Desktop and in some VMs, and how the README screenshots were taken on a desktop that is never shown, so nobody's
+  screen or focus is touched.

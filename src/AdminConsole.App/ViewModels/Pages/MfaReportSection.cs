@@ -74,6 +74,8 @@ public sealed class MfaReportSection : ReportSection<MfaReport, MfaRow>
         _ => r.Rows.Where(x => x.Status.ToString() == show),
     };
 
+    protected override (string Id, string Name)? PersonOf(MfaRow row) => (row.UserId, row.DisplayName);
+
     protected override IReadOnlyList<string> ExportHeaders { get; } = ["Name", "Sign-in name", "Status", "Detail", "Methods", "Admin", "Guest", "Passwordless capable"];
 
     protected override IReadOnlyList<string?> ExportCells(MfaRow r) =>

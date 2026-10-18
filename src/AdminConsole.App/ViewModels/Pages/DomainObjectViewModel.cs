@@ -909,4 +909,10 @@ public sealed record AdMembershipRow(string Name, Guid ObjectGuid, string Distin
 {
     /// <summary>False when the group was beyond the list that was loaded, so there is no GUID to remove by.</summary>
     public bool CanRemove => ObjectGuid != Guid.Empty;
+
+    // Identity, not value equality: WPF keys a list's automation peers by item equality, so a refilled list whose
+    // rows equal the ones before reused their detached peers, and a screen reader lost the rows (0.3.3).
+    public bool Equals(AdMembershipRow? other) => ReferenceEquals(this, other);
+
+    public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
 }

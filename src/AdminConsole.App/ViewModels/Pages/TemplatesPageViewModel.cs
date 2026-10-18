@@ -1,4 +1,4 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using AdminConsole.App.Services;
@@ -47,7 +47,7 @@ public sealed partial class TemplatesPageViewModel : ObservableObject, IPageView
     public bool HasTemplates => TemplatesList.Count > 0;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    [NotifyPropertyChangedFor(nameof(HasSelection), nameof(HybridNote))]
     private UserTemplate? _selected;
 
     public bool HasSelection => Selected is not null;
@@ -58,10 +58,19 @@ public sealed partial class TemplatesPageViewModel : ObservableObject, IPageView
 
     public bool HasLoadError => LoadError is not null;
 
-    /// <summary>Doc 07 §Hybrid note: creation here is cloud-only, and a hybrid tenant should be told so, not blocked.</summary>
+    /// <summary>Doc 07 §Hybrid: in a synced tenant, say where people made from the selected template will be created.</summary>
     public bool IsHybridTenant => _tenant.OnPremisesSyncEnabled;
 
-    public string HybridNote => "This tenant syncs from on-prem AD. Users created here are cloud-only. On-prem creation arrives in Phase 2.";
+    /// <summary>
+    /// Since M17 a template with an AD part creates the person in AD and finishes the cloud half after Entra Connect;
+    /// one without creates a cloud-only account. (Until 0.3.3 this still said on-prem creation was coming in Phase 2.)
+    /// </summary>
+    public string HybridNote => Selected switch
+    {
+        { IsHybrid: true } => "This tenant syncs from on-prem AD, and this template has an AD part: people made from it are created in AD, and their licences, groups and mailbox settings follow once Entra Connect has synced them.",
+        not null => "This tenant syncs from on-prem AD, but this template has no AD part, so people made from it are cloud-only accounts. Snapshot a synced user with New from user… to make one that creates people in AD.",
+        _ => "This tenant syncs from on-prem AD. A template snapshotted from a synced user creates people in AD; one without an AD part creates cloud-only accounts.",
+    };
 
     private void Reload(string? keepFileName = null)
     {

@@ -159,6 +159,7 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is ReportsPageViewModel reports)
         {
             reports.ReportStatus = text => RunOnUi(() => ShowStatusMessage(text, 8));
+            reports.OpenUser = (id, name) => OpenObjectFromPage(ObjectType.User, id, name);
             _ = reports.StartAsync();
         }
         if (page is DomainPageViewModel domain)

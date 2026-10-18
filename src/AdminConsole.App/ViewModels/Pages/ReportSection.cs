@@ -45,6 +45,9 @@ public abstract partial class ReportSection<TReport, TRow> : ObservableObject wh
 
     public FilePicker? Files { get; set; }
 
+    /// <summary>Set by the shell: opens a person's page. Every row that is a person opens them (0.3.3).</summary>
+    public Action<string, string>? OpenUser { get; set; }
+
     public Action<string>? ReportStatus { get; set; }
 
     public ObservableCollection<ReportFigure> Figures { get; } = [];
@@ -54,7 +57,33 @@ public abstract partial class ReportSection<TReport, TRow> : ObservableObject wh
     [ObservableProperty]
     private ChoiceItem _show;
 
-    partial void OnShowChanged(ChoiceItem value) => Refill();
+    partial void OnShowChanged(ChoiceItem value)
+    {
+        OnPropertyChanged(nameof(BackText));
+        Refill();
+    }
+
+    /// <summary>A link back to the report's first view, shown while a row's own list is open (a subscription's holders).</summary>
+    public string? BackText => BackTextFor(Show);
+
+    protected virtual string? BackTextFor(ChoiceItem show) => null;
+
+    [RelayCommand]
+    private void Back() => Show = Shows[0];
+
+    /// <summary>The person a row stands for, if it is one.</summary>
+    protected virtual (string Id, string Name)? PersonOf(TRow row) => null;
+
+    [RelayCommand]
+    private void OpenRow(object? row)
+    {
+        if (row is TRow typed && PersonOf(typed) is { } person && OpenUser is not null) OpenUser(person.Id, person.Name);
+    }
+
+    /// <summary>Called with each report as it is shown, before its rows: for views that depend on what is in it.</summary>
+    protected virtual void OnReport(TReport report)
+    {
+    }
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(BuildCommand), nameof(ExportCommand))]
@@ -117,6 +146,7 @@ public abstract partial class ReportSection<TReport, TRow> : ObservableObject wh
         var age = DateTimeOffset.Now - at;
         var ago = age.TotalMinutes < 1 ? "just now" : age.TotalHours < 1 ? $"{(int)age.TotalMinutes} min ago" : age.TotalDays < 1 ? $"{(int)age.TotalHours} h ago" : $"{(int)age.TotalDays} days ago";
         AsOfText = $"Built {at.ToString("d MMM yyyy HH:mm", CultureInfo.CurrentCulture)} ({ago}). Rebuild for today's figures.";
+        OnReport(report);
         Figures.Clear();
         foreach (var f in FiguresOf(report)) Figures.Add(f);
         Note = NoteOf(report);

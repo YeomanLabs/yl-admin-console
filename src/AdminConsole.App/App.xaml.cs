@@ -52,6 +52,13 @@ public sealed partial class App : Application
     {
         base.OnStartup(e);
 
+        // Opt-in software rendering, for the places a GPU cannot draw the window: some Remote Desktop and VM setups,
+        // and a desktop that is never shown (how the README's screenshots are taken without anyone's screen).
+        if (Environment.GetEnvironmentVariable("ADMINCONSOLE_SOFTWARE_RENDERING") == "1")
+        {
+            System.Windows.Media.RenderOptions.ProcessRenderMode = System.Windows.Interop.RenderMode.SoftwareOnly;
+        }
+
         // Before anything opens a file under it: an install made before the M11 rename keeps its cache, templates,
         // action log and token cache. No logger exists this early, so the outcome is reported once the host is up.
         _migratedLegacyData = AppPaths.MigrateLegacyRoot();

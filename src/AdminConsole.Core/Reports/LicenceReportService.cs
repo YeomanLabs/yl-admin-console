@@ -57,7 +57,7 @@ public sealed class LicenceReportService
         var disabled = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var quiet = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         var names = skus.ToDictionary(s => s.Id, s => SkuNames.For(s.Part) ?? s.Part, StringComparer.OrdinalIgnoreCase);
-        var flagged = new List<LicensedUserRow>();
+        var holders = new List<LicensedUserRow>();
 
         foreach (var user in users)
         {
@@ -77,15 +77,15 @@ public sealed class LicenceReportService
                 if (isQuiet) quiet[sku] = quiet.GetValueOrDefault(sku) + 1;
             }
 
-            if (!enabled || isQuiet)
             {
-                flagged.Add(new LicensedUserRow
+                holders.Add(new LicensedUserRow
                 {
                     UserId = Text(user, "id") ?? string.Empty,
                     DisplayName = Text(user, "displayName") ?? Text(user, "userPrincipalName") ?? string.Empty,
                     Upn = Text(user, "userPrincipalName") ?? string.Empty,
                     Enabled = enabled,
                     Licences = [.. held.Select(h => names.GetValueOrDefault(h.Sku, h.Sku))],
+                    SkuIds = [.. held.Select(h => h.Sku)],
                     AssignedBy = [.. held.Select(h => h.By.Direct && h.By.Group ? "Direct and group" : h.By.Group ? "Group" : "Direct")],
                     LastSignIn = last,
                     Created = created,
@@ -94,7 +94,8 @@ public sealed class LicenceReportService
             }
         }
 
-        _logger.LogInformation("Licence report: {Skus} subscriptions, {Users} users read, {Flagged} flagged", skus.Count, users.Count, flagged.Count);
+        var flagged = holders.Where(h => h.IsFlagged).ToList();
+        _logger.LogInformation("Licence report: {Skus} subscriptions, {Users} users read, {Holders} licensed, {Flagged} flagged", skus.Count, users.Count, holders.Count, flagged.Count);
         return new LicenceReport
         {
             TakenAt = DateTimeOffset.Now,
@@ -115,6 +116,7 @@ public sealed class LicenceReportService
                 Quiet = quiet.GetValueOrDefault(s.Id),
             }).OrderBy(s => s.LooksFree).ThenBy(s => s.IsSuspended).ThenByDescending(s => s.Consumed).ThenBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase)],
             Flagged = [.. flagged.OrderBy(f => f.Enabled).ThenBy(f => f.LastSignIn ?? DateTimeOffset.MinValue).ThenBy(f => f.DisplayName, StringComparer.CurrentCultureIgnoreCase)],
+            Holders = [.. holders.OrderBy(h => h.DisplayName, StringComparer.CurrentCultureIgnoreCase)],
         };
     }
 

@@ -37,6 +37,14 @@ public sealed record LicenceSkuRow
 
     public string StateText => IsSuspended ? $"Suspended — {Suspended:N0} seats lapsed, {Consumed:N0} still assigned" : string.Empty;
 
+    public override string ToString() => $"{Name}, {Consumed} of {Enabled + Warning} seats assigned{(IsSuspended ? ", suspended" : string.Empty)}";
+
     /// <summary>A free subscription (Power Automate Free, Teams Exploratory…) whose "seats" are a ceiling, not a purchase.</summary>
     public bool LooksFree => Enabled >= 10000;
+
+    // Identity, not value equality: WPF keys a list's automation peers by item equality, so after a rebuild a row equal
+    // to the one before took over that row's detached peer and dropped out of what a screen reader can reach (0.3.3).
+    public bool Equals(LicenceSkuRow? other) => ReferenceEquals(this, other);
+
+    public override int GetHashCode() => System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(this);
 }

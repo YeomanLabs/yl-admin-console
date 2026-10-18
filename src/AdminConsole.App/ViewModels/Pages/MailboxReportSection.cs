@@ -60,6 +60,8 @@ public sealed class MailboxReportSection : ReportSection<MailboxReport, MailboxR
         _ => r.Rows,
     };
 
+    protected override (string Id, string Name)? PersonOf(MailboxReportRow row) => (row.UserId, row.Name);
+
     protected override IReadOnlyList<string> ExportHeaders { get; } =
         ["Mailbox", "Address", "Kind", "Size (bytes)", "Size", "Items", "Last user action", "Full Access", "Send As", "Send on behalf", "Problem"];
 

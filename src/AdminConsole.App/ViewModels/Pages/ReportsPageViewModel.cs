@@ -35,6 +35,17 @@ public sealed class ReportsPageViewModel : IPageViewModel
         }
     }
 
+    /// <summary>Set by the shell: opens a person's page from any report row that is a person.</summary>
+    public Action<string, string>? OpenUser
+    {
+        set
+        {
+            Mfa.OpenUser = value;
+            Licences.OpenUser = value;
+            Mailboxes.OpenUser = value;
+        }
+    }
+
     /// <summary>Called once the page is on screen: shows each saved report without rebuilding anything.</summary>
     public async Task StartAsync()
     {

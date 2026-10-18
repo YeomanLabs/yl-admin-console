@@ -539,8 +539,16 @@
             <StackPanel>
                 <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,4,0,8"
                             IsOpen="{Binding HasTemplateError, Mode=OneWay}" Message="{Binding TemplateError}" />
-                <ui:InfoBar Severity="Informational" IsClosable="False" Margin="0,0,0,8"
-                            IsOpen="{Binding IsHybridTenant, Mode=OneWay}" Message="{Binding HybridNote}" />
+                <!-- A plain note rather than an InfoBar: the InfoBar has no automation peer, so a screen reader could not read
+                     what it said, and it does not draw content given in place of Message. -->
+                <Border CornerRadius="4" Padding="12,10" Margin="0,0,0,8" BorderThickness="1"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                        Visibility="{Binding IsHybridTenant, Converter={StaticResource BoolToVisibility}}">
+                    <DockPanel>
+                        <ui:SymbolIcon Symbol="Info24" Foreground="{DynamicResource AcAccent}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                        <TextBlock Text="{Binding HybridNote}" TextWrapping="Wrap" AutomationProperties.Name="{Binding HybridNote}" />
+                    </DockPanel>
+                </Border>
 
                 <!-- 1. Pick a template -->
                 <StackPanel Visibility="{Binding IsPickingTemplate, Converter={StaticResource BoolToVisibility}}">
