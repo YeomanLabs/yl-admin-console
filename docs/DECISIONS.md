@@ -642,3 +642,28 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   start: the file logger opened the day's log, which the first copy held, and the exception escaped. Found by the 0.3.3
   release smoke run while the owner had 0.3.2 open. A copy that finds the log held writes to its own
   `app-<date>-<process id>.log`, and a write that still fails is dropped rather than thrown.
+
+## 2026-10-18 — History rewritten to take the tenant screenshots out
+
+- **Why.** The README screenshots from M8.5, M9 and 0.3.3 showed real people, addresses, object IDs and the tenant's
+  domain. Taking them out of the README left them in every earlier commit and in the source archives of the four
+  releases, so on the owner's say-so the history was rewritten: `git filter-branch --index-filter` dropped the twelve
+  files from every commit, and `main` and the four tags were force-pushed. Only `app-icon.png` and `domain.png` (lab
+  data) remain.
+- **What changed.** Sixty of the 107 commits have new SHAs (everything from M8.5 on); content, messages, authors and
+  dates are otherwise identical, and the tip's tree is unchanged. The release tags now point at:
+
+  | Tag | Before | After |
+  |---|---|---|
+  | v0.3.0 | `2d4bd2a` | `7c51eee` |
+  | v0.3.1 | `0739c93` | `7b7baed` |
+  | v0.3.2 | `897c26f` | `958dd77` |
+  | v0.3.3 | `0cc5c3d` | `a163944` |
+
+- **The binaries were not rebuilt.** Each release's MSIs and zips are byte for byte what was published (digests checked
+  against the build's `SHA256SUMS.txt`), so their product version still names the commit they were built from before
+  the rewrite (`0.3.3+0cc5c3d…`). Look an old SHA up in the table above. The next build carries the new SHAs.
+- **Any other clone must be re-cloned**, or reset to `origin/main` with its tags fetched again with `--force`: pushing
+  from an old clone would bring the images back.
+- **GitHub keeps the old commits reachable by SHA** until it collects them, so a request to GitHub Support (Removing
+  sensitive data) asks it to purge them and its cached views.
