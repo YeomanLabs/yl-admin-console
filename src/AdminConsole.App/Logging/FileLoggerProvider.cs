@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.IO;
 using Microsoft.Extensions.Logging;
 
@@ -32,19 +32,51 @@ public sealed class FileLoggerProvider : ILoggerProvider
     {
         lock (_lock)
         {
-            var today = DateOnly.FromDateTime(DateTime.Now);
-            if (_writer is null || today != _day)
+            try
             {
-                _writer?.Dispose();
-                Directory.CreateDirectory(_directory);
-                _writer = new StreamWriter(Path.Combine(_directory, $"app-{today:yyyyMMdd}.log"), append: true) { AutoFlush = true };
-                _day = today;
-            }
+                var today = DateOnly.FromDateTime(DateTime.Now);
+                if (_writer is null || today != _day)
+                {
+                    _writer?.Dispose();
+                    _writer = Open(today);
+                    _day = today;
+                }
 
-            _writer.WriteLine(line);
+                _writer?.WriteLine(line);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                // Logging must never take the app down: a write that fails is dropped, and the next one tries again.
+                _writer?.Dispose();
+                _writer = null;
+            }
         }
 
         Debug.WriteLine(line);
+    }
+
+    /// <summary>
+    /// The day's log, or this process's own when another copy of the console already holds it (0.3.3): opening a
+    /// second copy — the zip beside an installed MSI, say — used to crash at start with "the file is being used by
+    /// another process". Null when neither can be opened; the app then logs to Debug only.
+    /// </summary>
+    private StreamWriter? Open(DateOnly day)
+    {
+        Directory.CreateDirectory(_directory);
+        foreach (var name in new[] { $"app-{day:yyyyMMdd}.log", $"app-{day:yyyyMMdd}-{Environment.ProcessId}.log" })
+        {
+            try
+            {
+                var stream = new FileStream(Path.Combine(_directory, name), FileMode.Append, FileAccess.Write, FileShare.Read);
+                return new StreamWriter(stream) { AutoFlush = true };
+            }
+            catch (IOException)
+            {
+                // Held by another copy of the console: try this process's own file.
+            }
+        }
+
+        return null;
     }
 
     private sealed class FileLogger(FileLoggerProvider provider, string category) : ILogger

@@ -638,3 +638,7 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **`ADMINCONSOLE_SOFTWARE_RENDERING=1`** makes WPF draw in software: the usual remedy for drawing glitches over Remote
   Desktop and in some VMs, and how the README screenshots were taken on a desktop that is never shown, so nobody's
   screen or focus is touched.
+- **Logging never takes the app down.** A second copy of the console (the zip beside an installed MSI) crashed at
+  start: the file logger opened the day's log, which the first copy held, and the exception escaped. Found by the 0.3.3
+  release smoke run while the owner had 0.3.2 open. A copy that finds the log held writes to its own
+  `app-<date>-<process id>.log`, and a write that still fails is dropped rather than thrown.
