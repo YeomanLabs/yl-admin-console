@@ -60,7 +60,7 @@ gone by itself after that. To remove it immediately:
 | Type | Public client — **no secret**, and none can be added |
 | Sign-in audience | Multi-tenant by default; `-SingleTenant` restricts it to the one tenant |
 | Redirect URIs | `ms-appx-web://microsoft.aad.brokerplugin/{client-id}` (Windows broker), the native-client URI, and `http://localhost` |
-| Permissions | 22 **delegated** Graph permissions and Exchange Online's delegated `Exchange.Manage`, listed below. No application permissions, ever |
+| Permissions | 26 **delegated** Graph permissions, Exchange Online's `Exchange.Manage` and SharePoint's `AllSites.FullControl`, listed below. No application permissions, ever |
 | Consent | Granted for the tenant unless `-NoConsent` — one grant per resource, Graph and Exchange |
 
 The script resolves every permission against Microsoft Graph *before* it creates anything, so a typo or a permission
@@ -145,7 +145,7 @@ when one is missing, naming the role rather than showing a bare 403.
 
 Only if the script cannot be used. Entra admin center → App registrations → New registration; multitenant; then
 Authentication → Add a platform → Mobile and desktop applications with the three redirect URIs above and **Allow
-public client flows: Yes**; then API permissions → Microsoft Graph → Delegated, adding all 22 above, and Office 365 Exchange Online → Delegated →
+public client flows: Yes**; then API permissions → Microsoft Graph → Delegated, adding all 26 above, SharePoint → Delegated → `AllSites.FullControl`, and Office 365 Exchange Online → Delegated →
 `Exchange.Manage`; then Grant admin consent. Copy the Application (client) ID into the console's setup screen.
 
 This is the six-step click-through the script replaced. It is easy to get subtly wrong — a missing broker redirect URI
