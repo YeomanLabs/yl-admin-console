@@ -10,8 +10,6 @@ what they can sign in with, their licences, groups, mailbox, OneDrive, AD accoun
 reset a password, issue a Temporary Access Pass, share a mailbox, fix a licence, offboard a leaver, or create a starter
 in AD from a template — without opening five admin centres.
 
-![A person's mailbox, one tab of their page](docs/images/user-mailbox.png)
-
 ## What it does
 
 - **Search that answers instantly.** Everything is indexed on your PC, so search never waits on Microsoft: a median of
@@ -43,12 +41,7 @@ in AD from a template — without opening five admin centres.
 - **A written record.** Every change goes into a local action log with what was sent and what came back; reversible
   ones offer an undo.
 
-| | |
-|---|---|
-| ![Users, narrowed with a field query](docs/images/users.png) | ![Offboarding preview: every step, before anything runs](docs/images/offboard-preview.png) |
-| ![Bulk edit: each person's change, and where it is written](docs/images/bulk-edit.png) | ![Who holds Microsoft 365 E3](docs/images/reports-licence-holders.png) |
-| ![MFA readiness: who still needs a second factor](docs/images/reports-mfa.png) | ![OneDrive: lock, sharing, admins and export](docs/images/user-onedrive.png) |
-| ![Home: what is in the tenant and what is worth a look](docs/images/home.png) | ![Active Directory: OUs, users, groups and computers](docs/images/domain.png) |
+![Active Directory: OUs, users, groups and computers in the lab domain](docs/images/domain.png)
 
 ## Install
 
@@ -241,8 +234,6 @@ hex colour falls back to the default. The installer and icon can be branded at b
 | `Alt+1`…`Alt+8` | Home, Users, Groups, Devices, Templates, Reports, Activity, Domain |
 | `Alt+←` · `F5` · `Esc` | Back · re-read what is on screen · close a dialog |
 | `Ctrl+Shift+S` · `Ctrl+,` | Sync now · Settings |
-
-![The action log](docs/images/activity.png)
 
 ## Build from source
 
