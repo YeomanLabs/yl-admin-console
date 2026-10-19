@@ -171,16 +171,21 @@ registration made there. Each tenant reopens with the account last used for it. 
 
 ## Active Directory
 
-Off until a domain is named. On a domain-joined PC the domain alone is enough: Windows finds a controller and the
-connection is your own Kerberos sign-in.
+Off until a domain is named for the tenant. **Settings → Active Directory → Connect a domain…** (or the button on the
+Domain page) asks for the domain's DNS name — `(Get-ADDomain).DNSRoot` shows it — tests the connection, lets you pick
+the leavers OU from the real tree, and reconnects the tenant. On the office network or the VPN, Windows finds a
+controller by itself; name one only if your VPN does not pass on the DNS records it uses.
 
-```json
-{ "OnPrem": { "Domain": "corp.example.com" } }
+The connection is your own Windows sign-in: no password is stored, and AD enforces what you have been delegated. If
+your AD rights are on a separate admin account, start the console as that account for network sign-ins:
+
+```powershell
+runas /netonly /user:CORP\admin-account "C:\Program Files\Admin Console\AdminConsole.exe"
 ```
 
-That goes in `appsettings.local.json` beside `AdminConsole.exe`, or per tenant in `tenant.json` as the profile's
-`domains` list — several domains are fine, and each change goes to the domain that holds the object. A server name and
-a credential exist for labs and troubleshooting, never for a client deployment
+Each tenant keeps its own domains, in `tenant.json` — several are fine, and each change goes to the domain that holds
+the object. `appsettings.local.json`'s `OnPrem` section still works for the first tenant. A server name and a
+credential exist there for labs and troubleshooting, never for a client deployment
 ([docs/11-ONPREM-AD.md](docs/11-ONPREM-AD.md)).
 
 ## Privacy
@@ -207,6 +212,9 @@ Everything it keeps is in `%LOCALAPPDATA%\AdminConsole`:
 | `settings.json` · `branding.json` | Sync intervals, theme and density; name and colours |
 | `logs\` | Object IDs and error text — never tokens or passwords |
 | `msal.cache` | Sign-in tokens, protected by DPAPI |
+
+Set the environment variable `ADMINCONSOLE_DATA_ROOT` to a folder to keep all of this there instead: a second,
+separate setup, or a test run that must not see this PC's real tenants.
 
 ## Branding it
 

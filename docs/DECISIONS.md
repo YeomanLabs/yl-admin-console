@@ -698,3 +698,33 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **A new template never takes another's file.** A new one used to be written to whatever file its name slugged to,
   so saving "Contractor" twice from the dialog silently replaced the first. Now a new template gets a file of its own,
   names must be unique, and saving from the dialog under an existing name updates that template, deliberately.
+
+## 2026-10-19 — Connecting AD from Settings
+
+- **Why.** On-prem AD could be turned on only by editing `tenant.json` or `appsettings.local.json`, and the Domain
+  page still pointed at appsettings.json, which an MSI install keeps under Program Files. The owner, on their work
+  VPN, could not see how to connect it. Settings now has an **Active Directory** section listing the tenant's domains
+  (Change, Disconnect, Connect a domain…), and the Domain page offers the same when no domain is named.
+- **No password field.** A profile's domains bind as the signed-in Windows user (non-negotiable 4). An admin whose AD
+  rights sit on a separate account uses `runas /netonly`; the dialog says so. The one exception stays the lab: the
+  first profile's domain, when it is the one appsettings names, keeps appsettings' credential (`TenantDomain.ToOptions`)
+  so connecting the lab domain in Settings does not cut the lab off. The dialog says which applies.
+- **Test before save, with the session's own rules.** `TenantSessionFactory.OptionsFor` builds the options for both
+  the saved session and the dialog's test, so a test that passes binds the way the session will. The test lists the
+  domain's OUs and the leavers OU is chosen from them rather than typed as a distinguished name. Saving without a
+  passing test is allowed — the VPN may simply be down — and the Domain page then says what it finds.
+- **Saving reopens the tenant.** A session's directory service is built with it, so a changed domain needs a new
+  session: the tenant's tabs close, it signs in again silently and opens on the Domain page. If that fails and no other
+  tenant is open, the window returns to the sign-in page rather than being left empty.
+- **Closing a session disposed what every tenant shares (a bug since M20).** The session container registered the
+  shared services (logger factory, action log, HttpClient, stores) through factory lambdas, and a container disposes
+  what its factories return — so closing one tenant broke the others, and reopening one failed with "Cannot access a
+  disposed object: LoggerFactory". Signing out of one of two open tenants had the same fault. They are now registered as
+  instances, which a container never disposes.
+- **The LDAP bind runs off the UI thread.** It is synchronous and waits out its timeout when nothing answers, and the
+  Domain page asked for the status on the UI thread, so a laptop on a VPN that could not find a controller froze the
+  window for up to 30 seconds. `LdapDirectoryService` now binds on the thread pool.
+- **`ADMINCONSOLE_DATA_ROOT`.** Moves the whole data folder for one process. Added so the app can be exercised on a
+  hidden desktop against a copy holding only the YeomanLabs profile, once the owner's real `tenant.json` gained their
+  work tenant, which the test harness must never open. The legacy-folder migration never runs into an overridden
+  folder.

@@ -154,7 +154,15 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         var page = _services.GetRequiredService(item.PageViewModelType);
         if (page is TemplatesPageViewModel templates) templates.PickPerson = OpenPersonPicker;
-        if (page is SettingsPageViewModel settings) settings.SignedOut = ReturnToSignIn;
+        if (page is SettingsPageViewModel settings)
+        {
+            settings.SignedOut = ReturnToSignIn;
+            settings.EditDomain = EditDomainAsync;
+            settings.RemoveDomain = RemoveDomainAsync;
+            settings.InheritedDomain = InheritedDomain();
+            settings.LoadDomains();
+        }
+
         if (page is ActivityPageViewModel activity) activity.OpenObject = OpenObjectFromPage;
         if (page is ReportsPageViewModel reports)
         {
@@ -165,6 +173,8 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is DomainPageViewModel domain)
         {
             domain.OpenObject = OpenDirectoryObject;
+            domain.RequestConnect = () => EditDomainAsync(null);
+            domain.RequestSettings = () => Navigate(SettingsItem);
             domain.Start();
         }
 
@@ -1140,6 +1150,135 @@ public sealed partial class ShellViewModel : ObservableObject
         _profiles.SaveProfiles(list);
         await OpenNewTenantAsync(profile, list);
         RefreshTenantChoices();
+    }
+
+    // ---- on-prem domains per tenant (Settings → Active Directory) ----------------------------------------------------
+
+    /// <summary>The tenant on screen as tenant.json has it now, and whether it is the first (which inherits appsettings' OnPrem).</summary>
+    private (TenantProfileList List, TenantProfile Profile, bool IsPrimary)? CurrentProfile()
+    {
+        if (_session is not { } session) return null;
+        var list = _profiles.LoadProfiles();
+        if (list.Profiles.FirstOrDefault(p => p.Id == session.Profile.Id) is not { } profile) return null;
+        return (list, profile, list.Profiles.FirstOrDefault()?.Id == profile.Id);
+    }
+
+    /// <summary>The domain appsettings gives the tenant on screen, when that is where its connection comes from.</summary>
+    private string? InheritedDomain() =>
+        CurrentProfile() is { IsPrimary: true, Profile.Domains.Count: 0 } && _factory.HasAppOnPrem ? _factory.AppOnPremDomain : null;
+
+    /// <summary>
+    /// Connects the tenant on screen to a domain, or changes how it reaches one: the dialog tests the connection, the
+    /// result is saved to the tenant's profile, and the tenant reopens so every page uses it.
+    /// </summary>
+    private async Task EditDomainAsync(TenantDomain? editing)
+    {
+        if (CurrentProfile() is not { } current || _session is not { } session) return;
+        var (_, profile, isPrimary) = current;
+
+        // A first guess for a new one: the domain appsettings already names, else the domain this PC is joined to.
+        string? suggested = null;
+        if (editing is null && profile.Domains.Count == 0)
+        {
+            suggested = isPrimary && _factory.HasAppOnPrem ? _factory.AppOnPremDomain : MachineDomain();
+        }
+
+        var dialog = new ConnectDomainDialogViewModel(
+            session.Label,
+            editing,
+            profile.Domains.Where(d => editing is null || !string.Equals(d.Domain, editing.Domain, StringComparison.OrdinalIgnoreCase)).ToList(),
+            d => _factory.OptionsFor(d, isPrimary),
+            _services.GetRequiredService<ILogger<LdapDirectoryService>>(),
+            suggested);
+        if (!await Dialogs.ShowAsync(dialog)) return;
+
+        var domain = dialog.Build();
+        var list = _profiles.LoadProfiles();
+        var saved = list.Profiles.FirstOrDefault(p => p.Id == profile.Id) ?? profile;
+        _profiles.SaveProfiles(list.With(saved.WithDomain(domain, editing?.Domain)));
+        _logger.LogInformation("Profile {Profile}: saved on-prem domain {Domain}", profile.Id, domain.Domain);
+        await ReopenTenantAsync(profile.Id, $"{session.Label} now reaches Active Directory through {domain.Domain}.");
+    }
+
+    private async Task RemoveDomainAsync(TenantDomain domain)
+    {
+        if (CurrentProfile() is not { } current || _session is not { } session) return;
+        var (_, profile, isPrimary) = current;
+        var fallsBack = isPrimary && profile.Domains.Count == 1 && _factory.HasAppOnPrem;
+        var confirmed = await Dialogs.ShowAsync(new ConfirmDialogViewModel
+        {
+            Heading = $"Disconnect {domain.Domain}?",
+            Message = fallsBack
+                ? $"{session.Label} goes back to the domain in appsettings.local.json ({_factory.AppOnPremDomain}). Nothing changes in Active Directory itself."
+                : $"On-prem features for {session.Label} stop using {domain.Domain}. Nothing changes in Active Directory itself, and you can connect it again at any time.",
+            ConfirmLabel = "Disconnect",
+        });
+        if (!confirmed) return;
+
+        var list = _profiles.LoadProfiles();
+        var saved = list.Profiles.FirstOrDefault(p => p.Id == profile.Id) ?? profile;
+        _profiles.SaveProfiles(list.With(saved.WithoutDomain(domain.Domain)));
+        _logger.LogInformation("Profile {Profile}: removed on-prem domain {Domain}", profile.Id, domain.Domain);
+        await ReopenTenantAsync(profile.Id, $"{session.Label} no longer uses {domain.Domain}.");
+    }
+
+    /// <summary>The DNS domain this PC is joined to, or null (workgroup, or joined to Entra only).</summary>
+    private static string? MachineDomain()
+    {
+        try
+        {
+            var name = System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties().DomainName;
+            return string.IsNullOrWhiteSpace(name) ? null : name;
+        }
+        catch (System.Net.NetworkInformation.NetworkInformationException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Closes a tenant's session and opens it again from tenant.json, on the Domain page: its directory service is built
+    /// when the session is, so a changed domain only takes effect in a new one. Signs in silently; if that fails and no
+    /// other tenant is open, the window goes back to the sign-in page rather than being left with nothing.
+    /// </summary>
+    private async Task ReopenTenantAsync(string profileId, string done)
+    {
+        var list = _profiles.LoadProfiles();
+        if (list.Profiles.FirstOrDefault(p => p.Id == profileId) is not { } profile) return;
+
+        if (_sessions.FirstOrDefault(s => s.Profile.Id == profileId) is { } closing)
+        {
+            foreach (var tab in Tabs.Where(t => ReferenceEquals(t.Session, closing)).ToList())
+            {
+                Tabs.Remove(tab);
+                tab.DisposeAll();
+            }
+
+            _sessions.Remove(closing);
+            await closing.DisposeAsync();
+        }
+
+        await OpenNewTenantAsync(profile, list);
+        if (_sessions.Any(s => s.Profile.Id == profileId && s.Tenant.IsLoaded))
+        {
+            Navigate(NavItems.First(i => i.Id == "domain"));
+            ShowStatusMessage(done, 8);
+            return;
+        }
+
+        if (Tabs.FirstOrDefault() is { } remaining)
+        {
+            SelectedTab = remaining;
+            RefreshTabLabels();
+            return;
+        }
+
+        IsSessionReady = false;
+        Palette = null;
+        _session = OpenSession(profile, list);
+        _signInPage ??= new SignInPageViewModel(BeginInteractiveSignInAsync);
+        CurrentPage = _signInPage;
+        HighlightRail(null);
     }
 
     /// <summary>On exit: each tenant's sync loop stops and its cache closes.</summary>

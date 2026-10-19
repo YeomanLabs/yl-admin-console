@@ -32,14 +32,33 @@ public sealed partial class DomainPageViewModel : ObservableObject, IPageViewMod
     /// <summary>Set by the shell: opens the AD object a row points at.</summary>
     public Action<Guid, OnPremKind>? OpenObject { get; set; }
 
+    /// <summary>Set by the shell: the connect dialog, for a tenant with no domain yet.</summary>
+    public Func<Task>? RequestConnect { get; set; }
+
+    /// <summary>Set by the shell: Settings, where the tenant's domains are listed and changed.</summary>
+    public Action? RequestSettings { get; set; }
+
     // ---- connection ----------------------------------------------------------------------------------------------
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsConnected))]
     [NotifyPropertyChangedFor(nameof(SubtitleText))]
+    [NotifyPropertyChangedFor(nameof(IsNotConfigured))]
+    [NotifyPropertyChangedFor(nameof(EmptyTitle))]
     private DirectoryStatus _status = DirectoryStatus.NotConfigured;
 
     public bool IsConnected => Status.IsConnected;
+
+    /// <summary>No domain named at all, as opposed to one named that did not answer: the page offers to connect one.</summary>
+    public bool IsNotConfigured => Status == DirectoryStatus.NotConfigured;
+
+    public string EmptyTitle => IsNotConfigured ? "Not connected to Active Directory" : "No domain controller in reach";
+
+    [RelayCommand]
+    private Task ConnectAsync() => RequestConnect?.Invoke() ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private void OpenAdSettings() => RequestSettings?.Invoke();
 
     public string SubtitleText => Status.IsConnected
         ? $"{Status.DomainName} · via {Status.DomainController} · as {Status.BoundAs}"

@@ -42,16 +42,32 @@ public sealed class TenantSessionFactory
         _logger = logger;
     }
 
+    /// <summary>Whether appsettings names a domain: the first profile's fallback when it has none of its own.</summary>
+    public bool HasAppOnPrem => _appOnPrem.Domain.Length > 0 || _appOnPrem.Server.Length > 0;
+
+    /// <summary>appsettings' domain, for Settings to say where the first profile's connection comes from.</summary>
+    public string AppOnPremDomain => _appOnPrem.Domain.Length > 0 ? _appOnPrem.Domain : _appOnPrem.Server;
+
+    /// <summary>
+    /// How a profile's domain binds — the session and Settings' connection test both ask here, so a test that passes
+    /// binds the way the saved session will. The first profile inherits appsettings' lab credential for that domain.
+    /// </summary>
+    public LdapOptions OptionsFor(TenantDomain domain, bool isPrimary) => domain.ToOptions(isPrimary ? _appOnPrem : null);
+
     /// <param name="isPrimary">The first profile: it also takes appsettings' <c>OnPrem</c> section, which predates profiles.</param>
     public TenantSession Create(TenantProfile profile, bool isPrimary)
     {
         var services = new ServiceCollection();
-        foreach (var type in Shared) services.AddSingleton(type, _ => _root.GetRequiredService(type));
+        // As instances, not factories: a container disposes what its factories return, so closing one tenant used to
+        // dispose the logger factory, the action log and the HttpClient every other tenant was still using. Found when
+        // reconnecting a tenant to AD (which closes and reopens its session); signing out of one of two tenants had the
+        // same fault. A container never disposes an instance it was handed.
+        foreach (var type in Shared) services.AddSingleton(type, _root.GetRequiredService(type));
         services.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
         services.AddSingleton(profile);
 
-        var domains = profile.Domains.Select(d => d.ToOptions()).ToList();
-        if (domains.Count == 0 && isPrimary && (_appOnPrem.Domain.Length > 0 || _appOnPrem.Server.Length > 0)) domains.Add(_appOnPrem);
+        var domains = profile.Domains.Select(d => OptionsFor(d, isPrimary)).ToList();
+        if (domains.Count == 0 && isPrimary && HasAppOnPrem) domains.Add(_appOnPrem);
         App.ConfigureTenantServices(services, profile, domains, isPrimary);
 
         var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = false, ValidateScopes = false });

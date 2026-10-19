@@ -49,4 +49,33 @@ public sealed record TenantProfile
     public string DisplayName => Name.Length > 0 ? Name : TenantHint ?? TenantId ?? "Tenant";
 
     public TenantConfig ToConfig() => new() { ClientId = ClientId, Authority = Authority, TenantHint = TenantHint };
+
+    /// <summary>
+    /// The profile with <paramref name="domain"/> in place of the domain named <paramref name="replacing"/> (an edit), or
+    /// added at the end. A domain of the same name is replaced rather than listed twice.
+    /// </summary>
+    public TenantProfile WithDomain(TenantDomain domain, string? replacing = null)
+    {
+        var name = domain.Domain.Trim();
+        var result = new List<TenantDomain>();
+        var placed = false;
+        foreach (var d in Domains)
+        {
+            // The entry being edited, and any other of the new name: the first one's place takes the new entry.
+            var isTarget = SameName(d.Domain, name) || (replacing is not null && SameName(d.Domain, replacing));
+            if (!isTarget) result.Add(d);
+            else if (!placed)
+            {
+                result.Add(domain);
+                placed = true;
+            }
+        }
+
+        if (!placed) result.Add(domain);
+        return this with { Domains = result };
+    }
+
+    public TenantProfile WithoutDomain(string name) => this with { Domains = Domains.Where(d => !SameName(d.Domain, name)).ToList() };
+
+    private static bool SameName(string a, string b) => string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase);
 }

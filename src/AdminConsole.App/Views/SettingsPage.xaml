@@ -81,6 +81,50 @@
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Removes the saved token from this machine" FontSize="11" VerticalAlignment="Center" Margin="10,0,0,0" />
                 </StackPanel>
 
+                <!-- Active Directory: which on-prem domains this tenant reaches. Saved to tenant.json; binds as the admin's own
+                     Windows sign-in, so there is no password field (doc 11). -->
+                <TextBlock Text="Active Directory" Style="{StaticResource SectionTitle}" />
+                <TextBlock Text="{Binding AdSourceNote}" Style="{StaticResource Caption}" FontSize="12" Margin="0,0,0,6"
+                           Visibility="{Binding AdSourceNote, Converter={StaticResource NullToCollapsed}}" />
+                <ItemsControl ItemsSource="{Binding DomainRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pages:DomainSettingRow}">
+                            <Border Padding="12,8" Margin="0,0,0,6" CornerRadius="4" MaxWidth="760" HorizontalAlignment="Left"
+                                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontFamily="{StaticResource AcMono}" FontSize="12" />
+                                        <TextBlock Text="{Binding Detail}" Style="{StaticResource Caption}" Margin="0,2,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0">
+                                        <ui:Button Content="Change…" Padding="8,2"
+                                                   Command="{Binding DataContext.ChangeDomainCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}"
+                                                   AutomationProperties.Name="{Binding Name, StringFormat='Change how this tenant reaches {0}'}" />
+                                        <ui:Button Content="Disconnect" Padding="8,2" Margin="6,0,0,0"
+                                                   Command="{Binding DataContext.DisconnectDomainCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                   CommandParameter="{Binding}"
+                                                   AutomationProperties.Name="{Binding Name, StringFormat='Disconnect {0}'}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <StackPanel Orientation="Horizontal" Margin="0,4,0,0">
+                    <ui:Button Content="Connect a domain…" Icon="{ui:SymbolIcon PlugConnected24}" Command="{Binding ConnectDomainCommand}"
+                               AutomationProperties.Name="Connect a domain" />
+                    <ui:ProgressRing IsIndeterminate="True" Width="12" Height="12" Margin="12,0,6,0"
+                                     Visibility="{Binding IsCheckingAd, Converter={StaticResource BoolToVisibility}}" />
+                    <TextBlock Text="{Binding AdStatusText}" Style="{StaticResource Caption}" FontSize="12" VerticalAlignment="Center" Margin="6,0,0,0"
+                               MaxWidth="560" AutomationProperties.LiveSetting="Polite" AutomationProperties.Name="{Binding AdStatusText}" />
+                </StackPanel>
+
                 <!-- Sync (UX §12) -->
                 <TextBlock Text="Sync" Style="{StaticResource SectionTitle}" />
                 <Grid>

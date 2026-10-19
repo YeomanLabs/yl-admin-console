@@ -12,8 +12,17 @@ public static class AppPaths
     public static string LegacyRoot { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "YeomanLabs", "AdminConsole");
 
-    public static string Root { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AdminConsole");
+    /// <summary>
+    /// Names a different data folder for this process: everything below — tenants, tokens, cache, logs — then lives
+    /// there instead. For test runs that must not see this PC's real tenants, and for keeping a second, separate setup.
+    /// </summary>
+    public const string RootOverrideVariable = "ADMINCONSOLE_DATA_ROOT";
+
+    public static bool IsRootOverridden { get; } = Environment.GetEnvironmentVariable(RootOverrideVariable) is { Length: > 0 };
+
+    public static string Root { get; } = IsRootOverridden
+        ? Path.GetFullPath(Environment.GetEnvironmentVariable(RootOverrideVariable)!)
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "AdminConsole");
 
     public static string CacheDirectory => Path.Combine(Root, "cache");
     public static string MsalCacheFileName => "msal.cache";
@@ -40,7 +49,8 @@ public static class AppPaths
     /// made, the saved templates and offboarding profiles, the sync cache, and the MSAL token cache — so they would be
     /// asked to sign in again and find their history gone, with nothing on screen to explain why.
     /// </remarks>
-    public static bool MigrateLegacyRoot(ILogger? logger = null) => Migrate(LegacyRoot, Root, logger);
+    /// <remarks>Never into an overridden folder: that would carry this PC's real data into a test run's.</remarks>
+    public static bool MigrateLegacyRoot(ILogger? logger = null) => !IsRootOverridden && Migrate(LegacyRoot, Root, logger);
 
     /// <summary>
     /// The actual move, against paths the caller supplies.

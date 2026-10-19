@@ -1276,12 +1276,18 @@
                     BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1"
                     Visibility="{Binding IsConnected, Converter={StaticResource InverseBoolToVisibility}}">
                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="520">
-                    <TextBlock Text="No domain controller in reach" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <TextBlock Text="{Binding EmptyTitle}" FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center" />
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding SubtitleText}" FontSize="12" Margin="0,8,0,0"
                                HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" Margin="0,10,0,0"
                                HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
-                               Text="On-prem features need line of sight to a domain controller and a domain named in the OnPrem section of appsettings.json. Everything in the cloud half of the console works without one." />
+                               Text="On-prem features need this tenant's domain and line of sight to one of its domain controllers — on the office network or over the VPN. Everything in the cloud half of the console works without one." />
+                    <ui:Button Content="Connect a domain…" Icon="{ui:SymbolIcon PlugConnected24}" Appearance="Primary" Margin="0,16,0,0" HorizontalAlignment="Center"
+                               Command="{Binding ConnectCommand}" AutomationProperties.Name="Connect a domain"
+                               Visibility="{Binding IsNotConfigured, Converter={StaticResource BoolToVisibility}}" />
+                    <ui:Button Content="Active Directory settings" Icon="{ui:SymbolIcon Settings24}" Margin="0,16,0,0" HorizontalAlignment="Center"
+                               Command="{Binding OpenAdSettingsCommand}" AutomationProperties.Name="Open the Active Directory settings"
+                               Visibility="{Binding IsNotConfigured, Converter={StaticResource InverseBoolToVisibility}}" />
                 </StackPanel>
             </Border>
 

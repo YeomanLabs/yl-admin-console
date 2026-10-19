@@ -214,8 +214,18 @@ thing that wrote it proves nothing.
 
 ## 10. Turning it on for an installation (M12.4)
 
-On-prem is off until a domain is named. The `OnPrem` section of `appsettings.json` — or `appsettings.local.json`,
-which is gitignored — carries it:
+On-prem is off until a domain is named for the tenant. Since M20 each tenant profile in `tenant.json` carries its own
+`domains`, and since the offboarding-templates release they are set in the app: **Settings → Active Directory →
+Connect a domain…**, or the button on the Domain page when no domain is named. The dialog takes the DNS name, an
+optional controller and LDAPS; **Test connection** binds exactly as the saved session will (a throwaway connection,
+off the UI thread) and lists the OUs so the leavers OU is picked from the real tree; **Save and reconnect** writes the
+profile and reopens the tenant, because its directory service is built with the session. There is no password field:
+a profile's domains bind as the signed-in Windows user. An admin whose AD rights sit on a separate account starts the
+console with `runas /netonly` as that account.
+
+The first profile also takes the `OnPrem` section of `appsettings.json` — or `appsettings.local.json`, which is
+gitignored — when it has no domains of its own; and when a domain connected in Settings is the one appsettings names,
+it keeps appsettings' credential, so connecting the lab domain in Settings does not cut the lab off:
 
 ```json
 {

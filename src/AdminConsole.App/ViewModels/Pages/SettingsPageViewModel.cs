@@ -10,13 +10,14 @@ using AdminConsole.App.ViewModels.Dialogs;
 using AdminConsole.Core;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
+using AdminConsole.Core.OnPrem;
 using AdminConsole.Core.Sync;
 
 namespace AdminConsole.App.ViewModels.Pages;
 
 /// <summary>
-/// Settings (UX §12): Account, Sync, Appearance, Permissions, Diagnostics. Changing an interval or the theme takes
-/// effect immediately and is remembered in <c>settings.json</c> beside the cache.
+/// Settings (UX §12): Account, Active Directory, Sync, Appearance, Permissions, Diagnostics. Changing an interval or the
+/// theme takes effect immediately and is remembered in <c>settings.json</c> beside the cache.
 /// </summary>
 public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewModel
 {
@@ -29,6 +30,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
     private readonly SyncOptions _syncOptions;
     private readonly IServiceProvider _services;
     private readonly ILogger<SettingsPageViewModel> _logger;
+    private readonly TenantConfigStore _profiles;
+    private readonly TenantProfile _profile;
+    private readonly IDirectoryService _directory;
     private bool _loadingSettings;
 
     public SettingsPageViewModel(
@@ -41,8 +45,14 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
         BrandingStore brandingStore,
         SyncOptions syncOptions,
         IServiceProvider services,
-        ILogger<SettingsPageViewModel> logger)
+        ILogger<SettingsPageViewModel> logger,
+        TenantConfigStore profiles,
+        TenantProfile profile,
+        IDirectoryService directory)
     {
+        _profiles = profiles;
+        _profile = profile;
+        _directory = directory;
         _consent = consent;
         _brandingStore = brandingStore;
         _checker = checker;
@@ -62,6 +72,80 @@ public sealed partial class SettingsPageViewModel : ObservableObject, IPageViewM
     }
 
     public string Title => "Settings";
+
+    // ---- Active Directory: which on-prem domains this tenant reaches ------------------------------------------------
+
+    /// <summary>Set by the shell: the connect dialog, for a new domain (null) or to change one. Saving reconnects the tenant.</summary>
+    public Func<TenantDomain?, Task>? EditDomain { get; set; }
+
+    /// <summary>Set by the shell: disconnects a domain, after asking.</summary>
+    public Func<TenantDomain, Task>? RemoveDomain { get; set; }
+
+    /// <summary>
+    /// Set by the shell for the first tenant when it has no domains of its own: the domain appsettings names, which it
+    /// uses instead. Null otherwise.
+    /// </summary>
+    public string? InheritedDomain { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDomainRows))]
+    private IReadOnlyList<DomainSettingRow> _domainRows = [];
+
+    public bool HasDomainRows => DomainRows.Count > 0;
+
+    /// <summary>Where the connection comes from when it is not a domain listed here, or that there is none.</summary>
+    [ObservableProperty]
+    private string? _adSourceNote;
+
+    [ObservableProperty]
+    private string _adStatusText = string.Empty;
+
+    [ObservableProperty]
+    private bool _isCheckingAd;
+
+    /// <summary>Called by the shell once it has set the callbacks above: lists the domains and checks the connection.</summary>
+    public void LoadDomains()
+    {
+        var saved = _profiles.LoadProfiles().Profiles.FirstOrDefault(p => p.Id == _profile.Id) ?? _profile;
+        DomainRows = saved.Domains.Select(d => new DomainSettingRow(d)).ToList();
+        AdSourceNote = DomainRows.Count > 0
+            ? null
+            : InheritedDomain is { } inherited
+                ? $"Connected through appsettings.local.json to {inherited}. Connecting a domain here replaces that for this tenant."
+                : "Not connected to Active Directory, so on-prem features are off. Everything in the cloud half works without it.";
+        _ = CheckAdAsync();
+    }
+
+    private async Task CheckAdAsync()
+    {
+        IsCheckingAd = true;
+        AdStatusText = "Checking the connection…";
+        try
+        {
+            var status = await _directory.GetStatusAsync(CancellationToken.None);
+            AdStatusText = status.IsConnected
+                ? $"Connected to {status.DomainController} as {status.BoundAs}."
+                : status.Reason ?? "Not connected.";
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex, "AD status check failed");
+            AdStatusText = $"Could not check the connection: {ex.Message}";
+        }
+        finally
+        {
+            IsCheckingAd = false;
+        }
+    }
+
+    [RelayCommand]
+    private Task ConnectDomainAsync() => EditDomain?.Invoke(null) ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private Task ChangeDomainAsync(DomainSettingRow row) => EditDomain?.Invoke(row.Domain) ?? Task.CompletedTask;
+
+    [RelayCommand]
+    private Task DisconnectDomainAsync(DomainSettingRow row) => RemoveDomain?.Invoke(row.Domain) ?? Task.CompletedTask;
 
     // ---- Account (UX §12) -------------------------------------------------------------------------------------------
 

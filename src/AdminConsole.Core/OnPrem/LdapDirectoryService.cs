@@ -142,16 +142,32 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
                 connection.SessionOptions.Sealing = true;
             }
 
-            if (_options.Credential is not null)
+            // The bind is synchronous and, when nothing answers, waits out the whole timeout. Off the caller's thread, so
+            // a page that asks for the status from the UI thread (a laptop off the network, a VPN that cannot find a
+            // controller) does not freeze the window while it waits.
+            (string? DefaultNamingContext, string? DnsHostName) root;
+            try
             {
-                connection.Bind(_options.Credential);
+                root = await Task.Run(() =>
+                {
+                    if (_options.Credential is not null)
+                    {
+                        connection.Bind(_options.Credential);
+                    }
+                    else
+                    {
+                        connection.Bind();
+                    }
+
+                    return ReadRootDse(connection);
+                }, ct).ConfigureAwait(false);
             }
-            else
+            catch
             {
-                connection.Bind();
+                connection.Dispose();
+                throw;
             }
 
-            var root = ReadRootDse(connection);
             _connection = connection;
             _status = new DirectoryStatus
             {
