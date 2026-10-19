@@ -99,6 +99,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     [NotifyPropertyChangedFor(nameof(IsSynced))]
     [NotifyPropertyChangedFor(nameof(CanRunActions))]
     [NotifyPropertyChangedFor(nameof(CanOffboard))]
+    [NotifyPropertyChangedFor(nameof(CanIssueTap))]
     private DirectoryUser? _user;
 
     public bool HasUser => User is not null;
@@ -873,6 +874,55 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         var outcome = await _users.DeleteAuthMethodAsync(Id, row.Method, CancellationToken.None);
         _toasts.Show(outcome.Success ? outcome.Summary : outcome.FriendlyError ?? outcome.Summary);
         if (outcome.Success) await RefreshAsync(CancellationToken.None);
+    }
+
+    /// <summary>
+    /// Reset MFA (header): read the methods live, preview what goes and what stays, then remove them in the order Entra
+    /// accepts (AuthMethodReset), optionally sign them out everywhere and issue a pass to register with. Each removal is
+    /// its own action-log row; the end says what happened to every one.
+    /// </summary>
+    [RelayCommand]
+    private async Task ResetMfaAsync()
+    {
+        IReadOnlyList<AuthMethod> methods;
+        try
+        {
+            methods = await _users.ReadAuthMethodsAsync(Id, CancellationToken.None);
+        }
+        catch (GraphException ex)
+        {
+            _logger.LogWarning("Reading methods of {UserId} for a reset failed: {Code}", Id, ex.ErrorCode);
+            _toasts.Show(ex.IsForbidden ? "Needs the 'UserAuthenticationMethod.Read.All' permission to read the methods." : GraphErrorText.Friendly(ex));
+            return;
+        }
+
+        var dialog = new ResetMfaDialogViewModel(UserLabel, methods);
+        if (!await _dialogs.ShowAsync(dialog)) return;
+        if (!await EnsureAsync(Capabilities.DeleteAuthMethod)) return;
+
+        var lines = new List<string>();
+        var removed = 0;
+        foreach (var method in dialog.Selected)
+        {
+            var outcome = await _users.DeleteAuthMethodAsync(Id, method, CancellationToken.None);
+            if (outcome.Success) removed++;
+            lines.Add(outcome.Success ? $"Removed {method.KindLabel} · {method.DisplayName}" : $"Not removed: {method.KindLabel} · {method.DisplayName} — {outcome.FriendlyError}");
+        }
+
+        if (dialog.RevokeSessions && await EnsureAsync(Capabilities.RevokeSessions))
+        {
+            var revoke = await _users.RevokeSessionsAsync(Id, CancellationToken.None);
+            lines.Add(revoke.Success ? "Signed out everywhere" : $"Not signed out: {revoke.FriendlyError ?? revoke.Summary}");
+        }
+
+        var failed = dialog.Selected.Count - removed;
+        var heading = failed == 0
+            ? $"Removed {removed} method{(removed == 1 ? string.Empty : "s")} from {UserLabel}"
+            : $"Removed {removed} of {dialog.Selected.Count} methods from {UserLabel}";
+        await _dialogs.ShowAsync(new NoticeDialogViewModel(heading, string.Join(Environment.NewLine, lines)));
+        await RefreshAsync(CancellationToken.None);
+
+        if (dialog.IssueTapAfter) await IssueTapAsync();
     }
 
     /// <summary>

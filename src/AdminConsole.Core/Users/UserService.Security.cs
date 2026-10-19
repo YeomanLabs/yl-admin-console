@@ -18,6 +18,13 @@ public sealed partial class UserService
     /// Deletes one authentication method. The password method cannot be deleted (doc 04), so it is refused locally.
     /// Not reversible: the user must re-register the method.
     /// </summary>
+    /// <summary>A person's registered methods, read live: a reset has to remove what is there now, not what the page read.</summary>
+    public async Task<IReadOnlyList<AuthMethod>> ReadAuthMethodsAsync(string userId, CancellationToken ct)
+    {
+        var page = await _graph.GetPageAsync($"users/{userId}/authentication/methods", ct).ConfigureAwait(false);
+        return page.Items.Select(AuthMethod.FromJson).ToList();
+    }
+
     public async Task<WriteOutcome> DeleteAuthMethodAsync(string userId, AuthMethod method, CancellationToken ct)
     {
         var user = _db.GetUser(userId);

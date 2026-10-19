@@ -32,8 +32,8 @@ public sealed class RemoveAuthMethodsStep : IOffboardingStep
 
     public async Task<StepPreview> PreviewAsync(OffboardingContext ctx, CancellationToken ct)
     {
-        var methods = await ReadAsync(ctx.UserId, ct).ConfigureAwait(false);
-        var deletable = methods.Where(m => m.CanDelete).ToList();
+        // In an order Entra accepts (an alternate mobile before the mobile), as Reset MFA does.
+        var deletable = AuthMethodReset.RemovalOrder(await _users.ReadAuthMethodsAsync(ctx.UserId, ct).ConfigureAwait(false)).ToList();
         ctx.Set(ScratchKey, deletable);
 
         if (deletable.Count == 0)
@@ -52,7 +52,7 @@ public sealed class RemoveAuthMethodsStep : IOffboardingStep
     public async Task<StepResult> ExecuteAsync(OffboardingContext ctx, CancellationToken ct)
     {
         // The preview already read them; re-reading would double the calls and could disagree with what was shown.
-        var methods = ctx.Get<List<AuthMethod>>(ScratchKey) ?? (await ReadAsync(ctx.UserId, ct).ConfigureAwait(false)).Where(m => m.CanDelete).ToList();
+        var methods = ctx.Get<List<AuthMethod>>(ScratchKey) ?? AuthMethodReset.RemovalOrder(await _users.ReadAuthMethodsAsync(ctx.UserId, ct).ConfigureAwait(false)).ToList();
         var removed = new List<string>();
         var failed = new List<string>();
 
@@ -67,12 +67,6 @@ public sealed class RemoveAuthMethodsStep : IOffboardingStep
         if (failed.Count == 0) return StepResult.Success(Id, $"Removed {removed.Count} method{(removed.Count == 1 ? string.Empty : "s")}: {string.Join(", ", removed)}");
         if (removed.Count == 0) return StepResult.Failed(Id, $"Could not remove any method: {string.Join("; ", failed)}");
         return StepResult.Failed(Id, $"Removed {removed.Count}, but {failed.Count} failed: {string.Join("; ", failed)}");
-    }
-
-    private async Task<IReadOnlyList<AuthMethod>> ReadAsync(string userId, CancellationToken ct)
-    {
-        var page = await _graph.GetPageAsync($"users/{userId}/authentication/methods", ct).ConfigureAwait(false);
-        return page.Items.Select(AuthMethod.FromJson).ToList();
     }
 
     private static string Describe(AuthMethod m) =>

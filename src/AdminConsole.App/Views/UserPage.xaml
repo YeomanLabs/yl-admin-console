@@ -460,6 +460,12 @@
                                        ToolTip="{Binding ActionsDisabledReason, TargetNullValue='Set a new password for this user'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
                             <ui:Button Content="Revoke sessions" Command="{Binding RevokeSessionsCommand}" IsEnabled="{Binding CanRunActions}"
                                        ToolTip="{Binding ActionsDisabledReason, TargetNullValue='Sign this user out everywhere'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0" />
+                            <ui:Button Content="Issue TAP…" Command="{Binding IssueTapCommand}" IsEnabled="{Binding CanIssueTap}"
+                                       ToolTip="{Binding AuthDeleteReason, TargetNullValue='Issue a Temporary Access Pass, shown once'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0"
+                                       AutomationProperties.Name="Issue a Temporary Access Pass" />
+                            <ui:Button Content="Reset MFA…" Command="{Binding ResetMfaCommand}" IsEnabled="{Binding CanIssueTap}"
+                                       ToolTip="{Binding AuthDeleteReason, TargetNullValue='Remove their sign-in methods so they register again'}" ToolTipService.ShowOnDisabled="True" Margin="0,0,8,0"
+                                       AutomationProperties.Name="Reset MFA" />
                             <ui:Button Content="Restore…" Command="{Binding RestoreCommand}" Margin="0,0,8,0"
                                        Visibility="{Binding HasSnapshots, Converter={StaticResource BoolToVisibility}}"
                                        ToolTip="Put the account back as an offboarding snapshot recorded it" AutomationProperties.Name="Restore from a snapshot" />
@@ -538,12 +544,8 @@
                                                         <ItemsControl ItemsSource="{Binding Roles}" ItemTemplate="{StaticResource RoleRowTemplate}" />
                                                         <TextBlock Text="No directory roles" Style="{StaticResource Caption}" Visibility="{Binding Roles.Count, Converter={StaticResource ZeroToVisible}}" />
 
-                                                        <StackPanel Orientation="Horizontal">
-                                                            <TextBlock Text="Authentication methods" Style="{StaticResource SectionTitle}" />
-                                                            <ui:Button Content="Issue Temporary Access Pass…" Command="{Binding IssueTapCommand}" Padding="10,2" Margin="12,16,0,6"
-                                                                       IsEnabled="{Binding CanIssueTap}" ToolTip="{Binding AuthDeleteReason}"
-                                                                       AutomationProperties.Name="Issue a Temporary Access Pass" />
-                                                        </StackPanel>
+                                                        <!-- Issue TAP and Reset MFA live in the header since 0.3.6; each method here keeps its own remove. -->
+                                                        <TextBlock Text="Authentication methods" Style="{StaticResource SectionTitle}" />
                                                         <TextBlock Text="{Binding AuthMethodsError}" Style="{StaticResource Caption}" Visibility="{Binding AuthMethodsError, Converter={StaticResource NullToCollapsed}}" />
                                                         <ItemsControl ItemsSource="{Binding AuthMethods}" ItemTemplate="{StaticResource AuthMethodRowTemplate}" />
                                                         <TextBlock Text="Nothing registered. This account has no second factor and cannot be reached for one." Style="{StaticResource Caption}"
