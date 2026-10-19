@@ -38,7 +38,7 @@ public sealed class ExportOneDriveStep : IOffboardingStep
         var od = found.OneDrive!;
         if (string.IsNullOrWhiteSpace(ctx.ExportFolder) || !Directory.Exists(ctx.ExportFolder))
         {
-            return StepPreview.Blocked(Id, Title, "Set an export folder in the profile (options.exportFolder) that exists on this machine.");
+            return StepPreview.Blocked(Id, Title, "Set an export folder in the offboarding template (Templates → Offboarding) that exists on this machine.");
         }
 
         if (od.LockState == OneDriveLock.NoAccess) return StepPreview.Blocked(Id, Title, "The OneDrive is locked to no access, so nothing can be read from it. Unlock it first.");

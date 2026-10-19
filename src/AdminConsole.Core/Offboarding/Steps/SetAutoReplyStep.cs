@@ -6,7 +6,8 @@ namespace AdminConsole.Core.Offboarding.Steps;
 
 /// <summary>
 /// Doc 06 step 12, un-greyed in M15: an automatic reply to everyone, inside and out, naming who to contact instead. The
-/// text is the profile's own or the template below, and the preview shows it word for word.
+/// text is the offboarding template's own, with its placeholders filled in (<see cref="AutoReplyText"/>), or the
+/// standard text below, and the preview shows it word for word.
 /// </summary>
 public sealed class SetAutoReplyStep : IOffboardingStep
 {
@@ -37,12 +38,20 @@ public sealed class SetAutoReplyStep : IOffboardingStep
         var found = await ExchangeStep.FindAsync(_exchange, ctx, Id, Title, ct).ConfigureAwait(false);
         if (found.Stop is { } stop) return stop;
 
-        var text = string.IsNullOrWhiteSpace(ctx.AutoReplyMessage) ? Template(ctx) : ctx.AutoReplyMessage.Trim();
+        var custom = ctx.AutoReplyMessage?.Trim();
+        if (!string.IsNullOrEmpty(custom) && ctx.Delegate is null && AutoReplyText.NeedsDelegate(custom))
+        {
+            return StepPreview.Blocked(Id, Title, "This template's automatic reply names the delegate. Choose a delegate, or untick this step.");
+        }
+
+        var text = string.IsNullOrEmpty(custom) ? Template(ctx) : AutoReplyText.Render(custom, AutoReplyText.For(ctx));
         ctx.Set(TextKey, text);
 
         var current = await _exchange.GetAutoReplyAsync(ctx.UserId, ct).ConfigureAwait(false);
-        if (current.Value is { IsOn: true } on && !on.IsScheduled && AutoReplySettings.PlainText(on.InternalMessage) == text
-            && AutoReplySettings.PlainText(on.ExternalMessage) == text && on.ExternalAudience == "All")
+        // Compared as Exchange keeps it: tags gone, whitespace collapsed, so a reply of several lines is still recognised.
+        var plain = AutoReplySettings.PlainText(Html(text));
+        if (current.Value is { IsOn: true } on && !on.IsScheduled && AutoReplySettings.PlainText(on.InternalMessage) == plain
+            && AutoReplySettings.PlainText(on.ExternalMessage) == plain && on.ExternalAudience == "All")
         {
             return StepPreview.NoOp(Id, "That automatic reply is already on");
         }
@@ -59,8 +68,11 @@ public sealed class SetAutoReplyStep : IOffboardingStep
     public async Task<StepResult> ExecuteAsync(OffboardingContext ctx, CancellationToken ct)
     {
         var text = ctx.Get<string>(TextKey) ?? Template(ctx);
-        var html = WebUtility.HtmlEncode(text);
+        var html = Html(text);
         var desired = new AutoReplySettings { State = "Enabled", InternalMessage = html, ExternalMessage = html, ExternalAudience = "All" };
         return ExchangeStep.Result(Id, await _exchange.SetAutoReplyAsync(ExchangeStep.Ref(ctx), desired, ct).ConfigureAwait(false));
     }
+
+    /// <summary>The plain text as the HTML Exchange sends: encoded, and a template's line breaks kept as line breaks.</summary>
+    private static string Html(string text) => WebUtility.HtmlEncode(text).ReplaceLineEndings("<br>");
 }

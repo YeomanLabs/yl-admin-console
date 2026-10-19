@@ -976,9 +976,10 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         var dialog = new OffboardDialogViewModel(target, _offboarding, _profiles, _permissions, _consent, _actions, _tenant, _logger)
         {
             PickDelegate = PickPerson,
+            ReadManager = ct => _users.ReadManagerAsync(target.Id, ct),
         };
 
-        await dialog.RefreshPreviewAsync();
+        await dialog.PrepareAsync();
         await _dialogs.ShowAsync(dialog);
         RefreshFromCache();
         await RefreshAsync(CancellationToken.None);

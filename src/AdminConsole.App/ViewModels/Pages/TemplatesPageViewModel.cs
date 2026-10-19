@@ -6,14 +6,15 @@ using AdminConsole.App.ViewModels.Dialogs;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
+using AdminConsole.Core.Offboarding;
 using AdminConsole.Core.Templates;
 
 namespace AdminConsole.App.ViewModels.Pages;
 
 /// <summary>
-/// The Templates page (M7.2): the saved templates on the left, the raw JSON on the right. The editor is the whole
-/// template rather than a form, because doc 07's file is the contract and an admin editing it should see exactly what
-/// will be written. Nothing is saved until it parses.
+/// The Templates page (M7.2): two tabs. New users: the saved templates on the left, the raw JSON on the right — the
+/// whole template rather than a form, because doc 07's file is the contract and an admin editing it should see exactly
+/// what will be written; nothing is saved until it parses. Offboarding: <see cref="OffboardingTemplatesViewModel"/>.
 /// </summary>
 public sealed partial class TemplatesPageViewModel : ObservableObject, IPageViewModel, IRefreshable
 {
@@ -23,17 +24,26 @@ public sealed partial class TemplatesPageViewModel : ObservableObject, IPageView
     private readonly IDialogService _dialogs;
     private readonly ILogger<TemplatesPageViewModel> _logger;
 
-    public TemplatesPageViewModel(TemplateService templates, TenantContext tenant, ToastService toasts, IDialogService dialogs, ILogger<TemplatesPageViewModel> logger)
+    public TemplatesPageViewModel(TemplateService templates, TenantContext tenant, ToastService toasts, IDialogService dialogs, ILogger<TemplatesPageViewModel> logger,
+        OffboardingProfileStore offboardingTemplates, OffboardingRunner offboarding, FilePicker files)
     {
         _templates = templates;
         _tenant = tenant;
         _toasts = toasts;
         _dialogs = dialogs;
         _logger = logger;
+        Offboarding = new OffboardingTemplatesViewModel(offboardingTemplates, offboarding.Steps, tenant, toasts, dialogs, files, logger);
         Reload();
     }
 
     public string Title => "Templates";
+
+    /// <summary>The Offboarding tab: what each kind of leaver gets.</summary>
+    public OffboardingTemplatesViewModel Offboarding { get; }
+
+    /// <summary>0 is New users, 1 is Offboarding; set by whoever opens the page on a particular tab.</summary>
+    [ObservableProperty]
+    private int _selectedTab;
 
     /// <summary>Set by the shell: opens the palette restricted to users and calls back with the pick.</summary>
     public Action<string, Action<PersonRef>>? PickPerson { get; set; }
@@ -82,6 +92,7 @@ public sealed partial class TemplatesPageViewModel : ObservableObject, IPageView
     public Task RefreshAsync(CancellationToken ct)
     {
         Reload(Selected?.FileName);
+        Offboarding.Reload(Offboarding.Selected?.Profile.FileName, keepBuiltIn: Offboarding.IsBuiltIn);
         return Task.CompletedTask;
     }
 

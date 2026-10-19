@@ -9,7 +9,7 @@ test (`Catalog_RunsSnapshotFirst_AndTheMailboxBeforeTheLicences_WithUniqueIds`) 
 ```csharp
 public interface IOffboardingStep
 {
-    string Id { get; }                     // stable kebab-case; saved profiles refer to it
+    string Id { get; }                     // stable kebab-case; saved templates refer to it
     string Title { get; }
     StepSurface Surface { get; }           // Graph | Exchange | OnPremAd — what it talks to
     Capability? RequiredCapability { get; } // the permission, for the grey rule and incremental consent
@@ -26,7 +26,7 @@ public interface IOffboardingStep
   that, so the run changes what the admin reviewed and nothing else. **The run uses the context its preview filled**
   (fixed in M15 — the dialog used to start the run with a fresh one).
 - `OffboardingContext` carries the user (read fresh from Graph), the tenant, the delegate, the correlation id every
-  action-log row of the run shares, the profile's attribute stamps and auto-reply text, and — for a restore — the
+  action-log row of the run shares, the template's attribute stamps and auto-reply text, and — for a restore — the
   snapshot and target OU. Its scratch dictionary is locked: previews run at once. `GetOrAdd` lets eleven Exchange
   steps share one mailbox read.
 - A step whose preview fails and that `HaltsOnFailure` halts the run before it starts. A required step whose
@@ -36,7 +36,7 @@ public interface IOffboardingStep
 ## The offboarding catalog
 
 Surface: **G** Graph, **X** Exchange Online, **AD** on-prem Active Directory. Default: ✅ ticked in the shipped
-"Standard leaver" profile. Undo: what the summary's Undo, and Restore, can put back.
+"Standard leaver" template. Undo: what the summary's Undo, and Restore, can put back.
 
 | # | Id | What it does | Surface | Default | Halts | Undo |
 |---|----|--------------|---------|---------|-------|------|
@@ -53,7 +53,7 @@ Surface: **G** Graph, **X** Exchange Online, **AD** on-prem Active Directory. De
 | 10 | `hide-from-gal` | Hides from address lists. Blocked on a synced mailbox (AD-mastered). | X | ✅ | ✗ | ✅ |
 | 11 | `convert-to-shared` | User mailbox → shared. Warns when the shared mailbox will still need a licence (over 50 GB, archive, hold) and, for hybrid, to set the on-prem side too. | X | ✅ | ✗ | ✅ |
 | 11a | `litigation-hold` | Indefinite hold. A legal decision, so off by default. | X | ✗ | ✗ | ✅ |
-| 12 | `set-auto-reply` | Internal and external reply; the profile's `autoReplyMessage` or a template naming the delegate, shown word for word in the preview. | X | ✗ | ✗ | ✅ |
+| 12 | `set-auto-reply` | Internal and external reply; the template's `autoReplyMessage` with its placeholders filled in, or the standard text naming the delegate, shown word for word in the preview. Blocked while the text names a delegate and none is chosen. | X | ✗ | ✗ | ✅ |
 | 13 | `forward-mail` | Forwards to the delegate, keeping a copy. With no delegate, stops forwarding to an outside address. Blocked on a synced mailbox. | X | ✗ | ✗ | ✅ |
 | 14 | `delegate-mailbox` | Full Access for the delegate, automapped. | X | ✗ | ✗ | ✅ |
 | 14a | `remove-mailbox-permissions` | The leaver's access to *other* mailboxes: Send As anywhere (one tenant-wide read), Full Access on up to 100 cached shared mailboxes. | X | ✅ | ✗ | ✅ |
@@ -65,7 +65,7 @@ Surface: **G** Graph, **X** Exchange Online, **AD** on-prem Active Directory. De
 | 9 | `remove-registered-devices` | **Not built.** Deleting Entra device objects needs `Directory.AccessAsUser.All`, which the app does not request. | G | ✗ | — | — |
 | 15 | `delegate-onedrive` | **M16.** Needs the SharePoint admin host. | G | ✗ | — | — |
 | 16 | `remove-teams-ownership` | Where the user is sole owner, makes the delegate owner. | G | ✗ | ✗ | partial |
-| 17 | `update-attributes` | Stamps `employeeType=Offboarded` and clears office and department (profile-configurable). Skipped when mastered in AD. | G | ✗ | ✗ | ✅ |
+| 17 | `update-attributes` | Stamps `employeeType=Offboarded` and clears office and department (template-configurable, from the attributes the snapshot keeps). Skipped when mastered in AD. | G | ✗ | ✗ | ✅ |
 | 18 | `move-ou` | Moves the AD object to the Disabled OU, before the disable. | AD | ✅ | ✗ | ✅ |
 | 19 | `disable-ad-account` | Disables in AD — the disable that survives the next sync. | AD | ✅ | ✗ | ✅ |
 
@@ -95,19 +95,49 @@ only the difference, so a second restore is all no-ops. All are ticked by defaul
 | `restore-other-mailbox-access` | Send As and Full Access on other mailboxes, from the run's own action-log rows (the snapshot cannot hold them) | X |
 | `restore-not-restorable` | Not a step: says what cannot come back — the password (set one or issue a Temporary Access Pass), MFA methods, retired devices, removed phones, cancelled meetings, transferred ownership | — |
 
-## Profiles
+## Offboarding templates
 
-An offboarding profile is JSON under `templates\offboarding\*.json`:
+What a kind of leaver gets: which steps are ticked when the dialog opens, and the options they run with. Made and
+changed on **Templates → Offboarding** (a form: every value is a choice from a fixed set), or saved from the dialog's
+ticks with **Save as template**. They are JSON under `templates\offboarding\*.json`, shared by every tenant on the
+machine, since they name steps and options and never a tenant's objects. The code and the file format still call them
+profiles (`OffboardingProfile`), which they were called until the Templates page had a tab for them.
 
 ```json
-{ "name": "Standard leaver",
-  "steps": { "disable-account": true, "retire-devices": false },
-  "options": { "delegateToManager": true, "attributeStamps": {}, "autoReplyMessage": null } }
+{ "name": "Contractor leaver",
+  "description": "Contractors: reply and stamp, keep the licences for finance",
+  "isDefault": true,
+  "steps": { "disable-account": true, "remove-licenses": false, "set-auto-reply": true },
+  "options": {
+    "delegateToManager": true,
+    "attributeStamps": { "employeeType": "Contractor (left)", "officeLocation": "", "department": "" },
+    "autoReplyMessage": "{firstName} has left {company}. Please write to {delegate} at {delegateEmail}.",
+    "exportFolder": null } }
 ```
 
-A step id the profile does not mention takes the step's default, so a profile saved before M15 picks up the new
-steps at their defaults. The snapshot cannot be turned off by a profile. "Standard leaver" is built in and never
-written to disk; the dialog saves the current ticks as a new profile.
+- **Steps.** A step id the template does not mention takes the step's default, so a template saved before a step
+  existed picks it up at its default. The snapshot cannot be turned off; a step that is not built cannot be ticked.
+- **`isDefault`.** The dialog opens with the template marked default, else "Standard leaver", which is built in,
+  read-only and never written to disk. Marking one clears the mark from the rest.
+- **`delegateToManager`.** The dialog fills the delegate with the leaver's manager, read live. With no manager, or
+  when it cannot be read, it says so and leaves the delegate empty. A delegate the admin picks or clears in the dialog
+  is never replaced by a template change.
+- **`attributeStamps`.** Attribute to value; an empty string clears it. Only `employeeType`, `department`,
+  `officeLocation`, `jobTitle` and `companyName`: the snapshot records exactly these, so Restore can put back anything
+  a template stamps. An empty set means doc 06's defaults (above).
+- **`autoReplyMessage`.** Plain text; line breaks are kept. Placeholders, matched without regard to case: `{name}`,
+  `{firstName}`, `{email}`, `{delegate}`, `{delegateEmail}`, `{company}` (the tenant's name). Anything else in braces
+  is refused when the template is saved. A text that names the delegate blocks the step until one is chosen. Null is
+  the standard text.
+- **`exportFolder`.** Where `export-onedrive` writes its ZIP; a folder that does not exist on this machine blocks it.
+
+A template's name must be unique, ignoring case, and cannot be "Standard leaver". A new template gets a file of its
+own (`contractor-2.json` if the name's file is taken); a renamed one keeps its file. Saving from the dialog under the
+name of an existing template updates that template rather than making a second one.
+
+In the dialog, changing the template previews again: the reply text, the stamps and the export folder are part of
+what the run acts on, and the run acts on what was last previewed. Offboarding a list opens each person on the
+template the previous person ran with.
 
 ## Offboard a list (M15.5)
 

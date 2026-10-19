@@ -349,10 +349,19 @@
         </StackPanel>
     </DataTemplate>
 
-    <!-- Templates (M7.2): saved templates on the left, the file itself on the right. -->
+    <!-- Templates (M7.2): two tabs. New users: saved templates on the left, the file itself on the right.
+         Offboarding: what each kind of leaver gets, below. -->
     <DataTemplate DataType="{x:Type pages:TemplatesPageViewModel}">
         <!-- Bottom margin leaves the toast stack (UX §10, bottom-right) somewhere to sit that is not on top of Save. -->
         <Grid Margin="24,16,24,56">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="Templates" FontSize="22" FontWeight="SemiBold" />
+            <TabControl Grid.Row="1" Margin="0,8,0,0" SelectedIndex="{Binding SelectedTab}">
+                <TabItem Header="New users" AutomationProperties.Name="New user templates">
+        <Grid Margin="0,12,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -364,8 +373,7 @@
             </Grid.ColumnDefinitions>
 
             <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,12">
-                <TextBlock Text="Templates" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <ui:Button Content="New from user…" Icon="{ui:SymbolIcon PersonAdd24}" Margin="16,0,0,0"
+                <ui:Button Content="New from user…" Icon="{ui:SymbolIcon PersonAdd24}"
                            Command="{Binding NewFromUserCommand}" AutomationProperties.Name="New template from user" />
                 <ui:Button Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="8,0,0,0"
                            Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
@@ -443,6 +451,209 @@
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
                         <ui:Button Content="Revert" Margin="0,0,8,0" Command="{Binding RevertCommand}" IsEnabled="{Binding HasSelection}" />
                         <ui:Button Content="Save" Appearance="Primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+        </Grid>
+                </TabItem>
+                <TabItem Header="Offboarding" AutomationProperties.Name="Offboarding templates">
+                    <ContentControl Content="{Binding Offboarding}" Margin="0,12,0,0" Focusable="False" />
+                </TabItem>
+            </TabControl>
+        </Grid>
+    </DataTemplate>
+
+    <!-- Templates → Offboarding: which steps a kind of leaver gets, and what they run with. A form, not JSON: every
+         value is a choice from a fixed set. -->
+    <DataTemplate DataType="{x:Type pages:OffboardingTemplatesViewModel}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="300" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,12">
+                <ui:Button Content="New template" Icon="{ui:SymbolIcon Add24}"
+                           Command="{Binding NewCommand}" AutomationProperties.Name="New offboarding template" />
+                <ui:Button Content="Duplicate" Icon="{ui:SymbolIcon Copy24}" Margin="8,0,0,0"
+                           Command="{Binding DuplicateCommand}" IsEnabled="{Binding HasSelection}"
+                           AutomationProperties.Name="Duplicate this offboarding template" />
+                <ui:Button Content="Open with this one" Icon="{ui:SymbolIcon Star24}" Margin="8,0,0,0"
+                           Command="{Binding MakeDefaultCommand}" IsEnabled="{Binding CanMakeDefault}"
+                           ToolTip="The offboard dialog opens with this template ticked"
+                           AutomationProperties.Name="Make this the template the offboard dialog opens with" />
+                <ui:Button Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="8,0,0,0"
+                           Command="{Binding DeleteCommand}" IsEnabled="{Binding CanDelete}"
+                           AutomationProperties.Name="Delete this offboarding template" />
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
+                <!-- TextBlocks rather than InfoBars: an InfoBar's message is not in the automation tree. -->
+                <TextBlock Text="{Binding LoadError}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                           Visibility="{Binding LoadError, Converter={StaticResource NullToCollapsed}}" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Text="Each offboarding still shows its preview first, and any step can be changed for that one person. Offboarding templates are kept on this PC and shared by every tenant you open." />
+            </StackPanel>
+
+            <Border Grid.Row="2" Grid.Column="0" Margin="0,0,12,0" CornerRadius="6" Padding="4"
+                    Background="{DynamicResource ControlFillColorDefaultBrush}"
+                    BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}" BorderThickness="1">
+                <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}"
+                         Background="Transparent" BorderThickness="0"
+                         ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                         AutomationProperties.Name="Offboarding templates">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="8,6" />
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate DataType="{x:Type pages:OffboardingTemplateItem}">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Description}" FontSize="11"
+                                           TextWrapping="Wrap" MaxHeight="30" TextTrimming="CharacterEllipsis"
+                                           Visibility="{Binding Description, Converter={StaticResource NullToCollapsed}}" />
+                                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding Summary}" FontSize="11" Margin="0,2,0,0" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Border>
+
+            <Grid Grid.Row="2" Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="0,0,12,0">
+                    <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+                        <Border CornerRadius="4" Padding="12,10" Margin="0,0,0,12" BorderThickness="1"
+                                Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource ControlStrokeColorDefaultBrush}"
+                                Visibility="{Binding IsBuiltIn, Converter={StaticResource BoolToVisibility}}">
+                            <DockPanel>
+                                <ui:SymbolIcon Symbol="Info24" Foreground="{DynamicResource AcAccent}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                                <TextBlock TextWrapping="Wrap"
+                                           Text="Standard leaver is built in, so it cannot be changed. Duplicate it to make one of your own, then use Open with this one to have the offboard dialog start from yours." />
+                            </DockPanel>
+                        </Border>
+
+                        <StackPanel IsEnabled="{Binding IsEditable}">
+                            <TextBlock Text="Name" FontSize="12" Foreground="{DynamicResource AcTextSecondary}" Margin="0,0,0,4" />
+                            <ui:TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="Template name" />
+                            <TextBlock Text="Description" FontSize="12" Foreground="{DynamicResource AcTextSecondary}" Margin="0,10,0,4" />
+                            <ui:TextBox Text="{Binding Description, UpdateSourceTrigger=PropertyChanged}"
+                                        PlaceholderText="When to use it — e.g. Contractors: keep the mailbox, leave the licences for finance"
+                                        AutomationProperties.Name="Template description" />
+
+                            <TextBlock Text="Steps" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,2" />
+                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" TextWrapping="Wrap"
+                                       Text="What is ticked when the offboard dialog opens with this template. Steps run in the dialog's order, whatever the grouping here." />
+                            <ItemsControl ItemsSource="{Binding Groups}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type pages:TemplateStepGroup}">
+                                        <StackPanel Margin="0,12,0,0">
+                                            <TextBlock Text="{Binding Title}" FontSize="12" FontWeight="SemiBold" Margin="0,0,0,4" />
+                                            <ItemsControl ItemsSource="{Binding Rows}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate DataType="{x:Type pages:TemplateStepRow}">
+                                                        <StackPanel Margin="0,0,0,2">
+                                                            <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked}" IsEnabled="{Binding CanToggle}"
+                                                                      AutomationProperties.HelpText="{Binding Note}" />
+                                                            <TextBlock Text="{Binding Note}" FontSize="11" TextWrapping="Wrap" Margin="28,-4,0,4"
+                                                                       Foreground="{DynamicResource AcTextSecondary}"
+                                                                       Visibility="{Binding HasNote, Converter={StaticResource BoolToVisibility}}" />
+                                                        </StackPanel>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="Delegate" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,2" />
+                            <CheckBox Content="Start with the leaver's manager as the delegate" IsChecked="{Binding DelegateToManager}" />
+                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0"
+                                       Text="The delegate gets forwarded mail, access to the mailbox and OneDrive, and the Teams they solely own — for whichever of those steps are ticked. It can be changed in the dialog for each person." />
+
+                            <TextBlock Text="Automatic reply" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,2" />
+                            <TextBlock Text="{Binding AutoReplyNote}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                       Visibility="{Binding AutoReplyNote, Converter={StaticResource NullToCollapsed}}" />
+                            <ui:TextBox Text="{Binding AutoReply, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap"
+                                        MinHeight="72" MaxHeight="160" VerticalScrollBarVisibility="Auto"
+                                        PlaceholderText="Leave blank for the standard reply, which names the delegate"
+                                        AutomationProperties.Name="Automatic reply text" />
+                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding TokenHelp}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding AutoReplySample}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"
+                                       AutomationProperties.Name="{Binding AutoReplySample}" />
+
+                            <TextBlock Text="Attribute stamps" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,2" />
+                            <TextBlock Text="{Binding StampNote}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                       Visibility="{Binding StampNote, Converter={StaticResource NullToCollapsed}}" />
+                            <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,6"
+                                       Text="So anyone reading the account later sees it was offboarded, not just disabled. Only these can be stamped: the snapshot keeps them, so Restore can put them back. Accounts synced from AD skip this step." />
+                            <ItemsControl ItemsSource="{Binding Stamps}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type pages:StampRow}">
+                                        <Grid Margin="0,0,0,6">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="130" />
+                                                <ColumnDefinition Width="150" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                            <ComboBox Grid.Column="1" ItemsSource="{x:Static pages:StampRow.Modes}" DisplayMemberPath="Label"
+                                                      SelectedValuePath="Mode" SelectedValue="{Binding Mode}"
+                                                      AutomationProperties.Name="{Binding Label}" />
+                                            <ui:TextBox Grid.Column="2" Margin="8,0,0,0" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                        IsEnabled="{Binding IsValueEnabled}" PlaceholderText="Value"
+                                                        AutomationProperties.Name="{Binding Label, StringFormat={}{0} value}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="OneDrive export folder" FontSize="14" FontWeight="SemiBold" Margin="0,20,0,2" />
+                            <TextBlock Text="{Binding ExportNote}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,4"
+                                       Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                                       Visibility="{Binding ExportNote, Converter={StaticResource NullToCollapsed}}" />
+                            <DockPanel>
+                                <ui:Button DockPanel.Dock="Right" Content="Browse…" Margin="8,0,0,0" Command="{Binding BrowseExportFolderCommand}"
+                                           AutomationProperties.Name="Choose the OneDrive export folder" />
+                                <ui:TextBox Text="{Binding ExportFolder, UpdateSourceTrigger=PropertyChanged}"
+                                            PlaceholderText="A folder on this PC where the ZIP of their OneDrive is saved"
+                                            AutomationProperties.Name="OneDrive export folder" />
+                            </DockPanel>
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <StackPanel Grid.Row="1" Margin="0,10,12,0">
+                    <ItemsControl ItemsSource="{Binding Problems}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}" Foreground="{DynamicResource SystemFillColorCriticalBrush}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,2" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
+                        <TextBlock Text="Unsaved changes" Foreground="{DynamicResource AcTextSecondary}" FontSize="12" VerticalAlignment="Center" Margin="0,0,12,0"
+                                   Visibility="{Binding IsDirty, Converter={StaticResource BoolToVisibility}}" />
+                        <ui:Button Content="Revert" Margin="0,0,8,0" Command="{Binding RevertCommand}" IsEnabled="{Binding IsDirty}"
+                                   AutomationProperties.Name="Revert the offboarding template" />
+                        <ui:Button Content="Save" Appearance="Primary" Command="{Binding SaveCommand}" IsEnabled="{Binding CanSave}"
+                                   AutomationProperties.Name="Save the offboarding template" />
                     </StackPanel>
                 </StackPanel>
             </Grid>

@@ -667,3 +667,34 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   from an old clone would bring the images back.
 - **GitHub keeps the old commits reachable by SHA** until it collects them, so a request to GitHub Support (Removing
   sensitive data) asks it to purge them and its cached views.
+
+## 2026-10-19 — Offboarding templates on the Templates page
+
+- **They existed, out of sight.** Doc 06's offboarding profiles (M6.3) could be picked and saved only inside the
+  offboard dialog, and their options (reply text, stamps, export folder) set only by editing the JSON; the export
+  step's reason even told admins to edit `options.exportFolder`. Asked for "a template for offboardings", the
+  Templates page gained an Offboarding tab and the UI now says offboarding template throughout. The code and the file
+  format keep `OffboardingProfile` and `templates\offboarding`, so files written before still load.
+- **A form, not the JSON editor.** User templates are edited as JSON because doc 07's file is the contract. Here every
+  value is a choice from a fixed set — step ids, five attributes, six placeholders — and a form cannot name a step
+  that does not exist.
+- **Shared by every tenant, unlike user templates.** M20 made user templates per tenant because they hold one
+  tenant's group and licence ids; these hold step ids and text. `{company}` puts the tenant's name in a reply, the one
+  thing that would otherwise differ.
+- **Placeholders in the automatic reply.** One template serves many leavers, and a fixed sentence cannot name the
+  person or who to write to instead. Unknown placeholders are refused at save, and a text naming the delegate blocks
+  the step while none is chosen, rather than sending "{delegate}" to customers. Line breaks are now sent as `<br>`:
+  a reply of several lines used to arrive as one.
+- **Stamps limited to what the snapshot keeps.** Restore puts back only what the snapshot recorded, so the editor
+  offers exactly those five attributes, and a hand-edited file stamping anything else is refused at save.
+- **Delegate-to-manager does something now.** The option had been saved since M6.3 and never read: the dialog always
+  opened with no delegate. It now reads the manager live as the dialog opens and says so when there is none. A
+  delegate the admin picks or clears is never replaced by a template change.
+- **Changing template re-previews (a bug).** The run acts on the context its preview filled, and the template's
+  options are part of that context, so switching template without a fresh preview ran the old template's reply text
+  and stamps. The dialog previews again on every change.
+- **One default.** `isDefault` on at most one saved template, else "Standard leaver". Offboarding a list opens each
+  person on the template the previous person ran with.
+- **A new template never takes another's file.** A new one used to be written to whatever file its name slugged to,
+  so saving "Contractor" twice from the dialog silently replaced the first. Now a new template gets a file of its own,
+  names must be unique, and saving from the dialog under an existing name updates that template, deliberately.

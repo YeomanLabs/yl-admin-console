@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using AdminConsole.App.Services;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Cache;
+using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
 using AdminConsole.Core.Offboarding;
 
@@ -65,9 +66,29 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         _logger = logger;
 
         Profiles = _profiles.Load(_runner.Steps);
-        _selectedProfile = Profiles[0];
+        _selectedProfile = OffboardingProfileStore.DefaultOf(Profiles);
+        _delegateToManager = _selectedProfile.Options.DelegateToManager;
         Rows = _runner.Steps.Select(s => new OffboardStepRow(s, _selectedProfile.IsEnabled(s))).ToList();
         _profileError = _profiles.LoadErrors.Count == 0 ? null : $"Could not read {string.Join(", ", _profiles.LoadErrors)}";
+    }
+
+    /// <summary>
+    /// Fills the dialog before it is shown: the template (a list's previous person's, so person 2 of 5 is offboarded the
+    /// same way as person 1), the delegate the template asks for, then every step's preview.
+    /// </summary>
+    public async Task PrepareAsync(OffboardingProfile? startWith = null)
+    {
+        if (startWith is not null && !IsRestore
+            && Profiles.FirstOrDefault(p => p.FileName == startWith.FileName && p.Name == startWith.Name) is { } match
+            && !ReferenceEquals(match, SelectedProfile))
+        {
+            _applyingTemplate = true;
+            SelectedProfile = match;
+            _applyingTemplate = false;
+        }
+
+        if (!IsRestore) await ApplyTemplateDelegateAsync();
+        await RefreshPreviewAsync();
     }
 
     public DirectoryUser User { get; }
@@ -132,12 +153,18 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         if (!_choosing) _ = RefreshPreviewAsync();
     }
 
-    // ---- profiles -------------------------------------------------------------------------------------------------
+    // ---- templates (OffboardingProfile in the code and the file format) --------------------------------------------
 
     public IReadOnlyList<OffboardingProfile> Profiles { get; private set; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TemplateDescription))]
     private OffboardingProfile _selectedProfile;
+
+    /// <summary>What the chosen template is for, under the drop-down; null when it says nothing.</summary>
+    public string? TemplateDescription => string.IsNullOrWhiteSpace(SelectedProfile.Description) ? null : SelectedProfile.Description;
+
+    private bool _applyingTemplate;
 
     /// <summary>Files under templates\offboarding that would not load; saying so beats showing a shorter list.</summary>
     [ObservableProperty]
@@ -155,28 +182,61 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
 
         DelegateToManager = value.Options.DelegateToManager;
         RefreshRunLabel();
+
+        // The template also carries the options the previews are built from (the reply text, the stamps, the export
+        // folder) and maybe a delegate, so a change means a fresh preview: the run acts on what was last previewed.
+        if (!_applyingTemplate && !IsRestore) _ = ApplyTemplateAndPreviewAsync();
+    }
+
+    private async Task ApplyTemplateAndPreviewAsync()
+    {
+        await ApplyTemplateDelegateAsync();
+        await RefreshPreviewAsync();
     }
 
     [ObservableProperty]
     private string _newProfileName = string.Empty;
 
+    /// <summary>
+    /// Saves what is ticked as a template. A name that is already a template updates that one (keeping its description
+    /// and whether it opens by default) rather than making a second template of the same name.
+    /// </summary>
     [RelayCommand]
     private void SaveProfile()
     {
         var name = NewProfileName.Trim();
         if (name.Length == 0) return;
+        if (string.Equals(name, OffboardingProfile.StandardLeaverName, StringComparison.OrdinalIgnoreCase))
+        {
+            StatusText = $"“{OffboardingProfile.StandardLeaverName}” is built in. Save under another name.";
+            return;
+        }
 
-        var profile = _profiles.Save(OffboardingProfile.From(name, _runner.Steps, EnabledIds, SelectedProfile.Options with { DelegateToManager = DelegateToManager }));
+        var existing = Profiles.FirstOrDefault(p => !p.IsBuiltIn && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        var profile = _profiles.Save(OffboardingProfile.From(existing?.Name ?? name, _runner.Steps, EnabledIds, SelectedProfile.Options with { DelegateToManager = DelegateToManager }) with
+        {
+            Description = existing?.Description,
+            IsDefault = existing?.IsDefault ?? false,
+            FileName = existing?.FileName,
+        });
         Profiles = _profiles.Load(_runner.Steps);
         OnPropertyChanged(nameof(Profiles));
+
+        // The ticks and options are the ones already previewed, so the new selection needs no second preview.
+        _applyingTemplate = true;
         SelectedProfile = Profiles.FirstOrDefault(p => p.FileName == profile.FileName) ?? Profiles[0];
+        _applyingTemplate = false;
         NewProfileName = string.Empty;
+        StatusText = existing is null ? $"Saved the template {profile.Name}." : $"Updated the template {profile.Name}.";
     }
 
     // ---- delegate -------------------------------------------------------------------------------------------------
 
     /// <summary>Set by the shell: opens the palette restricted to users and calls back with the pick.</summary>
     public Action<string, Action<PersonRef>>? PickDelegate { get; set; }
+
+    /// <summary>Set by the opener: reads the leaver's manager live, for a template that delegates to them.</summary>
+    public Func<CancellationToken, Task<PersonRef?>>? ReadManager { get; init; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DelegateLabel))]
@@ -185,11 +245,62 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     [ObservableProperty]
     private bool _delegateToManager = true;
 
-    public string DelegateLabel => ChosenDelegate?.Label ?? "None chosen";
+    /// <summary>The delegate is the manager the template asked for, not someone the admin picked.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DelegateLabel))]
+    private bool _delegateIsManager;
+
+    /// <summary>Why the template's delegate could not be filled in; null when it was, or was not asked for.</summary>
+    [ObservableProperty]
+    private string? _delegateNote;
+
+    /// <summary>Set once the admin picks or clears the delegate: from then on a template change leaves it alone.</summary>
+    private bool _delegateChosenByAdmin;
+
+    public string DelegateLabel => ChosenDelegate is null ? "None chosen" : DelegateIsManager ? $"{ChosenDelegate.Label} (their manager)" : ChosenDelegate.Label;
+
+    /// <summary>
+    /// The delegate the template asks for: the leaver's manager, read live, or nobody. Never overrides the admin's own
+    /// choice in this dialog.
+    /// </summary>
+    private async Task ApplyTemplateDelegateAsync()
+    {
+        if (_delegateChosenByAdmin) return;
+
+        DelegateNote = null;
+        if (!SelectedProfile.Options.DelegateToManager || ReadManager is null)
+        {
+            if (DelegateIsManager)
+            {
+                DelegateIsManager = false;
+                ChosenDelegate = null;
+            }
+
+            return;
+        }
+
+        try
+        {
+            var manager = await ReadManager(CancellationToken.None);
+            DelegateIsManager = manager is not null;
+            ChosenDelegate = manager;
+            if (manager is null) DelegateNote = "The template hands things to the leaver's manager, but they have none. Choose a delegate if the ticked steps need one.";
+        }
+        catch (GraphException ex)
+        {
+            _logger.LogWarning("Could not read the manager of {UserId}: {Code}", User.Id, ex.ErrorCode);
+            DelegateIsManager = false;
+            ChosenDelegate = null;
+            DelegateNote = $"The template hands things to the leaver's manager, but their manager could not be read ({GraphErrorText.Friendly(ex)}). Choose a delegate.";
+        }
+    }
 
     [RelayCommand]
     private void ChooseDelegate() => PickDelegate?.Invoke("Choose who inherits ownership and access", person =>
     {
+        _delegateChosenByAdmin = true;
+        DelegateIsManager = false;
+        DelegateNote = null;
         ChosenDelegate = person;
         _ = RefreshPreviewAsync();
     });
@@ -197,6 +308,9 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     [RelayCommand]
     private void ClearDelegate()
     {
+        _delegateChosenByAdmin = true;
+        DelegateIsManager = false;
+        DelegateNote = null;
         ChosenDelegate = null;
         _ = RefreshPreviewAsync();
     }
@@ -247,11 +361,19 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
 
     // ---- preview --------------------------------------------------------------------------------------------------
 
+    /// <summary>
+    /// Counts previews started. A template or delegate change starts a new preview while one may still be running, and
+    /// only the newest may fill the checklist and become what the run acts on: an older one finishing last would
+    /// otherwise run the previous template's options.
+    /// </summary>
+    private int _previewGeneration;
+
     /// <summary>Runs every enabled step's preview at once and fills the checklist with what would actually change.</summary>
     public async Task RefreshPreviewAsync()
     {
         if (Phase != OffboardPhase.Preview) return;
 
+        var generation = ++_previewGeneration;
         IsPreviewing = true;
         StatusText = null;
         foreach (var row in Rows) row.IsPreviewing = true;
@@ -261,7 +383,9 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
             // Every step is previewed, not only the ticked ones: a row with no preview would show no reason for being
             // greyed, and the admin could not tell a blocked step from one they simply had not ticked.
             var ctx = Context();
-            _previews = await _runner.PreviewAsync(ctx, _runner.Steps.Select(s => s.Id).ToList(), CancellationToken.None);
+            var previews = await _runner.PreviewAsync(ctx, _runner.Steps.Select(s => s.Id).ToList(), CancellationToken.None);
+            if (generation != _previewGeneration) return;
+            _previews = previews;
             _previewed = ctx;
             var byId = _previews.ToDictionary(p => p.StepId, StringComparer.Ordinal);
             foreach (var row in Rows)
@@ -279,13 +403,17 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Offboarding preview for {UserId} failed", User.Id);
-            StatusText = $"The preview failed: {ex.Message}";
+            if (generation == _previewGeneration) StatusText = $"The preview failed: {ex.Message}";
         }
         finally
         {
-            IsPreviewing = false;
-            foreach (var row in Rows) row.IsPreviewing = false;
-            RefreshRunLabel();
+            // A superseded preview leaves the spinner to the newer one still running.
+            if (generation == _previewGeneration)
+            {
+                IsPreviewing = false;
+                foreach (var row in Rows) row.IsPreviewing = false;
+                RefreshRunLabel();
+            }
         }
     }
 

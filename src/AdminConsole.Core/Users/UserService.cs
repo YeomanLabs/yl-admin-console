@@ -54,6 +54,23 @@ public sealed partial class UserService
         return user;
     }
 
+    /// <summary>
+    /// The user's manager, read live: an offboarding template that hands the leaver's things to their manager must not
+    /// pick last week's. Null when nobody is assigned (Graph answers 404 rather than an empty body).
+    /// </summary>
+    public async Task<PersonRef?> ReadManagerAsync(string id, CancellationToken ct)
+    {
+        try
+        {
+            using var doc = await _graph.SendAsync(HttpMethod.Get, $"users/{id}/manager?$select={GraphSelects.PersonRef}", null, ct).ConfigureAwait(false);
+            return doc is null ? null : PersonRef.FromJson(doc.RootElement);
+        }
+        catch (GraphException ex) when (ex.IsNotFound)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Cache only: Intune devices where the user is primary, and cached group memberships.</summary>
     public IReadOnlyList<ManagedDevice> GetCachedDevices(string userId) => _db.GetManagedDevicesForUser(userId);
 

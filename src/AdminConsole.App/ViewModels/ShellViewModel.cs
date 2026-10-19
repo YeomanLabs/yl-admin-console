@@ -611,6 +611,9 @@ public sealed partial class ShellViewModel : ObservableObject
         var people = list.Chosen;
         var users = _services.GetRequiredService<UserService>();
         var done = 0;
+
+        // Each person's dialog opens on the template the previous one ran with: a list is usually one kind of leaver.
+        OffboardingProfile? template = null;
         for (var i = 0; i < people.Count; i++)
         {
             DirectoryUser target;
@@ -635,11 +638,13 @@ public sealed partial class ShellViewModel : ObservableObject
                 _logger)
             {
                 PickDelegate = OpenPersonPicker,
+                ReadManager = ct => users.ReadManagerAsync(target.Id, ct),
                 ListPosition = $"{i + 1} of {people.Count}",
             };
 
-            await dialog.RefreshPreviewAsync();
+            await dialog.PrepareAsync(template);
             await Dialogs.ShowAsync(dialog);
+            template = dialog.SelectedProfile;
             if (!dialog.HasRun)
             {
                 ShowStatusMessage(done == 0

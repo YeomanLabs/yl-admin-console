@@ -26,6 +26,9 @@ in AD from a template — without opening five admin centres.
 - **Offboarding as a checklist.** A snapshot of everything first, then the AD, Entra, Exchange and OneDrive steps,
   previewed and run in order with a live log. **Restore** puts it back from the snapshot. Offboard a list of leavers —
   pasted, or imported from a CSV — each with their own preview.
+- **Offboarding templates.** Save what each kind of leaver gets — the steps, the manager as delegate, an automatic
+  reply with `{name}` and `{delegate}` filled in per person, the attributes to stamp — and pick the one the offboard
+  dialog opens with.
 - **Starters from templates.** Snapshot someone who already has the role. In a synced organisation the account is
   created in AD, and the licences, groups and mailbox settings follow on their own once Entra Connect has synced it.
 - **Bulk edit.** Tick people (or every match), set the fields, and read a per-person preview of what changes and
@@ -197,7 +200,7 @@ Everything it keeps is in `%LOCALAPPDATA%\AdminConsole`:
 | `tenant.json` | The tenants this PC opens: registration, tenant, last account, on-prem domains. Never a password |
 | `cache\{tenant}.db` | The search index, per tenant. Settings → Rebuild index starts it again |
 | `actions.db` | The action log: every change, with its tenant and outcome |
-| `templates\users\{tenant}\` · `templates\offboarding\` | User templates per tenant, and offboarding profiles. Hand-editable |
+| `templates\users\{tenant}\` · `templates\offboarding\` | User templates per tenant; offboarding templates, shared by every tenant. Hand-editable |
 | `snapshots\{tenant}\` | What offboarding recorded before it changed anything, for Restore |
 | `pending\{tenant}.json` | Starters created in AD, waiting for Entra Connect |
 | `reports\{tenant}\` | The last build of each report, with its date |

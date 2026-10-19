@@ -369,17 +369,25 @@
                               Visibility="{Binding HasOuChoices, Converter={StaticResource BoolToVisibility}}" />
                 </Grid>
 
-                <!-- Phase 1 chrome: profile, delegate. Hidden once the run starts, and for a restore. -->
+                <!-- Phase 1 chrome: template, delegate. Hidden once the run starts, and for a restore. -->
                 <Grid Margin="0,4,0,8" Visibility="{Binding ShowsOffboardChrome, Converter={StaticResource BoolToVisibility}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Profile" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
+                        <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Template" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <ComboBox MinWidth="200" ItemsSource="{Binding Profiles}" SelectedItem="{Binding SelectedProfile}"
-                                  DisplayMemberPath="Name" AutomationProperties.Name="Offboarding profile" />
+                                  DisplayMemberPath="Name" AutomationProperties.Name="Offboarding template"
+                                  ToolTip="Offboarding templates are made and changed on the Templates page" />
                     </StackPanel>
+                    <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding TemplateDescription}" FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0"
+                               Foreground="{DynamicResource AcTextSecondary}"
+                               Visibility="{Binding TemplateDescription, Converter={StaticResource NullToCollapsed}}" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Delegate" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
                         <TextBlock Text="{Binding DelegateLabel}" FontSize="12" VerticalAlignment="Center" Margin="0,0,8,0" />
@@ -389,6 +397,10 @@
                                    Visibility="{Binding ChosenDelegate, Converter={StaticResource NullToCollapsed}}" />
                     </StackPanel>
                 </Grid>
+
+                <TextBlock Text="{Binding DelegateNote}" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,8"
+                           Foreground="{DynamicResource SystemFillColorCautionBrush}"
+                           Visibility="{Binding DelegateNote, Converter={StaticResource NullToCollapsed}}" />
 
                 <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,0,0,8"
                             IsOpen="{Binding HasProfileError, Mode=OneWay}" Message="{Binding ProfileError}" />
@@ -416,9 +428,10 @@
                     </Grid.ColumnDefinitions>
 
                     <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsOffboardChrome, Converter={StaticResource BoolToVisibility}}">
-                        <ui:TextBox MinWidth="160" PlaceholderText="Save these as…" Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
-                                    AutomationProperties.Name="New profile name" />
-                        <ui:Button Content="Save profile" Margin="6,0,0,0" Command="{Binding SaveProfileCommand}" AutomationProperties.Name="Save profile" />
+                        <ui:TextBox MinWidth="180" PlaceholderText="Save these ticks as…" Text="{Binding NewProfileName, UpdateSourceTrigger=PropertyChanged}"
+                                    AutomationProperties.Name="Name for a new offboarding template" />
+                        <ui:Button Content="Save as template" Margin="6,0,0,0" Command="{Binding SaveProfileCommand}"
+                                   AutomationProperties.Name="Save these ticks as an offboarding template" />
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal">

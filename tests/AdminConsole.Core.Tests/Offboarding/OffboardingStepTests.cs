@@ -216,6 +216,21 @@ public sealed class OffboardingStepTests : IDisposable
         new RemoveManagerStep(_graph, _actions, _tenant).DefaultEnabled.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task ReadManager_ReadsLive_AndANotFoundMeansNobodyIsAssigned()
+    {
+        // The offboard dialog pre-fills the delegate with this when the template says "the leaver's manager".
+        _handler.Enqueue(HttpStatusCode.OK, """{"id":"m-1","displayName":"Megan Bowen","userPrincipalName":"megan@contoso.com"}""")
+            .Enqueue(HttpStatusCode.NotFound, """{"error":{"code":"Request_ResourceNotFound","message":"Resource 'manager' does not exist."}}""");
+
+        var manager = await _users.ReadManagerAsync(UserId, CancellationToken.None);
+        var none = await _users.ReadManagerAsync(UserId, CancellationToken.None);
+
+        manager.Should().Be(new PersonRef("m-1", "Megan Bowen", "megan@contoso.com"));
+        none.Should().BeNull();
+        _handler.Requests[0].Uri.ToString().Should().Contain("users/u-1/manager");
+    }
+
     // ---- 6. remove-group-memberships (the skip rules) ---------------------------------------------------------------
 
     private void EnqueueGroups(params string[] groupsJson) =>

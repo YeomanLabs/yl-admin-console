@@ -245,6 +245,51 @@ public sealed class ExchangeOffboardingStepTests : IDisposable
     }
 
     [Fact]
+    public async Task A_reply_of_several_lines_keeps_its_line_breaks()
+    {
+        _exo.Enqueue(HttpStatusCode.OK, Mailbox())
+            .Enqueue(HttpStatusCode.OK, Fixtures.Text("exchange/auto-reply-configuration"))   // preview
+            .Enqueue(HttpStatusCode.OK, Fixtures.Text("exchange/auto-reply-configuration"))   // before
+            .Enqueue(HttpStatusCode.OK);
+        var on = JsonNode.Parse(Fixtures.Text("exchange/auto-reply-configuration"))!;
+        on["value"]![0]!["AutoReplyState"] = "Enabled";
+        _exo.Enqueue(HttpStatusCode.OK, on.ToJsonString()).Enqueue(HttpStatusCode.OK, on.ToJsonString());
+        var step = new SetAutoReplyStep(Exchange());
+        var ctx = Context(autoReply: "Adele has left.\r\nPlease write to Megan & Co.");
+
+        await step.PreviewAsync(ctx, Ct);
+        await step.ExecuteAsync(ctx, Ct);
+
+        using var set = Body(_exo.Requests[3]);
+        set.RootElement.GetProperty("CmdletInput").GetProperty("Parameters").GetProperty("InternalMessage").GetString()
+            .Should().Be("Adele has left.<br>Please write to Megan &amp; Co.");
+    }
+
+    [Fact]
+    public async Task A_template_reply_fills_in_its_placeholders_and_the_preview_shows_the_result()
+    {
+        _exo.Enqueue(HttpStatusCode.OK, Mailbox()).Enqueue(HttpStatusCode.OK, Fixtures.Text("exchange/auto-reply-configuration"));
+
+        var preview = await new SetAutoReplyStep(Exchange()).PreviewAsync(
+            Context(delegateTo: Megan, autoReply: "  {firstName} has left {company}. Please write to {delegate} at {delegateEmail}.  "), Ct);
+
+        preview.CanRun.Should().BeTrue();
+        preview.Details.Should().Equal("“Adele has left our organisation. Please write to Megan Bowen at Megan@contoso.com.”");
+    }
+
+    [Fact]
+    public async Task A_template_reply_that_names_the_delegate_waits_for_one_to_be_chosen()
+    {
+        // Sent as written it would tell customers to contact "{delegate}".
+        _exo.Enqueue(HttpStatusCode.OK, Mailbox());
+
+        var preview = await new SetAutoReplyStep(Exchange()).PreviewAsync(Context(autoReply: "Please write to {delegate}."), Ct);
+
+        preview.CanRun.Should().BeFalse();
+        preview.Reason.Should().Be("This template's automatic reply names the delegate. Choose a delegate, or untick this step.");
+    }
+
+    [Fact]
     public async Task Forwarding_with_no_delegate_is_blocked_unless_mail_already_leaves_the_organisation()
     {
         _exo.Enqueue(HttpStatusCode.OK, Mailbox());

@@ -4,9 +4,10 @@ using Microsoft.Extensions.Logging;
 namespace AdminConsole.Core.Offboarding;
 
 /// <summary>
-/// Profiles on disk under <c>templates\offboarding</c> (doc 06 §Profiles). "Standard leaver" is built in and always
-/// first; a file that will not parse is reported rather than swallowed, because a profile that quietly vanishes is
-/// how an admin ends up running the wrong set of steps.
+/// Offboarding templates on disk under <c>templates\offboarding</c> (doc 06 §Offboarding templates), shared by every
+/// tenant on this machine: they name steps and options, never a tenant's objects. "Standard leaver" is built in and
+/// always first; a file that will not parse is reported rather than swallowed, because a template that quietly
+/// vanishes is how an admin ends up running the wrong set of steps.
 /// </summary>
 public sealed class OffboardingProfileStore
 {
@@ -40,7 +41,7 @@ public sealed class OffboardingProfileStore
                     var profile = JsonSerializer.Deserialize<OffboardingProfile>(json, JsonFiles.Options);
                     if (profile is null || string.IsNullOrWhiteSpace(profile.Name))
                     {
-                        errors.Add($"{Path.GetFileName(path)} — no profile name");
+                        errors.Add($"{Path.GetFileName(path)} — no template name");
                         continue;
                     }
 
@@ -55,18 +56,46 @@ public sealed class OffboardingProfileStore
         }
 
         LoadErrors = errors;
-        return profiles;
+
+        // By name, as the list shows them: by file name, "contractor-2.json" would sort before "contractor.json".
+        return [profiles[0], .. profiles.Skip(1).OrderBy(p => p.Name, StringComparer.OrdinalIgnoreCase).ThenBy(p => p.FileName, StringComparer.OrdinalIgnoreCase)];
     }
 
-    /// <summary>Writes the profile and returns it with the file name it was saved under.</summary>
+    /// <summary>
+    /// The template the offboard dialog opens with: the saved one marked default, else the built-in. Two marked by hand
+    /// is not an error worth refusing to open over; the first in the list wins.
+    /// </summary>
+    public static OffboardingProfile DefaultOf(IReadOnlyList<OffboardingProfile> profiles) =>
+        profiles.FirstOrDefault(p => p is { IsDefault: true, IsBuiltIn: false }) ?? profiles[0];
+
+    /// <summary>
+    /// Writes the template and returns it with the file name it was saved under. A template saved before keeps its file,
+    /// so a rename does not leave the old one behind; a new one gets a file of its own, never another template's.
+    /// </summary>
     public OffboardingProfile Save(OffboardingProfile profile)
     {
         Directory.CreateDirectory(_directory);
-        var fileName = profile.FileName ?? $"{Slug(profile.Name)}.json";
+        var fileName = profile.FileName ?? UniqueFileName(Slug(profile.Name));
         var path = Path.Combine(_directory, fileName);
         File.WriteAllText(path, JsonSerializer.Serialize(profile, JsonFiles.Options));
         _logger.LogInformation("Saved the offboarding profile {Name} to {File}", profile.Name, fileName);
         return profile with { FileName = fileName };
+    }
+
+    /// <summary>
+    /// Makes <paramref name="chosen"/> the one the dialog opens with, clearing the mark from every other saved template.
+    /// The built-in (or null) means none is marked. Returns the templates as they now are.
+    /// </summary>
+    public IReadOnlyList<OffboardingProfile> SetDefault(IReadOnlyList<OffboardingProfile> profiles, OffboardingProfile? chosen)
+    {
+        var result = new List<OffboardingProfile>(profiles.Count);
+        foreach (var profile in profiles)
+        {
+            var wanted = !profile.IsBuiltIn && chosen is { IsBuiltIn: false } && profile.FileName == chosen.FileName;
+            result.Add(profile.IsBuiltIn || profile.IsDefault == wanted ? profile : Save(profile with { IsDefault = wanted }));
+        }
+
+        return result;
     }
 
     public void Delete(OffboardingProfile profile)
@@ -84,10 +113,17 @@ public sealed class OffboardingProfileStore
     private static string Explain(Exception ex) => ex switch
     {
         JsonException when ex.Message.Contains("missing required properties", StringComparison.OrdinalIgnoreCase)
-                           && ex.Message.Contains("name", StringComparison.OrdinalIgnoreCase) => "no profile name",
+                           && ex.Message.Contains("name", StringComparison.OrdinalIgnoreCase) => "no template name",
         JsonException => "not valid JSON",
         _ => ex.Message,
     };
+
+    private string UniqueFileName(string slug)
+    {
+        var fileName = $"{slug}.json";
+        for (var n = 2; File.Exists(Path.Combine(_directory, fileName)); n++) fileName = $"{slug}-{n}.json";
+        return fileName;
+    }
 
     /// <summary>A file name from a display name; shared with user templates, which name their files the same way.</summary>
     public static string Slug(string name) => JsonFiles.Slug(name);

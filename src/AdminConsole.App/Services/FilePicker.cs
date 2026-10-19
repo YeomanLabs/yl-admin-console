@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using Microsoft.Win32;
 
@@ -35,5 +36,17 @@ public sealed class FilePicker
             Multiselect = false,
         };
         return dialog.ShowDialog(Application.Current?.MainWindow) == true ? dialog.FileName : null;
+    }
+
+    /// <summary>An existing folder, or null when the admin cancels.</summary>
+    public string? PickFolder(string title, string? initialFolder = null)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = title,
+            Multiselect = false,
+            InitialDirectory = initialFolder is { Length: > 0 } && Directory.Exists(initialFolder) ? initialFolder : string.Empty,
+        };
+        return dialog.ShowDialog(Application.Current?.MainWindow) == true ? dialog.FolderName : null;
     }
 }
