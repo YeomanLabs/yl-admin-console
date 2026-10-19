@@ -67,6 +67,10 @@ public sealed partial class SignInPageViewModel : ObservableObject
                 ErrorMessage = ex.RawMessage ?? ex.Message;
                 ErrorHint = "Contact your Entra admin.";
                 break;
+            case SignInFailureKind.AdminConsentRequired:
+                ErrorTitle = "An admin has to approve the app";
+                ErrorMessage = ex.Message;
+                break;
             default:
                 ErrorTitle = "Sign-in failed";
                 ErrorMessage = ex.Message;

@@ -190,9 +190,18 @@
                     <ui:Button Content="Grant all write permissions" Command="{Binding GrantAllWriteCommand}" Margin="0,0,10,0" />
                     <TextBlock Text="{Binding GrantedSummary}" Style="{StaticResource Caption}" VerticalAlignment="Center" />
                 </StackPanel>
-                <ui:InfoBar Severity="Warning" IsClosable="False" Margin="0,0,0,10"
-                            IsOpen="{Binding ConsentError, Converter={StaticResource NullToBool}, Mode=OneWay}"
-                            Message="{Binding ConsentError}" />
+                <!-- A plain note, not an InfoBar: the InfoBar's text is not in the automation tree, and this one can carry an
+                     admin consent link that has to be copied out. Read-only text box, so it can be selected. -->
+                <Border CornerRadius="4" Padding="12,10" Margin="0,0,0,10" BorderThickness="1" MaxWidth="760" HorizontalAlignment="Left"
+                        Background="{DynamicResource ControlFillColorDefaultBrush}" BorderBrush="{DynamicResource SystemFillColorCautionBrush}"
+                        Visibility="{Binding ConsentError, Converter={StaticResource NullToCollapsed}}">
+                    <DockPanel>
+                        <ui:SymbolIcon Symbol="Warning24" Foreground="{DynamicResource SystemFillColorCautionBrush}" Margin="0,0,10,0" VerticalAlignment="Top" />
+                        <TextBox Text="{Binding ConsentError, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                                 BorderThickness="0" Background="Transparent" Padding="0"
+                                 AutomationProperties.Name="{Binding ConsentError}" />
+                    </DockPanel>
+                </Border>
                 <ItemsControl ItemsSource="{Binding Permissions}" ItemTemplate="{StaticResource PermissionRowTemplate}" />
 
                 <!-- My roles (M18.2): what PIM lets me activate, and activation itself. -->

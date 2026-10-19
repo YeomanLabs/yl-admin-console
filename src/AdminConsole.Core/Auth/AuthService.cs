@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Identity.Client;
 using Microsoft.Identity.Client.Broker;
@@ -9,7 +10,7 @@ namespace AdminConsole.Core.Auth;
 /// MSAL public client with the Windows WAM broker and a DPAPI-protected file token cache
 /// (docs/03-ARCHITECTURE.md §Auth flow). Delegated permissions only; no secrets.
 /// </summary>
-public sealed class AuthService : IAuthService
+public sealed partial class AuthService : IAuthService
 {
     private const string ClientName = "Admin Console";
 
@@ -59,8 +60,8 @@ public sealed class AuthService : IAuthService
             }
             catch (MsalException msal)
             {
-                var mapped = Map(msal);
-                _logger.LogWarning("Interactive sign-in failed: {Kind} ({ErrorCode})", mapped.Kind, mapped.ErrorCode);
+                var mapped = Map(msal, AdminConsentUrl());
+                _logger.LogWarning("Interactive sign-in failed: {Kind} ({ErrorCode}, {Entra})", mapped.Kind, mapped.ErrorCode, EntraCode(msal.Message) ?? "no AADSTS code");
                 throw mapped;
             }
             finally
@@ -98,8 +99,8 @@ public sealed class AuthService : IAuthService
             }
             catch (MsalException msal)
             {
-                var mapped = Map(msal);
-                _logger.LogWarning("Consent failed: {Kind} ({ErrorCode})", mapped.Kind, mapped.ErrorCode);
+                var mapped = Map(msal, AdminConsentUrl());
+                _logger.LogWarning("Consent failed: {Kind} ({ErrorCode}, {Entra})", mapped.Kind, mapped.ErrorCode, EntraCode(msal.Message) ?? "no AADSTS code");
                 throw mapped;
             }
             finally
@@ -116,11 +117,43 @@ public sealed class AuthService : IAuthService
         return now;
     }
 
+    /// <summary>The tenant's admin consent link for this registration, when both are known.</summary>
+    private string? AdminConsentUrl() =>
+        TenantConfig.LooksLikeClientId(_options.ClientId) && !string.IsNullOrWhiteSpace(_options.TenantId)
+            ? $"https://login.microsoftonline.com/{_options.TenantId}/adminconsent?client_id={_options.ClientId}"
+            : null;
+
+    [GeneratedRegex(@"AADSTS(\d+)[^\r\n]*")]
+    private static partial Regex EntraLine();
+
+    /// <summary>"AADSTS90094", from wherever MSAL or the broker put it in the message; null when there is none.</summary>
+    internal static string? EntraCode(string? text) => EntraLine().Match(text ?? string.Empty) is { Success: true } m ? $"AADSTS{m.Groups[1].Value}" : null;
+
+    /// <summary>
+    /// Entra's own sentence ("AADSTS90094: The grant requires admin permission."), without the trace and correlation ids
+    /// that follow it. The broker reports failures as "WAM_provider_error_" and a number that says nothing to an admin;
+    /// the reason is in here.
+    /// </summary>
+    internal static string? EntraReason(string? text)
+    {
+        if (EntraLine().Match(text ?? string.Empty) is not { Success: true } m) return null;
+        var line = m.Value;
+        foreach (var noise in new[] { " Trace ID:", " Correlation ID:", " Timestamp:" })
+        {
+            var at = line.IndexOf(noise, StringComparison.OrdinalIgnoreCase);
+            if (at > 0) line = line[..at];
+        }
+
+        line = line.Trim();
+        return line.Length > 400 ? line[..400] + "…" : line;
+    }
+
     /// <summary>MSAL → the UX §9 failure states. Kept here so the App never depends on MSAL error codes.</summary>
-    private static SignInException Map(MsalException ex)
+    internal static SignInException Map(MsalException ex, string? adminConsentUrl = null)
     {
         var code = ex.ErrorCode ?? string.Empty;
         var text = ex.Message ?? string.Empty;
+        var reason = EntraReason(text);
 
         if (ex is MsalClientException && (code.Contains("cancel", StringComparison.OrdinalIgnoreCase) || code == "user_canceled" || code == "authentication_canceled"))
         {
@@ -140,7 +173,25 @@ public sealed class AuthService : IAuthService
             return new SignInException(SignInFailureKind.ConsentDeclined, "Consent was declined. The app cannot work without read access to your tenant.", code, text, ex);
         }
 
-        return new SignInException(SignInFailureKind.Other, $"Sign-in failed ({code}).", code, text, ex);
+        // The tenant will not take this account's consent (user consent off, or permissions only an admin may grant),
+        // or the registration it signs in with does not list the API. Both need someone else, so say who and how.
+        switch (EntraCode(text))
+        {
+            case "AADSTS65001" or "AADSTS90094" or "AADSTS90095":
+                var where = adminConsentUrl is null
+                    ? "in the Entra admin center: Enterprise applications → this app → Permissions → Grant admin consent"
+                    : $"in the Entra admin center (Enterprise applications → this app → Permissions → Grant admin consent), or by opening {adminConsentUrl}";
+                return new SignInException(SignInFailureKind.AdminConsentRequired,
+                    $"An admin has to approve these permissions in this tenant. A Global Administrator or Privileged Role Administrator can grant them {where}. Entra said: {reason}",
+                    code, text, ex);
+            case "AADSTS650057" or "AADSTS65005":
+                return new SignInException(SignInFailureKind.AdminConsentRequired,
+                    $"The app registration this tenant signs in with does not list this API, so it cannot be consented to. In that tenant, run scripts/New-AppRegistration.ps1 -Update, which adds it and grants admin consent. Entra said: {reason}",
+                    code, text, ex);
+        }
+
+        // Anything else: Entra's own sentence when there is one, rather than the broker's number alone.
+        return new SignInException(SignInFailureKind.Other, reason is null ? $"Sign-in failed ({code})." : $"Sign-in failed: {reason}", code, text, ex);
     }
 
     public async Task<string> GetTokenAsync(IReadOnlyList<string> scopes, CancellationToken ct, bool forceRefresh = false)

@@ -12,6 +12,12 @@ public enum SignInFailureKind
     /// <summary>Blocked by Conditional Access → show the message verbatim and "Contact your Entra admin".</summary>
     ConditionalAccess,
 
+    /// <summary>
+    /// The tenant will not let this account consent: an admin has to approve the permissions, or the registration the
+    /// tenant uses does not list the API at all → say who can fix it, and how, with Entra's own reason.
+    /// </summary>
+    AdminConsentRequired,
+
     /// <summary>Anything else (network, broker, unexpected service error).</summary>
     Other,
 }

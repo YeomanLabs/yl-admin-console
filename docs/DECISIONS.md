@@ -728,3 +728,16 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   hidden desktop against a copy holding only the YeomanLabs profile, once the owner's real `tenant.json` gained their
   work tenant, which the test harness must never open. The legacy-folder migration never runs into an overridden
   folder.
+
+## 2026-10-19 — Sign-in and consent failures say Entra's reason
+
+- **Why.** In a work tenant, Settings → Grant all write permissions said only "Sign-in failed
+  (WAM_provider_error_3399614468)". The Windows broker wraps Entra's error in its own code; Entra's sentence
+  ("AADSTS90094: …") was in the exception message, which the mapping dropped and the log never recorded.
+- **What changed.** The mapping takes the `AADSTS` line out of whatever MSAL or the broker returned, without the trace and
+  correlation ids, and shows it. AADSTS65001, 90094 and 90095 (consent this account cannot give) become a new
+  `AdminConsentRequired` state that names the roles that can grant it and gives the tenant's admin consent link for
+  this registration; AADSTS650057 and 65005 (the registration does not list the API) point at
+  `New-AppRegistration.ps1 -Update`. The log records the AADSTS code, not the sentence, which can name the account.
+- **Settings shows it as a plain note**, not an InfoBar: the InfoBar's text is not in the automation tree, and the link
+  has to be copied out, so the text is selectable.
