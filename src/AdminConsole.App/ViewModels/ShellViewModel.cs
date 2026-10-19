@@ -455,6 +455,7 @@ public sealed partial class ShellViewModel : ObservableObject
             case ObjectType.Group:
                 var group = _services.GetRequiredService<GroupDetailViewModel>();
                 group.OpenObject = OpenObjectFromPage;
+                group.PickPerson = OpenPersonPicker;
                 group.Start(id);
                 return group;
             default:

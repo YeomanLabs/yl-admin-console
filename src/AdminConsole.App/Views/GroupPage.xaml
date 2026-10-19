@@ -33,6 +33,21 @@
         </DataTemplate.Triggers>
     </DataTemplate>
 
+    <!-- A member with a remove control, for the members list (owners use MemberRow). -->
+    <DataTemplate x:Key="EditableMemberRow" DataType="{x:Type models:PersonRef}">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ContentControl Content="{Binding}" ContentTemplate="{StaticResource MemberRow}" Focusable="False" />
+            <ui:Button Grid.Column="1" Icon="{ui:SymbolIcon Dismiss16}" Appearance="Transparent" Padding="6,2" Margin="8,0,0,0" VerticalAlignment="Center"
+                       Command="{Binding DataContext.RemoveMemberCommand, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" CommandParameter="{Binding}"
+                       Visibility="{Binding DataContext.CanEditMembers, RelativeSource={RelativeSource AncestorType=ScrollViewer}, Converter={StaticResource BoolToVisibility}}"
+                       ToolTip="Remove from this group" AutomationProperties.Name="{Binding Label, StringFormat='Remove {0} from this group'}" />
+        </Grid>
+    </DataTemplate>
+
     <DataTemplate DataType="{x:Type pages:GroupDetailViewModel}">
         <Grid Margin="24,16,16,8">
             <Grid.RowDefinitions>
@@ -76,8 +91,9 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="2" VerticalAlignment="Top" Margin="16,0,0,0">
-                    <ui:Button Content="Add member…" IsEnabled="False" HorizontalAlignment="Right"
-                               ToolTip="{Binding MembershipDisabledReason}" ToolTipService.ShowOnDisabled="True" />
+                    <ui:Button Content="Add member…" Icon="{ui:SymbolIcon PersonAdd24}" Command="{Binding AddMemberCommand}" IsEnabled="{Binding CanEditMembers}"
+                               HorizontalAlignment="Right" ToolTip="{Binding MembershipDisabledReason}" ToolTipService.ShowOnDisabled="True"
+                               AutomationProperties.Name="Add member" />
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding MembershipDisabledReason}" FontSize="11" HorizontalAlignment="Right" Margin="0,4,0,0" MaxWidth="280" TextWrapping="Wrap" TextAlignment="Right" />
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="{Binding TimingText}" FontSize="11" HorizontalAlignment="Right" Margin="0,2,0,0" />
                 </StackPanel>
@@ -124,7 +140,7 @@
                         <ui:ProgressRing IsIndeterminate="True" Width="14" Height="14" Margin="8,16,0,6" Visibility="{Binding IsMembersLoading, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>
                     <TextBlock Text="{Binding MembersCaption}" Style="{StaticResource Caption}" Margin="0,0,0,4" Visibility="{Binding MembersCaption, Converter={StaticResource NullToCollapsed}}" />
-                    <ItemsControl ItemsSource="{Binding Members}" ItemTemplate="{StaticResource MemberRow}" />
+                    <ItemsControl ItemsSource="{Binding Members}" ItemTemplate="{StaticResource EditableMemberRow}" />
                     <TextBlock Text="This group has no members." Style="{StaticResource Caption}" Visibility="{Binding Members.Count, Converter={StaticResource ZeroToVisible}}" />
                     <ui:Button Content="Load more" Command="{Binding LoadMoreMembersCommand}" Margin="0,8,0,0" HorizontalAlignment="Left"
                                Visibility="{Binding HasMoreMembers, Converter={StaticResource BoolToVisibility}}" />

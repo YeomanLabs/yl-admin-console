@@ -33,8 +33,12 @@ in AD from a template — without opening five admin centres.
   created in AD, and the licences, groups and mailbox settings follow on their own once Entra Connect has synced it.
 - **Bulk edit.** Tick people (or every match), set the fields, and read a per-person preview of what changes and
   whether it is written in Entra ID or in AD before anything is sent.
-- **Temporary Access Pass and PIM.** Issue a pass shown once and logged nowhere. See your eligible roles and activate
-  one within its policy; a permission you lack but are eligible for offers to activate it.
+- **Temporary Access Pass, Reset MFA and PIM.** From the person's header: issue a pass shown once and logged
+  nowhere, or reset their MFA — every removable method, in an order Entra accepts, optionally signing them out and
+  handing them a pass to register with. See your eligible roles and activate one within its policy; a permission you
+  lack but are eligible for offers to activate it.
+- **Groups.** Add and remove members from the group's page or the person's; dynamic, synced and role-assignable
+  groups say why they cannot be changed here.
 - **Reports.** MFA readiness, licence usage — click a subscription to see who holds it — and mailbox size and
   delegation. Built when you ask, kept with their date, exported as shown.
 - **Several tenants.** The tenant name in the title bar is a switcher. Each tenant opens in its own tabs, with its own

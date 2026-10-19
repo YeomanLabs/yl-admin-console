@@ -755,3 +755,25 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   running, a group the rules say cannot change — still disable.
 - **Not built, found on the way:** the group page's "Add member…" has always been disabled with "arrives in M5.4".
   Membership changes work from a person's page; adding from the group page was never written.
+
+## 2026-10-19 — Issue TAP and Reset MFA in the person's header; members added and removed on the group page
+
+- **Header.** The owner asked for the Temporary Access Pass and MFA removal "at the top", beside Reset password and Revoke
+  sessions. Issue TAP moved from the Access tab to the header, and **Reset MFA…** is new there: it reads the methods
+  live, previews every removable one ticked (with what stays and why — the password), and offers the two usual
+  follow-ups, signing them out everywhere (on by default) and issuing a pass to register with. Each removal is its own
+  action-log row, and a notice at the end says what happened to every method. The per-method remove stays on the
+  Access tab.
+- **Removal order (`AuthMethodReset`).** Microsoft documents that a user cannot keep an alternate mobile number without
+  a mobile one, so the alternate goes before the mobile; phones go last, everything else first, oldest first within a
+  kind. The offboarding step that removes methods used Graph's list order and now uses the same planner.
+- **A bug the header exposed:** `CanIssueTap` was announced only when the grey-rule reasons were recomputed, before the
+  user had loaded, so a header button bound to it stayed disabled; it now follows the user like the other header
+  actions. The Access tab's button had hidden it by being drawn later.
+- **Group page.** "Add member…" had been disabled since M4 with "arrives in M5.4"; membership changes were only ever
+  built from the person's side. It now opens the person picker and adds through the same `GroupService` write, and each
+  member has a remove (confirm, then undo). The group's own rules (dynamic, synced, role-assignable without Privileged
+  Role Administrator) still disable both; a missing permission is asked for on the click.
+- **Checked live in YeomanLabs**, on a copy of the data holding only that tenant: a pass issued on the lab user AD Lab
+  Hybrid One and removed again by Reset MFA (with sessions revoked), and the same user added to and removed from the
+  empty test group "Intune Automation Test" — every write in the action log, nothing left behind.
