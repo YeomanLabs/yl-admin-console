@@ -30,10 +30,29 @@ public sealed class OffboardingRunner
     /// Previews the chosen steps at once (doc 06: previews are parallel). A step that throws still gets a row, because
     /// a missing row in the dialog would be read as "this step will not run" when nobody actually knows.
     /// </summary>
-    public async Task<IReadOnlyList<StepPreview>> PreviewAsync(OffboardingContext ctx, IReadOnlyCollection<string> enabledStepIds, CancellationToken ct)
+    /// <param name="progress">
+    /// Told about each preview the moment it is ready, so the dialog can fill in step by step rather than showing
+    /// nothing until the slowest step (a Full Access scan across shared mailboxes, say) has finished.
+    /// </param>
+    public async Task<IReadOnlyList<StepPreview>> PreviewAsync(OffboardingContext ctx, IReadOnlyCollection<string> enabledStepIds, CancellationToken ct, IProgress<StepPreview>? progress = null)
     {
         var chosen = _steps.Where(s => enabledStepIds.Contains(s.Id)).ToList();
         var previews = await Task.WhenAll(chosen.Select(async step =>
+        {
+            var preview = await PreviewOneAsync(step, ctx, ct).ConfigureAwait(false);
+            progress?.Report(preview);
+            return preview;
+        })).ConfigureAwait(false);
+
+        // Back into catalog order: Task.WhenAll preserves the input order, and the input was already ordered.
+        return previews;
+    }
+
+    /// <summary>One step's preview, timed: the log says which step an admin waited on.</summary>
+    private async Task<StepPreview> PreviewOneAsync(IOffboardingStep step, OffboardingContext ctx, CancellationToken ct)
+    {
+        var timer = System.Diagnostics.Stopwatch.StartNew();
+        try
         {
             try
             {
@@ -53,10 +72,11 @@ public sealed class OffboardingRunner
                 _logger.LogError(ex, "Preview of {StepId} threw", step.Id);
                 return StepPreview.Error(step.Id, step.Title, $"The preview failed: {ex.Message}");
             }
-        })).ConfigureAwait(false);
-
-        // Back into catalog order: Task.WhenAll preserves the input order, and the input was already ordered.
-        return previews;
+        }
+        finally
+        {
+            _logger.LogInformation("Preview of {StepId} took {Ms} ms", step.Id, timer.ElapsedMilliseconds);
+        }
     }
 
     /// <summary>

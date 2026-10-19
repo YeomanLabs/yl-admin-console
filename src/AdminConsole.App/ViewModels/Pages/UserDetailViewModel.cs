@@ -1035,7 +1035,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
             ReadManager = ct => _users.ReadManagerAsync(target.Id, ct),
         };
 
-        await dialog.PrepareAsync();
+        dialog.StartPreparing();
         await _dialogs.ShowAsync(dialog);
         RefreshFromCache();
         await RefreshAsync(CancellationToken.None);
@@ -1098,7 +1098,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         };
         dialog.ChooseRestoreTarget(dialog.Snapshots[0], ous[0]);
 
-        await dialog.RefreshPreviewAsync();
+        dialog.StartPreparing();
         await _dialogs.ShowAsync(dialog);
         RefreshFromCache();
         await RefreshAsync(CancellationToken.None);

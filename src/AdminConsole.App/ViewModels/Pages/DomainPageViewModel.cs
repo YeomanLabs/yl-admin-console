@@ -190,11 +190,9 @@ public sealed partial class DomainPageViewModel : ObservableObject, IPageViewMod
                 var roots = OuNode.Build(ous);
                 OuRoots.Clear();
                 OuList.Clear();
-                foreach (var root in roots)
-                {
-                    OuRoots.Add(root);
-                    foreach (var node in root.Flatten()) OuList.Add(node);
-                }
+                // Collapsed to start: the top level only, and the admin opens the branch they want.
+                foreach (var root in roots) OuRoots.Add(root);
+                foreach (var node in OuNode.Visible(roots)) OuList.Add(node);
             }
         }
         catch (OperationCanceledException)
@@ -227,6 +225,25 @@ public sealed partial class DomainPageViewModel : ObservableObject, IPageViewMod
         // means by "in Sales" — clicking the parent should not hide what is in its children.
         SelectedOu = ReferenceEquals(SelectedOu, node) ? null : node;
         QueueReload();
+    }
+
+    /// <summary>Opens or closes an OU's branch in place, so the list does not jump back to the top.</summary>
+    [RelayCommand]
+    private void ToggleOu(OuNode node)
+    {
+        var at = OuList.IndexOf(node);
+        if (at < 0 || !node.HasChildren) return;
+
+        if (node.IsExpanded)
+        {
+            node.IsExpanded = false;
+            while (at + 1 < OuList.Count && OuList[at + 1].Depth > node.Depth) OuList.RemoveAt(at + 1);
+            return;
+        }
+
+        node.IsExpanded = true;
+        var insert = at + 1;
+        foreach (var child in OuNode.Visible(node.Children)) OuList.Insert(insert++, child);
     }
 
     [RelayCommand]

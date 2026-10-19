@@ -814,3 +814,20 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   says which are missing; it does not guess replacements.
 - **Also:** the test project had CA1416 warnings from `DirectorySignInTests` (in 0.3.7, whose notes said zero
   warnings — true of the app, not the tests); the class is now marked Windows-only.
+
+## 2026-10-19 — The offboard dialog opens at once; the OU tree starts collapsed
+
+- **Why.** In the owner's work tenant, clicking Offboard took about five minutes to show anything: the dialog was filled
+  before it was shown, so the screen stayed empty until the slowest of some thirty previews had finished. Which step was
+  slow there is not known from here — likely candidates are the Full Access scan across up to 100 shared mailboxes,
+  Exchange throttling with every mailbox step reading at once, and (before 0.3.7's 30-second hold) AD steps each
+  waiting out the connection timeout in turn.
+- **What changed.** The dialog opens at once; `OffboardingRunner.PreviewAsync` reports each preview as it finishes, so
+  rows fill in one by one, and the line above them names the steps still running. Run still waits for every preview,
+  because the run acts on what was previewed. Each step's preview time is now logged ("Preview of … took … ms"), so the
+  next slow run says which step it was. In the test tenant with the lab DC off the dialog appeared after 3.3 s and the
+  last preview finished at 18 s (the AD steps and the snapshot waiting on the DC; the Full Access scan 6 s).
+- **The OU tree starts collapsed.** The Domain page used to show every OU at once, indented. It now shows the top level
+  with a chevron on each OU that has children; the chevron opens or closes that branch in place (the list does not jump
+  back to the top), and clicking the name still narrows the list to that OU. A branch left open stays open when its
+  parent is closed and opened again.

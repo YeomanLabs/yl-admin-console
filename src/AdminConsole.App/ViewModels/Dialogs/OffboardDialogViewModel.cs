@@ -73,8 +73,29 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
     }
 
     /// <summary>
-    /// Fills the dialog before it is shown: the template (a list's previous person's, so person 2 of 5 is offboarded the
-    /// same way as person 1), the delegate the template asks for, then every step's preview.
+    /// Starts filling the dialog and returns at once, so the dialog opens straight away and each step fills in as its
+    /// preview finishes. It used to be filled before it was shown, and in a large tenant that meant minutes of nothing
+    /// on screen while the slowest preview (a Full Access scan across shared mailboxes, say) ran.
+    /// </summary>
+    public void StartPreparing(OffboardingProfile? startWith = null) => _ = PrepareSafelyAsync(startWith);
+
+    private async Task PrepareSafelyAsync(OffboardingProfile? startWith)
+    {
+        try
+        {
+            await PrepareAsync(startWith);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Preparing the offboard dialog for {UserId} failed", User.Id);
+            StatusText = $"The preview failed: {ex.Message}";
+            IsPreviewing = false;
+        }
+    }
+
+    /// <summary>
+    /// Fills the dialog: the template (a list's previous person's, so person 2 of 5 is offboarded the same way as
+    /// person 1), the delegate the template asks for, then every step's preview.
     /// </summary>
     public async Task PrepareAsync(OffboardingProfile? startWith = null)
     {
@@ -377,13 +398,27 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
         IsPreviewing = true;
         StatusText = null;
         foreach (var row in Rows) row.IsPreviewing = true;
+        RefreshWaitingOn();
+
+        // Each step's row fills in as its preview is ready, and the line above the list names what is still running.
+        var progress = new Progress<StepPreview>(p =>
+        {
+            if (generation != _previewGeneration) return;
+            if (Rows.FirstOrDefault(r => r.Id == p.StepId) is { } row)
+            {
+                row.Apply(p);
+                row.IsPreviewing = false;
+            }
+
+            RefreshWaitingOn();
+        });
 
         try
         {
             // Every step is previewed, not only the ticked ones: a row with no preview would show no reason for being
             // greyed, and the admin could not tell a blocked step from one they simply had not ticked.
             var ctx = Context();
-            var previews = await _runner.PreviewAsync(ctx, _runner.Steps.Select(s => s.Id).ToList(), CancellationToken.None);
+            var previews = await _runner.PreviewAsync(ctx, _runner.Steps.Select(s => s.Id).ToList(), CancellationToken.None, progress);
             if (generation != _previewGeneration) return;
             _previews = previews;
             _previewed = ctx;
@@ -415,6 +450,21 @@ public sealed partial class OffboardDialogViewModel : DialogViewModelBase
                 RefreshRunLabel();
             }
         }
+    }
+
+    /// <summary>"Working out what each step would change — still waiting on …", or null when nothing is running.</summary>
+    [ObservableProperty]
+    private string _waitingOn = "Working out what each step would change…";
+
+    private void RefreshWaitingOn()
+    {
+        var running = Rows.Where(r => r.IsPreviewing).Select(r => r.Title).ToList();
+        WaitingOn = running.Count switch
+        {
+            0 => "Working out what each step would change…",
+            <= 3 => $"Working out what each step would change — still waiting on {string.Join(", ", running)}…",
+            _ => $"Working out what each step would change — {running.Count} steps still running, including {string.Join(", ", running.Take(3))}…",
+        };
     }
 
     private void RefreshRunLabel()

@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace AdminConsole.Core.OnPrem;
 
 /// <summary>
@@ -9,9 +11,36 @@ namespace AdminConsole.Core.OnPrem;
 /// (a permission boundary, or a size limit): such a node is attached at the nearest ancestor that did come back,
 /// rather than being dropped and silently under-reporting what is there.
 /// </remarks>
-public sealed class OuNode
+public sealed class OuNode : INotifyPropertyChanged
 {
     public required OnPremOu Ou { get; init; }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    private bool _isExpanded;
+
+    /// <summary>
+    /// Whether its children show. Every node starts collapsed, so a domain with hundreds of OUs opens as its top
+    /// level and the admin opens the branch they want.
+    /// </summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded == value) return;
+            _isExpanded = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsExpanded)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(ToggleLabel)));
+        }
+    }
+
+    public bool HasChildren => Children.Count > 0;
+
+    /// <summary>What the expand button says to a screen reader.</summary>
+    public string ToggleLabel => IsExpanded ? $"Collapse {Name}" : $"Expand {Name}";
+
+    public override string ToString() => Name;
 
     public List<OuNode> Children { get; } = [];
 
@@ -29,6 +58,25 @@ public sealed class OuNode
         foreach (var child in Children)
         {
             foreach (var descendant in child.Flatten()) yield return descendant;
+        }
+    }
+
+    /// <summary>The nodes a collapsible tree shows: each root, and beneath it only the children of expanded nodes.</summary>
+    public static IEnumerable<OuNode> Visible(IEnumerable<OuNode> roots)
+    {
+        foreach (var root in roots)
+        {
+            foreach (var node in root.VisibleFrom()) yield return node;
+        }
+    }
+
+    private IEnumerable<OuNode> VisibleFrom()
+    {
+        yield return this;
+        if (!IsExpanded) yield break;
+        foreach (var child in Children)
+        {
+            foreach (var node in child.VisibleFrom()) yield return node;
         }
     }
 

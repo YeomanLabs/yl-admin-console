@@ -1331,15 +1331,33 @@
                             <ItemsControl ItemsSource="{Binding OuList}" AutomationProperties.Name="Organisational units">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Style="{StaticResource ListRowButton}" Padding="6,4"
-                                                Command="{Binding DataContext.FilterToOuCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                                CommandParameter="{Binding}"
-                                                AutomationProperties.Name="{Binding Name}">
-                                            <StackPanel Orientation="Horizontal" Margin="{Binding Depth, Converter={StaticResource DepthToMargin}}">
-                                                <ui:SymbolIcon Symbol="Folder24" FontSize="12" Margin="0,0,6,0" Opacity="0.8" />
-                                                <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" />
-                                            </StackPanel>
-                                        </Button>
+                                        <!-- The chevron opens or closes the branch; the name narrows the list to that OU. -->
+                                        <Grid Margin="{Binding Depth, Converter={StaticResource DepthToMargin}}">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="22" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Button x:Name="Toggle" Background="Transparent" BorderThickness="0" Padding="2" Cursor="Hand" VerticalAlignment="Center"
+                                                    Command="{Binding DataContext.ToggleOuCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}" AutomationProperties.Name="{Binding ToggleLabel}"
+                                                    Visibility="{Binding HasChildren, Converter={StaticResource BoolToVisibility}}">
+                                                <ui:SymbolIcon x:Name="Chevron" Symbol="ChevronRight24" FontSize="10" Opacity="0.8" />
+                                            </Button>
+                                            <Button Grid.Column="1" Style="{StaticResource ListRowButton}" Padding="4,4"
+                                                    Command="{Binding DataContext.FilterToOuCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    AutomationProperties.Name="{Binding Name}">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <ui:SymbolIcon Symbol="Folder24" FontSize="12" Margin="0,0,6,0" Opacity="0.8" />
+                                                    <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Button>
+                                        </Grid>
+                                        <DataTemplate.Triggers>
+                                            <DataTrigger Binding="{Binding IsExpanded}" Value="True">
+                                                <Setter TargetName="Chevron" Property="Symbol" Value="ChevronDown24" />
+                                            </DataTrigger>
+                                        </DataTemplate.Triggers>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

@@ -653,7 +653,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 ListPosition = $"{i + 1} of {people.Count}",
             };
 
-            await dialog.PrepareAsync(template);
+            dialog.StartPreparing(template);
             await Dialogs.ShowAsync(dialog);
             template = dialog.SelectedProfile;
             if (!dialog.HasRun)
