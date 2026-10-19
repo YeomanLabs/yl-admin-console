@@ -741,3 +741,17 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
   `New-AppRegistration.ps1 -Update`. The log records the AADSTS code, not the sentence, which can name the account.
 - **Settings shows it as a plain note**, not an InfoBar: the InfoBar's text is not in the automation tree, and the link
   has to be copied out, so the text is selectable.
+
+## 2026-10-19 — A permission not yet granted no longer locks the control that needs it
+
+- **Why.** In a tenant where `UserAuthenticationMethod.ReadWrite.All` had not been consented, the owner "could not remove
+  MFA, set up a TAP or anything": the Access tab said "Needs the 'UserAuthenticationMethod.ReadWrite.All' permission —
+  click to grant" while the grey rule had disabled both the TAP button and every remove-method button, so there was
+  nothing to click. The same rule disabled reset password, revoke sessions, licence and group toggles, device actions
+  and the BitLocker and LAPS reveals. Every one of those actions already asks for consent before it runs.
+- **What changed.** Missing consent is a caption, not a lock: the controls stay enabled and the click asks for the
+  permission. If the tenant needs an admin to approve it, a notice says so with the reason and the admin consent link
+  (selectable, unlike a toast), instead of "Write permission was not granted." Real blocks — not Windows, an action
+  running, a group the rules say cannot change — still disable.
+- **Not built, found on the way:** the group page's "Add member…" has always been disabled with "arrives in M5.4".
+  Membership changes work from a person's page; adding from the group page was never written.

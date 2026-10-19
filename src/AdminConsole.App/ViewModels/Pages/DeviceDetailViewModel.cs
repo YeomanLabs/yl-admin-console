@@ -96,12 +96,13 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
     [NotifyPropertyChangedFor(nameof(CanRevealLaps))]
     private bool _isActionRunning;
 
-    public bool CanRunActions => HasDevice && ActionsDisabledReason is null && !IsActionRunning;
+    /// <summary>A permission not yet consented does not disable these: each asks for consent on the click (EnsureAsync).</summary>
+    public bool CanRunActions => HasDevice && !IsActionRunning;
 
     /// <summary>Windows only: neither secret exists on any other platform, and offering the button would mislead.</summary>
-    public bool CanRevealBitLocker => IsWindows && BitLockerReason is null && !IsActionRunning;
+    public bool CanRevealBitLocker => IsWindows && !IsActionRunning;
 
-    public bool CanRevealLaps => IsWindows && LapsReason is null && !IsActionRunning;
+    public bool CanRevealLaps => IsWindows && !IsActionRunning;
 
     private bool IsWindows => Device?.OperatingSystem?.Contains("Windows", StringComparison.OrdinalIgnoreCase) == true;
 
@@ -514,9 +515,9 @@ public sealed partial class DeviceDetailViewModel : ObservableObject, IPageViewM
         {
             permission = await _consent.EnsureAsync(capability, CancellationToken.None);
         }
-        catch (SignInException)
+        catch (SignInException ex)
         {
-            _toasts.Show("Permission was not granted.");
+            await ConsentFailure.ShowAsync(_dialogs, _toasts, ex);
             return false;
         }
 

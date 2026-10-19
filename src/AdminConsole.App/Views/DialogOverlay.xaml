@@ -283,6 +283,12 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- A message to read and copy (a consent that needs an admin, with the link to send them). -->
+        <DataTemplate DataType="{x:Type dlg:NoticeDialogViewModel}">
+            <TextBox Text="{Binding Text, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" BorderThickness="0" Background="Transparent"
+                     Padding="0" Margin="0,4,0,0" AutomationProperties.Name="{Binding Text}" />
+        </DataTemplate>
+
         <!-- Settings → Active Directory: connect a tenant to an on-prem domain. No password field, by design (doc 11). -->
         <DataTemplate DataType="{x:Type dlg:ConnectDomainDialogViewModel}">
             <StackPanel Margin="0,4,0,0">

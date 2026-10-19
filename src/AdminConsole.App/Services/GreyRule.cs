@@ -3,8 +3,10 @@ using AdminConsole.Core.Auth;
 namespace AdminConsole.App.Services;
 
 /// <summary>
-/// UX §6: every disabled control gets one inline reason. Missing consent wins over "not built yet", because that is the
-/// one the admin can act on. Once the action exists, pass <c>notBuiltYet: null</c> and the control enables itself.
+/// UX §6: the one inline caption a control carries. Missing consent wins over "not built yet", because that is the one
+/// the admin can act on. Missing consent is a caption, not a lock: since 0.3.6 the controls stay enabled and the click
+/// asks for the permission (every action goes through ConsentService first), so "click to grant" is true. Disabling them
+/// left an admin in a tenant without the grant unable to do anything from the page, with no way to ask for it there.
 /// </summary>
 public static class GreyRule
 {

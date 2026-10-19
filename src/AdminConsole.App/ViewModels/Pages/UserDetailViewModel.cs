@@ -137,11 +137,15 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
     [NotifyPropertyChangedFor(nameof(CanRunActions))]
     private string? _actionsDisabledReason;
 
-    /// <summary>Enables Reset password and Revoke sessions in the header.</summary>
-    public bool CanRunActions => HasUser && ActionsDisabledReason is null;
+    /// <summary>
+    /// Enables Reset password and Revoke sessions in the header. A permission not yet consented does not disable them:
+    /// the caption says "click to grant", and the click does — each action asks for consent first (EnsureAsync). They
+    /// used to be disabled, so the caption invited a click on a button that could not be clicked.
+    /// </summary>
+    public bool CanRunActions => HasUser;
 
-    /// <summary>M18.1: the same permission as removing a method, so the same grey rule and caption.</summary>
-    public bool CanIssueTap => HasUser && AuthDeleteReason is null;
+    /// <summary>M18.1: the same permission as removing a method, so the same caption; a click asks for it.</summary>
+    public bool CanIssueTap => HasUser;
 
     [ObservableProperty]
     private string? _authDeleteReason;
@@ -159,7 +163,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         OffboardDisabledReason = null;
         AuthDeleteReason = GreyRule.Reason(_permissions, Capabilities.DeleteAuthMethod, null);
         OnPropertyChanged(nameof(CanIssueTap));
-        foreach (var row in AuthMethods) row.BlockedReason = AuthDeleteReason;
+
+        // The caption under the list carries the consent hint; the remove buttons stay live and ask on the click.
+        foreach (var row in AuthMethods) row.BlockedReason = null;
     }
 
     // ---- header ---------------------------------------------------------------------------------------------------
@@ -607,7 +613,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
             catch (SignInException ex)
             {
                 _logger.LogInformation("Consent for user edits not completed: {Kind}", ex.Kind);
-                return new WriteOutcome { Success = false, Summary = "Not saved", FriendlyError = "Write permission was not granted." };
+                return new WriteOutcome { Success = false, Summary = "Not saved", FriendlyError = ConsentFailure.Inline(ex) };
             }
 
             if (!permission.CanRun)
@@ -684,16 +690,16 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
             }
         }
 
-        var licenseBlocked = GreyRule.Reason(_permissions, Capabilities.AssignLicense, null);
+        // Consent is asked for on the first toggle (ToggleLicenseAsync), so a missing grant does not lock the rows.
         Licenses = skus
             .Where(s => s.IsEnabled || assigned.Contains(s.SkuId))
-            .Select(s => new LicenseRow(s, assigned.Contains(s.SkuId), states.GetValueOrDefault(s.SkuId), licenseBlocked, ToggleLicenseAsync))
+            .Select(s => new LicenseRow(s, assigned.Contains(s.SkuId), states.GetValueOrDefault(s.SkuId), null, ToggleLicenseAsync))
             .OrderByDescending(r => r.IsAssigned).ThenBy(r => r.Name)
             .ToList();
 
         // Groups: live list when available (authoritative), else the cache; member counts always from the cache.
         var counts = cachedGroups.ToDictionary(g => g.Id, g => g.MemberCount, StringComparer.OrdinalIgnoreCase);
-        var groupBlocked = GreyRule.Reason(_permissions, Capabilities.ChangeGroupMembership, null);
+        string? groupBlocked = null; // consent is asked for on the first removal (EnsureAsync), not a reason to lock the rows
         if (Live?.Groups.IsSuccess == true)
         {
             Groups = Live.Groups.Value!
@@ -713,7 +719,7 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         {
             AuthMethods = Live.AuthMethods.Value!
                 .OrderBy(m => m.Kind == AuthMethodKind.Password).ThenBy(m => m.KindLabel)
-                .Select(m => new AuthMethodRow(m, AuthDeleteReason, DeleteAuthMethodAsync))
+                .Select(m => new AuthMethodRow(m, null, DeleteAuthMethodAsync))
                 .ToList();
             AuthMethodsError = null;
             var last = Live.AuthMethods.Value!.Where(m => m.Kind != AuthMethodKind.Password).Select(m => m.CreatedDateTime).Max();
@@ -739,9 +745,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
             {
                 permission = await _consent.EnsureAsync(Capabilities.AssignLicense, CancellationToken.None);
             }
-            catch (SignInException)
+            catch (SignInException ex)
             {
-                return new WriteOutcome { Success = false, Summary = "Not changed", FriendlyError = "Write permission was not granted." };
+                return new WriteOutcome { Success = false, Summary = "Not changed", FriendlyError = ConsentFailure.Inline(ex) };
             }
 
             if (!permission.CanRun) return new WriteOutcome { Success = false, Summary = "Not changed", FriendlyError = permission.Reason };
@@ -832,9 +838,9 @@ public sealed partial class UserDetailViewModel : ObservableObject, IPageViewMod
         {
             permission = await _consent.EnsureAsync(capability, CancellationToken.None);
         }
-        catch (SignInException)
+        catch (SignInException ex)
         {
-            _toasts.Show("Write permission was not granted.");
+            await ConsentFailure.ShowAsync(_dialogs, _toasts, ex);
             return false;
         }
 
