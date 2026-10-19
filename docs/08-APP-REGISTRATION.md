@@ -148,8 +148,12 @@ when one is missing, naming the role rather than showing a bare 403.
 
 Only if the script cannot be used. Entra admin center → App registrations → New registration; multitenant; then
 Authentication → Add a platform → Mobile and desktop applications with the three redirect URIs above and **Allow
-public client flows: Yes**; then API permissions → Microsoft Graph → Delegated, adding all 26 above, SharePoint → Delegated → `AllSites.FullControl`, and Office 365 Exchange Online → Delegated →
-`Exchange.Manage`; then Grant admin consent. Copy the Application (client) ID into the console's setup screen.
+public client flows: Yes**; then API permissions → Add a permission, once per API, Delegated each time: Microsoft
+Graph (Microsoft APIs tab) with all 26 above; SharePoint (Microsoft APIs tab) → `AllSites.FullControl`; and Office 365
+Exchange Online → `Exchange.Manage`, which is on the **APIs my organization uses** tab (search for it) — not under
+Microsoft Graph, where searching for it finds nothing. Check that Configured permissions lists Microsoft Graph (26),
+Office 365 Exchange Online (1) and SharePoint (1); only then Grant admin consent, because the tenant-wide grant becomes
+exactly what is listed at that moment. Copy the Application (client) ID into the console's setup screen.
 
 This is the six-step click-through the script replaced. It is easy to get subtly wrong — a missing broker redirect URI
 fails only on the machines that use the broker, which is all of them.
@@ -173,7 +177,8 @@ showing the unverified warning. A per-tenant registration created by the tenant'
 One installation can open several tenants: the title bar's tenant name is the switcher, and "Add a tenant…" asks for
 the tenant's id or one of its domains, then the client ID of that tenant's own registration — made there by running the
 script in that tenant, as for the first. Left empty, the current tenant's registration is used, which works only where
-it has been consented; for that, have the other tenant's Global Administrator open
+it has been consented; for that, have an admin there who can grant consent (a Cloud Application Administrator,
+Application Administrator, Privileged Role Administrator or Global Administrator) open
 
 ```
 https://login.microsoftonline.com/{tenant}/adminconsent?client_id={client id}

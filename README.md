@@ -103,8 +103,19 @@ Pass `-WriteConfig` and there is nothing to paste. Undoing it is the one `Remove
    - `ms-appx-web://microsoft.aad.brokerplugin/<client ID>`
    - `https://login.microsoftonline.com/common/oauth2/nativeclient`
    - `http://localhost`
-3. **API permissions**, all **Delegated**, then **Grant admin consent**. There are no application permissions: the
-   console only ever acts as the signed-in admin.
+3. **API permissions → Add a permission**, three times — once for each of three APIs — choosing **Delegated
+   permissions** every time. There are no application permissions: the console only ever acts as the signed-in admin.
+   Two of the three are **not under Microsoft Graph**, so searching Graph for them finds nothing:
+
+   | API | Where it is in **Request API permissions** | Permissions |
+   |---|---|---|
+   | Microsoft Graph | **Microsoft APIs** tab → Microsoft Graph | the 26 below |
+   | Office 365 Exchange Online | **APIs my organization uses** tab → search "Office 365 Exchange Online" | `Exchange.Manage` |
+   | SharePoint | **Microsoft APIs** tab → SharePoint | `AllSites.FullControl` |
+
+   When you are done, **Configured permissions** lists **Microsoft Graph (26)**, **Office 365 Exchange Online (1)** and
+   **SharePoint (1)**. (Graph shows 23 if `openid`, `profile` and `offline_access` were left out; sign-in grants those
+   anyway.)
 
    **Microsoft Graph**
 
@@ -143,7 +154,17 @@ Pass `-WriteConfig` and there is nothing to paste. Undoing it is the one `Remove
 
    Until a permission is consented, only the feature that needs it waits; it says which permission it is missing, and
    **Settings → Permissions** grants it.
-4. Open the console, paste the **Application (client) ID** into the setup screen, and sign in.
+4. **Grant admin consent for (your organisation)** — last, once all three APIs are listed. The tenant-wide grant
+   becomes exactly what is listed at that moment, so granting first and adding Exchange or SharePoint afterwards leaves
+   them unconsented. Any of Cloud Application Administrator, Application Administrator, Privileged Role Administrator or
+   Global Administrator can grant it.
+5. Open the console, paste the **Application (client) ID** into the setup screen, and sign in.
+
+**Checking an existing registration.** If **Settings → Permissions** shows fewer than 17 of 17, or **Grant all write
+permissions** fails, the rows without a tick name what is missing. Usually it is Exchange or SharePoint, absent from the
+registration altogether — the console cannot ask for an API the registration does not list. Add it as in step 3 (or
+run `.\scripts\New-AppRegistration.ps1 -Update` in that tenant), grant admin consent again, then in the console sign
+out of that tenant (**Settings → Sign out**) and back in so it picks up the new grant.
 
 ### Roles your admins need
 
