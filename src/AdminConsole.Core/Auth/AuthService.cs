@@ -182,7 +182,7 @@ public sealed partial class AuthService : IAuthService
                     ? "in the Entra admin center: Enterprise applications → this app → Permissions → Grant admin consent"
                     : $"in the Entra admin center (Enterprise applications → this app → Permissions → Grant admin consent), or by opening {adminConsentUrl}";
                 return new SignInException(SignInFailureKind.AdminConsentRequired,
-                    $"An admin has to approve these permissions in this tenant. A Global Administrator or Privileged Role Administrator can grant them {where}. Entra said: {reason}",
+                    $"An admin has to approve these permissions in this tenant. Every permission is delegated, so a Cloud Application Administrator, Application Administrator, Privileged Role Administrator or Global Administrator can grant them {where}. Entra said: {reason}",
                     code, text, ex);
             case "AADSTS650057" or "AADSTS65005":
                 return new SignInException(SignInFailureKind.AdminConsentRequired,

@@ -50,7 +50,10 @@ gone by itself after that. To remove it immediately:
 - The **Microsoft.Graph** PowerShell module: `Install-Module Microsoft.Graph -Scope CurrentUser`
 - An account in the target tenant with:
   - **Application Administrator** — to create the registration
-  - **Privileged Role Administrator** or **Global Administrator** — to grant admin consent
+  - to grant admin consent: the same **Application Administrator**, or a **Cloud Application Administrator**,
+    **Privileged Role Administrator** or **Global Administrator**. Every permission is delegated, and Microsoft lets
+    the application-administrator roles grant delegated permissions tenant-wide; only application permissions
+    (which this app has none of) need Privileged Role Administrator.
 - If the person running it cannot consent, pass `-NoConsent`. The script prints a consent URL for someone who can.
 
 ## What it creates

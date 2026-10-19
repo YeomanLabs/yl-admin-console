@@ -90,7 +90,8 @@ to the directory. The package carries none: the first run opens a setup screen t
 .\scripts\New-AppRegistration.ps1 -Update   # an existing registration: adds what a newer version needs
 ```
 
-It needs a Global Administrator, or an Application Administrator plus a Privileged Role Administrator for the consent.
+It needs an Application Administrator, Cloud Application Administrator or Global Administrator. Every permission is
+delegated, so the same role that creates the registration can grant its admin consent.
 Pass `-WriteConfig` and there is nothing to paste. Undoing it is the one `Remove-MgApplication` command it prints.
 
 ### By hand
