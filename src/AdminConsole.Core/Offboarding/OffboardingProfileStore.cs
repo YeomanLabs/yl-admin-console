@@ -98,6 +98,55 @@ public sealed class OffboardingProfileStore
         return result;
     }
 
+    /// <summary>
+    /// Imports an offboarding template file: refused when it is the other kind of template or breaks the editor's rules
+    /// (a stamp Restore could not undo, a placeholder that does not exist), renamed on a clash, never the default.
+    /// </summary>
+    public OffboardingProfile? Import(string json, IReadOnlyList<OffboardingProfile> existing, out string? error)
+    {
+        if (Templates.TemplateTransfer.KindOf(json) == Templates.TemplateFileKind.User)
+        {
+            error = "This is a user template. Import it on the New users tab.";
+            return null;
+        }
+
+        OffboardingProfile? parsed;
+        try
+        {
+            parsed = JsonSerializer.Deserialize<OffboardingProfile>(json, JsonFiles.Options);
+        }
+        catch (JsonException ex)
+        {
+            error = Explain(ex);
+            return null;
+        }
+
+        if (parsed is null || string.IsNullOrWhiteSpace(parsed.Name))
+        {
+            error = "no template name";
+            return null;
+        }
+
+        var renamed = parsed with
+        {
+            Name = Templates.TemplateTransfer.UniqueName(parsed.Name, existing.Select(p => p.Name)),
+            IsDefault = false,
+            FileName = null,
+        };
+
+        if (renamed.Problems(existing) is { Count: > 0 } problems)
+        {
+            error = string.Join(" ", problems);
+            return null;
+        }
+
+        error = null;
+        return Save(renamed);
+    }
+
+    /// <summary>The file an export writes: the template as it sits on disk, without being anyone's default.</summary>
+    public static string Export(OffboardingProfile profile) => JsonSerializer.Serialize(profile with { IsDefault = false }, JsonFiles.Options);
+
     public void Delete(OffboardingProfile profile)
     {
         if (profile.FileName is null) return;

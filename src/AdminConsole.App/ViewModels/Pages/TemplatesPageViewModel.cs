@@ -3,7 +3,9 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using AdminConsole.App.Services;
 using AdminConsole.App.ViewModels.Dialogs;
+using System.IO;
 using AdminConsole.Core.Auth;
+using AdminConsole.Core.Cache;
 using AdminConsole.Core.Graph;
 using AdminConsole.Core.Models;
 using AdminConsole.Core.Offboarding;
@@ -19,14 +21,18 @@ namespace AdminConsole.App.ViewModels.Pages;
 public sealed partial class TemplatesPageViewModel : ObservableObject, IPageViewModel, IRefreshable
 {
     private readonly TemplateService _templates;
+    private readonly FilePicker _files;
+    private readonly CacheDb _db;
     private readonly TenantContext _tenant;
     private readonly ToastService _toasts;
     private readonly IDialogService _dialogs;
     private readonly ILogger<TemplatesPageViewModel> _logger;
 
     public TemplatesPageViewModel(TemplateService templates, TenantContext tenant, ToastService toasts, IDialogService dialogs, ILogger<TemplatesPageViewModel> logger,
-        OffboardingProfileStore offboardingTemplates, OffboardingRunner offboarding, FilePicker files)
+        OffboardingProfileStore offboardingTemplates, OffboardingRunner offboarding, FilePicker files, CacheDb db)
     {
+        _files = files;
+        _db = db;
         _templates = templates;
         _tenant = tenant;
         _toasts = toasts;
@@ -160,6 +166,83 @@ public sealed partial class TemplatesPageViewModel : ObservableObject, IPageView
     {
         Json = _savedJson;
         ValidationError = null;
+    }
+
+    // ---- import and export ----------------------------------------------------------------------------------------
+
+    /// <summary>The selected template as saved (not unsaved edits in the editor), as a file to take elsewhere.</summary>
+    [RelayCommand]
+    private void Export()
+    {
+        if (Selected is not { } template) return;
+        var path = _files.SaveAs(TemplateTransfer.ExportFileName(template.Name, TemplateFileKind.User), TemplateFiles.Filter, "Export template");
+        if (path is null) return;
+        try
+        {
+            File.WriteAllText(path, TemplateService.Export(template));
+            _toasts.Show($"Exported {template.Name}" + (IsDirty ? " (as saved; your unsaved edits are not in the file)" : string.Empty));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _toasts.Show($"Could not write the file: {ex.Message}");
+        }
+    }
+
+    /// <summary>Every template, one file each, into a folder — for moving them to another PC.</summary>
+    [RelayCommand]
+    private void ExportAll()
+    {
+        if (TemplatesList.Count == 0) return;
+        var folder = _files.PickFolder("Export every user template to a folder");
+        if (folder is null) return;
+        try
+        {
+            foreach (var t in TemplatesList) TemplateFiles.WriteNew(folder, TemplateTransfer.ExportFileName(t.Name, TemplateFileKind.User), TemplateService.Export(t));
+            _toasts.Show($"Exported {TemplatesList.Count} template{(TemplatesList.Count == 1 ? string.Empty : "s")} to {folder}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _toasts.Show($"Could not write the files: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Template files into this tenant: each checked with the editor's rules, renamed on a clash, and checked against
+    /// this tenant's cache for groups, licences and a manager it does not have — said in the summary, file by file.
+    /// </summary>
+    [RelayCommand]
+    private async Task ImportAsync()
+    {
+        var paths = _files.OpenFiles(TemplateFiles.Filter, "Import user templates");
+        if (paths.Count == 0) return;
+
+        var lines = new List<string>();
+        UserTemplate? last = null;
+        var skus = _db.GetSkus().Select(s => s.SkuId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in paths)
+        {
+            var file = Path.GetFileName(path);
+            var (text, problem) = TemplateFiles.Read(path);
+            if (text is null)
+            {
+                lines.Add($"{file}: not imported — {problem}");
+                continue;
+            }
+
+            if (_templates.Import(text, out var error) is not { } imported)
+            {
+                lines.Add($"{file}: not imported — {error}");
+                continue;
+            }
+
+            last = imported;
+            var missing = TemplateTransfer.MissingHere(imported, id => _db.GetGroup(id) is not null, skus.Contains, id => _db.GetUser(id) is not null);
+            lines.Add(missing.Count == 0 ? $"{file}: imported as {imported.Name}." : $"{file}: imported as {imported.Name}. {string.Join(" ", missing)}");
+        }
+
+        _logger.LogInformation("Imported {Count} of {Files} user template file(s)", lines.Count(l => l.Contains(": imported", StringComparison.Ordinal)), paths.Count);
+        Reload(last?.FileName ?? Selected?.FileName);
+        await _dialogs.ShowAsync(new NoticeDialogViewModel("Import user templates", string.Join(Environment.NewLine + Environment.NewLine, lines)));
     }
 
     // ---- create and delete ----------------------------------------------------------------------------------------

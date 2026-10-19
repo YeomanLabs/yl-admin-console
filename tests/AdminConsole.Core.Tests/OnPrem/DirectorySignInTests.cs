@@ -8,6 +8,7 @@ using AdminConsole.Core.OnPrem;
 namespace AdminConsole.Core.Tests.OnPrem;
 
 /// <summary>Connect as another account: what may be typed, how it binds, and asking for the password without a network.</summary>
+[System.Runtime.Versioning.SupportedOSPlatform("windows")]
 public sealed class DirectorySignInTests
 {
     [Theory]

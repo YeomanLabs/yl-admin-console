@@ -9,6 +9,7 @@ using AdminConsole.Core;
 using AdminConsole.Core.Auth;
 using AdminConsole.Core.Offboarding;
 using AdminConsole.Core.Offboarding.Steps;
+using AdminConsole.Core.Templates;
 
 namespace AdminConsole.App.ViewModels.Pages;
 
@@ -339,6 +340,83 @@ public sealed partial class OffboardingTemplatesViewModel : ObservableObject
         _store.SetDefault(_profiles, item.Profile);
         _toasts.Show($"The offboard dialog now opens with {item.Name}");
         Reload(item.Profile.FileName, keepBuiltIn: item.Profile.IsBuiltIn);
+    }
+
+    // ---- import and export ----------------------------------------------------------------------------------------
+
+    /// <summary>A saved template (not the built-in, which every installation already has) as a file.</summary>
+    [RelayCommand]
+    private void Export()
+    {
+        if (Selected is not { Profile: { IsBuiltIn: false } profile }) return;
+        var path = _files.SaveAs(TemplateTransfer.ExportFileName(profile.Name, TemplateFileKind.Offboarding), TemplateFiles.Filter, "Export offboarding template");
+        if (path is null) return;
+        try
+        {
+            File.WriteAllText(path, OffboardingProfileStore.Export(profile));
+            _toasts.Show($"Exported {profile.Name}" + (IsDirty ? " (as saved; your unsaved changes are not in the file)" : string.Empty));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _toasts.Show($"Could not write the file: {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void ExportAll()
+    {
+        var saved = _profiles.Where(p => !p.IsBuiltIn).ToList();
+        if (saved.Count == 0)
+        {
+            _toasts.Show("There are no offboarding templates of your own to export yet.");
+            return;
+        }
+
+        var folder = _files.PickFolder("Export every offboarding template to a folder");
+        if (folder is null) return;
+        try
+        {
+            foreach (var p in saved) TemplateFiles.WriteNew(folder, TemplateTransfer.ExportFileName(p.Name, TemplateFileKind.Offboarding), OffboardingProfileStore.Export(p));
+            _toasts.Show($"Exported {saved.Count} offboarding template{(saved.Count == 1 ? string.Empty : "s")} to {folder}");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _toasts.Show($"Could not write the files: {ex.Message}");
+        }
+    }
+
+    /// <summary>Offboarding template files: refused when they break the editor's rules, renamed on a clash, never the default.</summary>
+    [RelayCommand]
+    private async Task ImportAsync()
+    {
+        var paths = _files.OpenFiles(TemplateFiles.Filter, "Import offboarding templates");
+        if (paths.Count == 0) return;
+
+        var lines = new List<string>();
+        OffboardingProfile? last = null;
+        foreach (var path in paths)
+        {
+            var file = Path.GetFileName(path);
+            var (text, problem) = TemplateFiles.Read(path);
+            if (text is null)
+            {
+                lines.Add($"{file}: not imported — {problem}");
+                continue;
+            }
+
+            if (_store.Import(text, _store.Load(_steps), out var error) is not { } imported)
+            {
+                lines.Add($"{file}: not imported — {error}");
+                continue;
+            }
+
+            last = imported;
+            lines.Add($"{file}: imported as {imported.Name}.");
+        }
+
+        _logger.LogInformation("Imported {Count} of {Files} offboarding template file(s)", lines.Count(l => l.Contains(": imported", StringComparison.Ordinal)), paths.Count);
+        Reload(last?.FileName ?? Selected?.Profile.FileName);
+        await _dialogs.ShowAsync(new NoticeDialogViewModel("Import offboarding templates", string.Join(Environment.NewLine + Environment.NewLine, lines)));
     }
 
     [RelayCommand]

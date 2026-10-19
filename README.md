@@ -29,6 +29,9 @@ in AD from a template — without opening five admin centres.
 - **Offboarding templates.** Save what each kind of leaver gets — the steps, the manager as delegate, an automatic
   reply with `{name}` and `{delegate}` filled in per person, the attributes to stamp — and pick the one the offboard
   dialog opens with.
+- **Templates travel.** Both kinds of template import and export as JSON files — one, or all into a folder — to share
+  with other techs or another PC. Importing a user template into another tenant lists the groups, licences and manager
+  it names that this tenant does not have.
 - **Onboarding.** **Onboard someone** on Home (or Ctrl+N) starts from a saved template or a copy of someone who already
   has the role — the same snapshot rules either way, nothing personal copied. In a synced organisation the account is
   created in AD, and the licences, groups and mailbox settings follow on their own once Entra Connect has synced it.

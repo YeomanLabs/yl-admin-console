@@ -375,6 +375,12 @@
             <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,0,0,12">
                 <ui:Button Content="New from user…" Icon="{ui:SymbolIcon PersonAdd24}"
                            Command="{Binding NewFromUserCommand}" AutomationProperties.Name="New template from user" />
+                <ui:Button Content="Import…" Icon="{ui:SymbolIcon ArrowUpload24}" Margin="8,0,0,0"
+                           Command="{Binding ImportCommand}" AutomationProperties.Name="Import user templates" />
+                <ui:Button Content="Export…" Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0"
+                           Command="{Binding ExportCommand}" IsEnabled="{Binding HasSelection}" AutomationProperties.Name="Export this user template" />
+                <ui:Button Content="Export all…" Margin="8,0,0,0"
+                           Command="{Binding ExportAllCommand}" IsEnabled="{Binding HasTemplates}" AutomationProperties.Name="Export every user template" />
                 <ui:Button Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="8,0,0,0"
                            Command="{Binding DeleteCommand}" IsEnabled="{Binding HasSelection}"
                            AutomationProperties.Name="Delete template" />
@@ -490,6 +496,12 @@
                 <ui:Button Content="Delete" Icon="{ui:SymbolIcon Delete24}" Margin="8,0,0,0"
                            Command="{Binding DeleteCommand}" IsEnabled="{Binding CanDelete}"
                            AutomationProperties.Name="Delete this offboarding template" />
+                <ui:Button Content="Import…" Icon="{ui:SymbolIcon ArrowUpload24}" Margin="8,0,0,0"
+                           Command="{Binding ImportCommand}" AutomationProperties.Name="Import offboarding templates" />
+                <ui:Button Content="Export…" Icon="{ui:SymbolIcon ArrowDownload24}" Margin="8,0,0,0"
+                           Command="{Binding ExportCommand}" IsEnabled="{Binding CanDelete}" AutomationProperties.Name="Export this offboarding template" />
+                <ui:Button Content="Export all…" Margin="8,0,0,0"
+                           Command="{Binding ExportAllCommand}" AutomationProperties.Name="Export every offboarding template" />
             </StackPanel>
 
             <StackPanel Grid.Row="1" Grid.ColumnSpan="2">

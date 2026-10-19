@@ -796,3 +796,21 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **A failed connection is held for 30 s.** With the DC unreachable every AD call waited out the bind timeout: the
   onboarding copy of a synced user took about 45 s, an offboarding preview 20 s per AD step. A failure now answers
   at once for 30 s; Try again (or Sign in) clears it.
+
+## 2026-10-19 — Templates import and export
+
+- **The file is the template file.** An export is the same JSON the Templates folder holds (without when it was last
+  used, or whether it is the default), so a file can also be dropped into the folder by hand. Export, Export all (one
+  file each into a folder, never replacing a file already there) and Import (several files at once) on both tabs; a
+  summary says what happened to each file.
+- **Kinds are told apart.** User template files always carry `schemaVersion`, offboarding ones `steps`. Without the
+  check a file imported on the wrong tab parsed as an empty template of the other kind.
+- **Imports never overwrite and never take over.** A clash renames ("Sales rep (imported)"); an imported offboarding
+  template is never the default and must pass the editor's rules. Found on the way: a new user template was saved to
+  whatever file its name made, so a second "Sales rep" quietly replaced the first. New templates now get a file of their
+  own, as offboarding templates already did.
+- **Another tenant's ids are named, not fixed.** A user template holds its tenant's group and manager ids (licence SKU
+  ids are the same product everywhere but may not be subscribed). Import checks them against this tenant's cache and
+  says which are missing; it does not guess replacements.
+- **Also:** the test project had CA1416 warnings from `DirectorySignInTests` (in 0.3.7, whose notes said zero
+  warnings — true of the app, not the tests); the class is now marked Windows-only.

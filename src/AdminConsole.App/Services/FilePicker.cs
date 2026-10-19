@@ -38,6 +38,19 @@ public sealed class FilePicker
         return dialog.ShowDialog(Application.Current?.MainWindow) == true ? dialog.FileName : null;
     }
 
+    /// <summary>Existing files to read, or none when the admin cancels.</summary>
+    public IReadOnlyList<string> OpenFiles(string filter, string title)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Filter = filter,
+            Title = title,
+            CheckFileExists = true,
+            Multiselect = true,
+        };
+        return dialog.ShowDialog(Application.Current?.MainWindow) == true ? dialog.FileNames : [];
+    }
+
     /// <summary>An existing folder, or null when the admin cancels.</summary>
     public string? PickFolder(string title, string? initialFolder = null)
     {

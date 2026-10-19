@@ -103,14 +103,45 @@ public sealed class TemplateService
         return templates.OrderBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
+    /// <summary>
+    /// Writes the template. One saved before keeps its file, so a rename leaves nothing behind; a new one gets a file of
+    /// its own — before import existed, a second "Sales rep" quietly replaced the first.
+    /// </summary>
     public UserTemplate Save(UserTemplate template)
     {
         Directory.CreateDirectory(_directory);
-        var fileName = template.FileName ?? $"{JsonFiles.Slug(template.Name)}.json";
+        var fileName = template.FileName ?? UniqueFileName(JsonFiles.Slug(template.Name));
         File.WriteAllText(Path.Combine(_directory, fileName), Serialize(template));
         _logger.LogInformation("Saved the template {Name} to {File}", template.Name, fileName);
         return template with { FileName = fileName };
     }
+
+    private string UniqueFileName(string slug)
+    {
+        var fileName = $"{slug}.json";
+        for (var n = 2; File.Exists(Path.Combine(_directory, fileName)); n++) fileName = $"{slug}-{n}.json";
+        return fileName;
+    }
+
+    /// <summary>
+    /// Imports a template file: parsed with the editor's rules, renamed if this tenant already has one of that name,
+    /// saved under a file of its own, never carrying where or when it was last used.
+    /// </summary>
+    public UserTemplate? Import(string json, out string? error)
+    {
+        if (TemplateTransfer.KindOf(json) == TemplateFileKind.Offboarding)
+        {
+            error = "This is an offboarding template. Import it on the Offboarding tab.";
+            return null;
+        }
+
+        if (TryParse(json, out error) is not { } parsed) return null;
+        var name = TemplateTransfer.UniqueName(parsed.Name, Load().Select(t => t.Name));
+        return Save(parsed with { Name = name, FileName = null, LastUsed = null });
+    }
+
+    /// <summary>The file an export writes: the template as it sits on disk, without when it was last used.</summary>
+    public static string Export(UserTemplate template) => Serialize(template with { LastUsed = null });
 
     public void Delete(UserTemplate template)
     {
