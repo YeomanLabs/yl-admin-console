@@ -28,7 +28,7 @@ public sealed class TenantSessionFactory
         typeof(ILoggerFactory), typeof(SyncOptions), typeof(BrandingStore), typeof(TenantConfigStore), typeof(WindowHandleProvider),
         typeof(HttpClient), typeof(ActionLog), typeof(SnapshotStore), typeof(UserSettingsStore), typeof(PendingProvisioningStore),
         typeof(ReportStore), typeof(OffboardingProfileStore), typeof(ToastService), typeof(DialogService), typeof(IDialogService),
-        typeof(FilePicker), typeof(ShellViewModel),
+        typeof(FilePicker), typeof(ShellViewModel), typeof(DirectoryCredentialStore),
     ];
 
     private readonly IServiceProvider _root;
@@ -52,7 +52,14 @@ public sealed class TenantSessionFactory
     /// How a profile's domain binds — the session and Settings' connection test both ask here, so a test that passes
     /// binds the way the saved session will. The first profile inherits appsettings' lab credential for that domain.
     /// </summary>
-    public LdapOptions OptionsFor(TenantDomain domain, bool isPrimary) => domain.ToOptions(isPrimary ? _appOnPrem : null);
+    public LdapOptions OptionsFor(TenantDomain domain, bool isPrimary)
+    {
+        var options = domain.ToOptions(isPrimary ? _appOnPrem : null);
+
+        // Connect as another account: its password comes from this run's memory, or is asked for (never stored).
+        if (options.SignInAs.Length > 0) options.Credentials = _root.GetRequiredService<DirectoryCredentialStore>();
+        return options;
+    }
 
     /// <param name="isPrimary">The first profile: it also takes appsettings' <c>OnPrem</c> section, which predates profiles.</param>
     public TenantSession Create(TenantProfile profile, bool isPrimary)

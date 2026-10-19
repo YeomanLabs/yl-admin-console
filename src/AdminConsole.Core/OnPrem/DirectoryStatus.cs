@@ -31,4 +31,13 @@ public sealed record DirectoryStatus
 
     public static DirectoryStatus Unreachable(string detail) =>
         new() { IsConnected = false, Reason = $"No domain controller reachable. {detail}" };
+
+    /// <summary>The connection signs in as an account whose password has not been given this session.</summary>
+    public bool NeedsSignIn { get; init; }
+
+    public static DirectoryStatus NotSignedIn(string domain, string account) =>
+        new() { IsConnected = false, NeedsSignIn = true, DomainName = domain, Reason = $"Not signed in to {domain}. Sign in as {account} to use on-prem features." };
+
+    public static DirectoryStatus SignInRefused(string domain, string account) =>
+        new() { IsConnected = false, NeedsSignIn = true, DomainName = domain, Reason = $"{domain} did not accept the password for {account}. Sign in again." };
 }

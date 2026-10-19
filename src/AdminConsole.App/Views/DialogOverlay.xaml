@@ -283,6 +283,18 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- Sign in to an on-prem domain as the account Settings names: once per run, held in memory only. -->
+        <DataTemplate DataType="{x:Type dlg:AdSignInDialogViewModel}">
+            <StackPanel Margin="0,4,0,0">
+                <TextBlock Text="{Binding Explanation}" TextWrapping="Wrap" FontSize="12" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Account" FontSize="12" Margin="0,12,0,4" />
+                <TextBlock Text="{Binding Account}" FontFamily="{StaticResource AcMono}" />
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Password" FontSize="12" Margin="0,10,0,4" />
+                <ui:PasswordBox Password="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" b:FocusBehavior.FocusWhen="True"
+                                AutomationProperties.Name="Password" />
+            </StackPanel>
+        </DataTemplate>
+
         <!-- Onboard someone: the one question before the create form. Two cards, each a whole button. -->
         <DataTemplate DataType="{x:Type dlg:OnboardDialogViewModel}">
             <StackPanel Margin="0,4,0,0">
@@ -363,6 +375,20 @@
                 <TextBlock Foreground="{DynamicResource AcTextSecondary}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
                            Text="Some VPNs do not pass on the DNS records Windows uses to find a controller. Naming one works around that, but it stops working if that controller is retired." />
                 <CheckBox Content="Use LDAPS (port 636) instead of a signed and sealed connection on 389" IsChecked="{Binding UseTls}" Margin="0,8,0,0" />
+
+                <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Connect as" FontSize="12" Margin="0,14,0,4" />
+                <RadioButton Content="{Binding ConnectAsMeLabel}" IsChecked="{Binding ConnectAsMe}" GroupName="ConnectAs" />
+                <RadioButton Content="Another account — a separate admin account, say" IsChecked="{Binding UseOtherAccount}" GroupName="ConnectAs" Margin="0,4,0,0" />
+                <Grid Margin="28,6,0,0" Visibility="{Binding UseOtherAccount, Converter={StaticResource BoolToVisibility}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <ui:TextBox Text="{Binding SignInAs, UpdateSourceTrigger=PropertyChanged}" PlaceholderText="CORP\admin or admin@corp.example.com"
+                                AutomationProperties.Name="Account to connect as" />
+                    <ui:PasswordBox Grid.Column="1" Margin="8,0,0,0" Password="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                    PlaceholderText="Password (this session only)" AutomationProperties.Name="Password for the account to connect as" />
+                </Grid>
 
                 <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
                     <ui:Button Content="Test connection" Icon="{ui:SymbolIcon PlugConnected24}" Command="{Binding TestCommand}"

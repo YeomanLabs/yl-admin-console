@@ -15,7 +15,8 @@ public sealed record DomainSettingRow(TenantDomain Domain)
             var via = Domain.Server.Length > 0 ? $"via {Domain.Server}" : "Windows finds a controller";
             var tls = Domain.UseTls ? " · LDAPS" : string.Empty;
             var leavers = Domain.DisabledOu.Length > 0 ? $"leavers to {DistinguishedNames.FriendlyPath(Domain.DisabledOu)}" : "no leavers OU";
-            return $"{via}{tls} · {leavers}";
+            var account = Domain.SignInAs.Length > 0 ? $"as {Domain.SignInAs}" : "as you";
+            return $"{via}{tls} · {account} · {leavers}";
         }
     }
 

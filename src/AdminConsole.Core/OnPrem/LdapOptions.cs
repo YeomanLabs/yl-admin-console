@@ -43,4 +43,13 @@ public sealed class LdapOptions
     /// machine that is not domain-joined can drive a lab, and it should never be how a client deployment runs.
     /// </summary>
     public NetworkCredential? Credential { get; set; }
+
+    /// <summary>
+    /// The admin's own other account to connect as ("CORP\admin"), set in Settings → Active Directory. Empty means the
+    /// Windows user. Its password is asked for once per session through <see cref="Credentials"/> and never stored.
+    /// </summary>
+    public string SignInAs { get; set; } = string.Empty;
+
+    /// <summary>Asks for and remembers <see cref="SignInAs"/>'s password for the session. Not bound from configuration.</summary>
+    public IDirectoryCredentials? Credentials { get; set; }
 }

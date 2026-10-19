@@ -203,12 +203,10 @@ Domain page) asks for the domain's DNS name — `(Get-ADDomain).DNSRoot` shows i
 the leavers OU from the real tree, and reconnects the tenant. On the office network or the VPN, Windows finds a
 controller by itself; name one only if your VPN does not pass on the DNS records it uses.
 
-The connection is your own Windows sign-in: no password is stored, and AD enforces what you have been delegated. If
-your AD rights are on a separate admin account, start the console as that account for network sign-ins:
-
-```powershell
-runas /netonly /user:CORP\admin-account "C:\Program Files\Admin Console\AdminConsole.exe"
-```
+**Connect as** is either your Windows sign-in or another account of yours — a separate admin account, say. For another
+account, only its name is saved: the console asks for the password once each time it runs (when the tenant opens, or
+from the Domain page's **Sign in…**), keeps it in memory, and never writes or logs it. Either way AD enforces what that
+account has been delegated.
 
 Each tenant keeps its own domains, in `tenant.json` — several are fine, and each change goes to the domain that holds
 the object. `appsettings.local.json`'s `OnPrem` section still works for the first tenant. A server name and a

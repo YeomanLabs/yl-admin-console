@@ -20,6 +20,12 @@ public interface IDirectoryService
     /// <summary>Whether a domain controller is reachable, and which one. Cheap enough to call on page load.</summary>
     Task<DirectoryStatus> GetStatusAsync(CancellationToken ct);
 
+    /// <summary>
+    /// Forgets a failed, declined or refused connection, so the next call tries again at once — and asks for the
+    /// sign-in again, where the domain signs in as another account. The Domain page's Sign in / Try again.
+    /// </summary>
+    void Reconnect();
+
     // ---- reads ---------------------------------------------------------------------------------------------------
 
     Task<OnPremUser?> GetUserAsync(Guid objectGuid, CancellationToken ct);

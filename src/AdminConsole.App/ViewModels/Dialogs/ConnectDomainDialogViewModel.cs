@@ -33,6 +33,8 @@ public sealed partial class ConnectDomainDialogViewModel : DialogViewModelBase
         _domain = editing?.Domain ?? suggestedDomain ?? string.Empty;
         _server = editing?.Server ?? string.Empty;
         _useTls = editing?.UseTls ?? false;
+        _signInAs = editing?.SignInAs ?? string.Empty;
+        _useOtherAccount = _signInAs.Length > 0;
         _ouChoices = InitialOus(editing?.DisabledOu);
         _selectedOu = _ouChoices.Count > 1 ? _ouChoices[1] : _ouChoices[0];
         _problem = Check();
@@ -50,9 +52,45 @@ public sealed partial class ConnectDomainDialogViewModel : DialogViewModelBase
     /// Who the connection binds as: the admin's own Windows sign-in, with no password stored — unless this is the lab
     /// domain appsettings names with a credential, which it keeps (<see cref="TenantDomain.ToOptions"/>).
     /// </summary>
-    public string BoundAsNote => _optionsFor(Build()).Credential is { } lab
-        ? $"Connects with the credential appsettings.local.json gives this domain ({lab.Domain}\\{lab.UserName}): a lab setup. Any other domain connects as you."
-        : $"Connects as you ({Environment.UserDomainName}\\{Environment.UserName}), with no password stored. If your AD rights are on a separate account, start the console as that account with runas /netonly.";
+    public string BoundAsNote => UseOtherAccount
+        ? $"Connects as {SignInAs.Trim()}. Its password is asked for once each time the console runs and kept in memory only — never saved or logged."
+        : _optionsFor(Build()).Credential is { } lab
+            ? $"Connects with the credential appsettings.local.json gives this domain ({lab.Domain}\\{lab.UserName}): a lab setup. Any other domain connects as you."
+            : $"Connects as you ({WindowsAccount}), with no password stored.";
+
+    /// <summary>The Windows sign-in, which the connection uses unless another account is chosen.</summary>
+    public static string WindowsAccount => $"{Environment.UserDomainName}\\{Environment.UserName}";
+
+    public string ConnectAsMeLabel => $"Me ({WindowsAccount})";
+
+    // ---- connect as ----------------------------------------------------------------------------------------------
+
+    /// <summary>Connect as the admin's own other account (a separate admin account), not the Windows sign-in.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ConnectAsMe), nameof(BoundAsNote))]
+    private bool _useOtherAccount;
+
+    public bool ConnectAsMe
+    {
+        get => !UseOtherAccount;
+        set => UseOtherAccount = !value;
+    }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BoundAsNote))]
+    private string _signInAs;
+
+    /// <summary>Only for Test connection and for this run of the console; never part of what is saved.</summary>
+    [ObservableProperty]
+    private string _password = string.Empty;
+
+    partial void OnUseOtherAccountChanged(bool value) => FieldsChanged(domainChanged: false);
+    partial void OnSignInAsChanged(string value) => FieldsChanged(domainChanged: false);
+    partial void OnPasswordChanged(string value) => FieldsChanged(domainChanged: false);
+
+    /// <summary>The password typed here, so saving and reconnecting does not ask for it a second time.</summary>
+    public System.Net.NetworkCredential? TypedCredential =>
+        UseOtherAccount && Password.Length > 0 && DirectoryAccount.Problem(SignInAs) is null ? DirectoryAccount.ToCredential(SignInAs, Password) : null;
 
     // ---- fields ---------------------------------------------------------------------------------------------------
 
@@ -110,6 +148,7 @@ public sealed partial class ConnectDomainDialogViewModel : DialogViewModelBase
     {
         if (TenantDomain.DomainProblem(Domain) is { } domainProblem) return domainProblem;
         if (TenantDomain.ServerProblem(Server) is { } serverProblem) return serverProblem;
+        if (UseOtherAccount && DirectoryAccount.Problem(SignInAs) is { } accountProblem) return accountProblem;
         if (_others.Any(d => string.Equals(d.Domain.Trim(), Domain.Trim(), StringComparison.OrdinalIgnoreCase)))
         {
             return $"{_tenantName} is already connected to {Domain.Trim()}. Change that one instead.";
@@ -141,6 +180,13 @@ public sealed partial class ConnectDomainDialogViewModel : DialogViewModelBase
     {
         if (Problem is not null || IsTesting) return;
 
+        if (UseOtherAccount && Password.Length == 0)
+        {
+            TestResult = $"Type the password for {SignInAs.Trim()} to test as that account. It is used for the test and this session only.";
+            TestSucceeded = false;
+            return;
+        }
+
         var generation = ++_testGeneration;
         var domain = Build();
         IsTesting = true;
@@ -148,7 +194,15 @@ public sealed partial class ConnectDomainDialogViewModel : DialogViewModelBase
         TestSucceeded = false;
         try
         {
-            var result = await DomainConnectionTest.RunAsync(_optionsFor(domain), _ldapLogger, CancellationToken.None);
+            var options = _optionsFor(domain);
+            if (TypedCredential is { } typed)
+            {
+                // The typed password, straight to the bind: the test never asks the store and never keeps it.
+                options.Credential = typed;
+                options.Credentials = null;
+            }
+
+            var result = await DomainConnectionTest.RunAsync(options, _ldapLogger, CancellationToken.None);
             if (generation != _testGeneration) return;
 
             if (result.Status.IsConnected)
@@ -204,5 +258,6 @@ public sealed partial class ConnectDomainDialogViewModel : DialogViewModelBase
         UseTls = UseTls,
         Port = _editing is { Port: not 389 and not 636 } custom ? custom.Port : UseTls ? 636 : 389,
         DisabledOu = SelectedOu.Dn ?? string.Empty,
+        SignInAs = UseOtherAccount ? SignInAs.Trim() : string.Empty,
     };
 }

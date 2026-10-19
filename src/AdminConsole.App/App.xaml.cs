@@ -179,6 +179,7 @@ public sealed partial class App : Application
         services.AddSingleton<DialogService>();
         services.AddSingleton<IDialogService>(sp => sp.GetRequiredService<DialogService>());
         services.AddSingleton<FilePicker>();
+        services.AddSingleton<DirectoryCredentialStore>();
         services.AddSingleton<ShellViewModel>();
         services.AddSingleton<MainWindow>();
 

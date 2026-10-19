@@ -42,14 +42,20 @@ public sealed class DirectoryRouter : IDirectoryService
         var down = statuses.Where(s => !s.IsConnected).ToList();
         if (up.Count == 0)
         {
-            return new DirectoryStatus { IsConnected = false, Reason = string.Join(" ", statuses.Select(s => s.Reason).Distinct()) };
+            return new DirectoryStatus { IsConnected = false, NeedsSignIn = statuses.Any(s => s.NeedsSignIn), Reason = string.Join(" ", statuses.Select(s => s.Reason).Distinct()) };
         }
 
         return up[0] with
         {
+            NeedsSignIn = down.Any(s => s.NeedsSignIn),
             DomainName = string.Join(", ", up.Select(s => s.DomainName)),
             Reason = down.Count == 0 ? null : "Not reachable: " + string.Join("; ", down.Select(s => $"{s.DomainName ?? "a domain"} ({s.Reason})")),
         };
+    }
+
+    public void Reconnect()
+    {
+        foreach (var d in _domains) d.Reconnect();
     }
 
     // ---- reads ---------------------------------------------------------------------------------------------------

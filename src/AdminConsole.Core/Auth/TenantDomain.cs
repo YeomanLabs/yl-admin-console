@@ -20,6 +20,12 @@ public sealed partial record TenantDomain
     public string DisabledOu { get; init; } = string.Empty;
 
     /// <summary>
+    /// The admin's own other account to connect as (DOMAIN\user or a UPN); empty is the Windows user. Only the name is
+    /// kept: the password is asked for once per session and held in memory (OnPrem.IDirectoryCredentials).
+    /// </summary>
+    public string SignInAs { get; init; } = string.Empty;
+
+    /// <summary>
     /// The options the directory service binds with. <paramref name="inherited"/> is appsettings' <c>OnPrem</c> section,
     /// passed for the first profile only: when it names this same domain, its credential and timeout come along. That is
     /// the lab case (a machine outside the domain); without it, connecting the lab domain in Settings would cut the lab
@@ -27,7 +33,8 @@ public sealed partial record TenantDomain
     /// </summary>
     public OnPrem.LdapOptions ToOptions(OnPrem.LdapOptions? inherited = null)
     {
-        var same = inherited is not null && string.Equals(inherited.Domain.Trim(), Domain.Trim(), StringComparison.OrdinalIgnoreCase);
+        // The lab credential applies only while no account is chosen here: a chosen account is the admin's decision.
+        var same = SignInAs.Trim().Length == 0 && inherited is not null && string.Equals(inherited.Domain.Trim(), Domain.Trim(), StringComparison.OrdinalIgnoreCase);
         var options = new OnPrem.LdapOptions
         {
             Domain = Domain.Trim(),
@@ -35,6 +42,7 @@ public sealed partial record TenantDomain
             Port = Port,
             UseTls = UseTls,
             DisabledOu = DisabledOu.Trim(),
+            SignInAs = SignInAs.Trim(),
             Credential = same ? inherited!.Credential : null,
         };
         if (same) options.Timeout = inherited!.Timeout;

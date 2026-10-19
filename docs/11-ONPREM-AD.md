@@ -219,9 +219,18 @@ On-prem is off until a domain is named for the tenant. Since M20 each tenant pro
 Connect a domain…**, or the button on the Domain page when no domain is named. The dialog takes the DNS name, an
 optional controller and LDAPS; **Test connection** binds exactly as the saved session will (a throwaway connection,
 off the UI thread) and lists the OUs so the leavers OU is picked from the real tree; **Save and reconnect** writes the
-profile and reopens the tenant, because its directory service is built with the session. There is no password field:
-a profile's domains bind as the signed-in Windows user. An admin whose AD rights sit on a separate account starts the
-console with `runas /netonly` as that account.
+profile and reopens the tenant, because its directory service is built with the session.
+
+**Connect as** is the signed-in Windows user, or another account of the admin's own (`signInAs`, `DOMAIN\user` or a
+UPN). A profile stores only that name. The password is asked for once per run of the console — right after the tenant
+opens, or from the Domain page's **Sign in…** — held in memory (`DirectoryCredentialStore`), and never written or
+logged; a password AD refuses is forgotten, so the next attempt asks again. The prompt is never shown over another
+dialog (the dialog service shows one at a time and opening a second cancels the first, which would close an
+offboarding mid-preview): AD answers "not signed in" instead, and the Domain page offers Sign in. This is still the
+admin's own sign-in, which non-negotiable 4 is about; what this section rules out is a password on disk.
+
+A connection that fails is not retried for 30 seconds — the next calls get the same answer at once instead of each
+waiting out the bind timeout — and the Domain page's **Try again** retries straight away.
 
 The first profile also takes the `OnPrem` section of `appsettings.json` — or `appsettings.local.json`, which is
 gitignored — when it has no domains of its own; and when a domain connected in Settings is the one appsettings names,

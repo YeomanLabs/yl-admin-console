@@ -777,3 +777,22 @@ A gate that moves a synced account into an out-of-scope OU must run inside one E
 - **Checked live in YeomanLabs**, on a copy of the data holding only that tenant: a pass issued on the lab user AD Lab
   Hybrid One and removed again by Reset MFA (with sessions revoked), and the same user added to and removed from the
   empty test group "Intune Automation Test" — every write in the action log, nothing left behind.
+
+## 2026-10-19 — Onboard someone; on-prem AD can connect as another account
+
+- **Onboard someone.** Home's "New user from a template" became **Onboard someone** (also Ctrl+N and the palette): a
+  saved template, or a copy of someone who already has the role. The copy is `TemplateService.SnapshotAsync` of that
+  person — the doc 07 rules, so the same things are copied either way and nothing personal ever is — handed to the
+  create form as "New user like …" and never saved (MarkUsed already skipped unsaved templates).
+- **Connect as another account.** Asked for so on-prem changes are made with the right account — typically the
+  admin's separate admin account — without `runas /netonly`. Only the account name is saved (`TenantDomain.SignInAs`);
+  the password is asked for once per run, kept in memory by `DirectoryCredentialStore`, never written or logged, and
+  forgotten when AD refuses it. Non-negotiable 4 is about the admin's own sign-in and no service accounts; this is the
+  admin's own account, typed by them. What stays ruled out is a password on disk.
+- **Never prompt over another dialog.** The dialog service shows one dialog and opening a second cancels the first, so a
+  prompt raised by an offboarding preview would close the offboarding. The store asks only when nothing else is open;
+  otherwise AD reports "not signed in" and the Domain page offers Sign in. The tenant asks right after it opens, which
+  is the moment nothing else is on screen.
+- **A failed connection is held for 30 s.** With the DC unreachable every AD call waited out the bind timeout: the
+  onboarding copy of a synced user took about 45 s, an offboarding preview 20 s per AD step. A failure now answers
+  at once for 30 s; Try again (or Sign in) clears it.

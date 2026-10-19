@@ -33,6 +33,26 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
     private LdapConnection? _connection;
     private DirectoryStatus _status = DirectoryStatus.NotConfigured;
 
+    /// <summary>
+    /// After a connection fails, further calls get the same answer at once until this passes, rather than each waiting
+    /// out the bind timeout again: an offboarding preview or a new-user form with the DC off used to wait 20 s per call.
+    /// </summary>
+    private DateTimeOffset _holdUntil;
+
+    private static readonly TimeSpan FailureHold = TimeSpan.FromSeconds(30);
+
+    /// <summary>LDAP_INVALID_CREDENTIALS: a wrong password, or the account locked or disabled.</summary>
+    private const int InvalidCredentials = 49;
+
+    /// <summary>Set by <see cref="Reconnect"/>: the next connect asks for the sign-in even after a decline.</summary>
+    private bool _askAgain;
+
+    public void Reconnect()
+    {
+        _holdUntil = DateTimeOffset.MinValue;
+        _askAgain = true;
+    }
+
     public LdapDirectoryService(LdapOptions options, ILogger<LdapDirectoryService> logger)
     {
         _options = options;
@@ -84,8 +104,9 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
         {
             // "No domain is configured" and "the configured domain did not answer" are different situations to be in,
             // and the page says whichever it is. Reporting an unconfigured install as unreachable would send an
-            // admin looking for a network fault that does not exist.
-            if (!_status.IsConnected && _status.Reason is not null && string.IsNullOrWhiteSpace(_options.Domain))
+            // admin looking for a network fault that does not exist. So is "not signed in", and "still holding".
+            if (!_status.IsConnected && _status.Reason is not null
+                && (string.IsNullOrWhiteSpace(_options.Domain) || _status.NeedsSignIn || DateTimeOffset.UtcNow < _holdUntil))
             {
                 return _status;
             }
@@ -108,6 +129,26 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
             {
                 _status = DirectoryStatus.NotConfigured;
                 throw new InvalidOperationException("No domain configured.");
+            }
+
+            if (DateTimeOffset.UtcNow < _holdUntil && !_status.IsConnected && _status.Reason is not null)
+            {
+                throw new InvalidOperationException(_status.Reason);
+            }
+
+            // Signing in as another account: its password, from this session's memory or asked for now.
+            var credential = _options.Credential;
+            var account = _options.SignInAs.Trim();
+            if (credential is null && account.Length > 0)
+            {
+                var askAgain = _askAgain;
+                _askAgain = false;
+                credential = _options.Credentials is null ? null : await _options.Credentials.GetAsync(_options.Domain, account, askAgain, ct).ConfigureAwait(false);
+                if (credential is null)
+                {
+                    _status = DirectoryStatus.NotSignedIn(_options.Domain, account);
+                    throw new InvalidOperationException(_status.Reason);
+                }
             }
 
             // Serverless binding: handing the LDAP client a domain name rather than a hostname lets Windows locate a
@@ -150,9 +191,9 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
             {
                 root = await Task.Run(() =>
                 {
-                    if (_options.Credential is not null)
+                    if (credential is not null)
                     {
-                        connection.Bind(_options.Credential);
+                        connection.Bind(credential);
                     }
                     else
                     {
@@ -162,9 +203,19 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
                     return ReadRootDse(connection);
                 }, ct).ConfigureAwait(false);
             }
-            catch
+            catch (LdapException ex) when (ex.ErrorCode == InvalidCredentials && account.Length > 0 && _options.Credential is null)
+            {
+                // The password was wrong (or the account locked): forget it so the next attempt asks again, and say so.
+                connection.Dispose();
+                _options.Credentials?.Forget(_options.Domain, account);
+                _status = DirectoryStatus.SignInRefused(_options.Domain, account);
+                throw new InvalidOperationException(_status.Reason, ex);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 connection.Dispose();
+                _status = DirectoryStatus.Unreachable(ex.Message);
+                _holdUntil = DateTimeOffset.UtcNow + FailureHold;
                 throw;
             }
 
@@ -175,7 +226,7 @@ public sealed partial class LdapDirectoryService : IDirectoryService, IDisposabl
                 DomainName = _options.Domain,
                 RootDn = root.DefaultNamingContext,
                 DomainController = root.DnsHostName ?? target,
-                BoundAs = _options.Credential?.UserName ?? WindowsIdentityName(),
+                BoundAs = credential is null ? WindowsIdentityName() : account.Length > 0 ? account : credential.UserName,
             };
 
             _logger.LogInformation("Bound to {Dc} for {Domain}", root.DnsHostName, _options.Domain);

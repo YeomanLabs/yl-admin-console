@@ -1285,7 +1285,13 @@
                     <ui:Button Content="Connect a domain…" Icon="{ui:SymbolIcon PlugConnected24}" Appearance="Primary" Margin="0,16,0,0" HorizontalAlignment="Center"
                                Command="{Binding ConnectCommand}" AutomationProperties.Name="Connect a domain"
                                Visibility="{Binding IsNotConfigured, Converter={StaticResource BoolToVisibility}}" />
-                    <ui:Button Content="Active Directory settings" Icon="{ui:SymbolIcon Settings24}" Margin="0,16,0,0" HorizontalAlignment="Center"
+                    <ui:Button Content="Sign in…" Icon="{ui:SymbolIcon Person24}" Appearance="Primary" Margin="0,16,0,0" HorizontalAlignment="Center"
+                               Command="{Binding RetryCommand}" AutomationProperties.Name="Sign in to Active Directory"
+                               Visibility="{Binding NeedsSignIn, Converter={StaticResource BoolToVisibility}}" />
+                    <ui:Button Content="Try again" Icon="{ui:SymbolIcon ArrowSync24}" Margin="0,16,0,0" HorizontalAlignment="Center"
+                               Command="{Binding RetryCommand}" AutomationProperties.Name="Try connecting again"
+                               Visibility="{Binding CanRetry, Converter={StaticResource BoolToVisibility}}" />
+                    <ui:Button Content="Active Directory settings" Icon="{ui:SymbolIcon Settings24}" Margin="0,8,0,0" HorizontalAlignment="Center"
                                Command="{Binding OpenAdSettingsCommand}" AutomationProperties.Name="Open the Active Directory settings"
                                Visibility="{Binding IsNotConfigured, Converter={StaticResource InverseBoolToVisibility}}" />
                 </StackPanel>

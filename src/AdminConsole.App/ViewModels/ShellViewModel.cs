@@ -999,6 +999,13 @@ public sealed partial class ShellViewModel : ObservableObject
             session.Sync!.ProgressChanged += (_, p) => RunOnUi(() => { if (ReferenceEquals(session, _session)) OnSyncProgress(p); });
             session.Sync.CycleCompleted += (_, _) => RunOnUi(() => { if (ReferenceEquals(session, _session)) OnCycleCompleted(); });
             session.Palette.Chosen += OnPaletteChosen;
+
+            // A domain that connects as another account asks for its password now, while nothing else is on screen,
+            // rather than in the middle of the first thing that reaches AD.
+            if (session.Profile.Domains.Any(d => d.SignInAs.Trim().Length > 0))
+            {
+                _ = session.Services.GetRequiredService<IDirectoryService>().GetStatusAsync(CancellationToken.None);
+            }
         }
 
         ShowSession(session);
@@ -1236,6 +1243,11 @@ public sealed partial class ShellViewModel : ObservableObject
         if (!await Dialogs.ShowAsync(dialog)) return;
 
         var domain = dialog.Build();
+        if (domain.SignInAs.Length > 0 && dialog.TypedCredential is { } typed)
+        {
+            _services.GetRequiredService<DirectoryCredentialStore>().Remember(domain.Domain, domain.SignInAs, typed);
+        }
+
         var list = _profiles.LoadProfiles();
         var saved = list.Profiles.FirstOrDefault(p => p.Id == profile.Id) ?? profile;
         _profiles.SaveProfiles(list.With(saved.WithDomain(domain, editing?.Domain)));

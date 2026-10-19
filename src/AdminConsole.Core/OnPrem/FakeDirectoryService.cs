@@ -104,6 +104,10 @@ public sealed class FakeDirectoryService : IDirectoryService
 
     // ---- IDirectoryService ---------------------------------------------------------------------------------------
 
+    public void Reconnect()
+    {
+    }
+
     public Task<DirectoryStatus> GetStatusAsync(CancellationToken ct) => Task.FromResult(
         IsConnected
             ? new DirectoryStatus

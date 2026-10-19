@@ -45,14 +45,30 @@ public sealed partial class DomainPageViewModel : ObservableObject, IPageViewMod
     [NotifyPropertyChangedFor(nameof(SubtitleText))]
     [NotifyPropertyChangedFor(nameof(IsNotConfigured))]
     [NotifyPropertyChangedFor(nameof(EmptyTitle))]
+    [NotifyPropertyChangedFor(nameof(NeedsSignIn))]
+    [NotifyPropertyChangedFor(nameof(CanRetry))]
     private DirectoryStatus _status = DirectoryStatus.NotConfigured;
+
+    /// <summary>The domain connects as another account whose password this run has not been given (or was refused).</summary>
+    public bool NeedsSignIn => Status.NeedsSignIn;
+
+    /// <summary>Configured but not answering: worth another go once the VPN is up.</summary>
+    public bool CanRetry => !Status.IsConnected && !IsNotConfigured && !Status.NeedsSignIn;
+
+    /// <summary>Sign in / Try again: forget the failure (and a declined sign-in), and connect now.</summary>
+    [RelayCommand]
+    private Task RetryAsync()
+    {
+        _directory.Reconnect();
+        return RefreshAsync(CancellationToken.None);
+    }
 
     public bool IsConnected => Status.IsConnected;
 
     /// <summary>No domain named at all, as opposed to one named that did not answer: the page offers to connect one.</summary>
     public bool IsNotConfigured => Status == DirectoryStatus.NotConfigured;
 
-    public string EmptyTitle => IsNotConfigured ? "Not connected to Active Directory" : "No domain controller in reach";
+    public string EmptyTitle => IsNotConfigured ? "Not connected to Active Directory" : Status.NeedsSignIn ? "Not signed in to Active Directory" : "No domain controller in reach";
 
     [RelayCommand]
     private Task ConnectAsync() => RequestConnect?.Invoke() ?? Task.CompletedTask;
