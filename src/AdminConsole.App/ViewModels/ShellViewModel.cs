@@ -212,7 +212,7 @@ public sealed partial class ShellViewModel : ObservableObject
         if (page is HomePageViewModel home)
         {
             home.OpenPalette = OpenPalette;
-            home.NewUser = () => NewUserCommand.Execute(null);
+            home.NewUser = () => OnboardCommand.Execute(null);
             home.Offboard = Offboard;
             home.OffboardMany = () => OffboardListCommand.Execute(null);
             home.SyncNow = () => SyncNowCommand.Execute(null);
@@ -552,7 +552,7 @@ public sealed partial class ShellViewModel : ObservableObject
                 _ = SyncNowAsync();
                 break;
             case PaletteActions.NewUser:
-                _ = NewUserAsync();
+                _ = OnboardAsync();
                 break;
             case PaletteActions.Offboard:
                 Offboard();
@@ -672,9 +672,50 @@ public sealed partial class ShellViewModel : ObservableObject
 
     private static string Names(IEnumerable<DirectoryUser> people) => string.Join(", ", people.Select(p => p.DisplayName ?? p.UserPrincipalName));
 
-    /// <summary>Ctrl+N and the palette's "New user from template" (doc 07 §flow).</summary>
+    /// <summary>
+    /// Onboard someone — Home, Ctrl+N and the palette: from a saved template, or by copying a person who already has the
+    /// role. The copy is the template snapshot (doc 07 rules: the role's attributes, direct licences, cloud groups and
+    /// manager; nothing personal), handed to the same create form and never saved.
+    /// </summary>
     [RelayCommand]
-    private async Task NewUserAsync()
+    private async Task OnboardAsync()
+    {
+        if (!IsSessionReady) return;
+
+        var templates = _services.GetRequiredService<TemplateService>();
+        var choice = new OnboardDialogViewModel(templates.Load().Count);
+        if (!await Dialogs.ShowAsync(choice)) return;
+
+        if (choice.Choice == OnboardChoice.CopyPerson)
+        {
+            OpenPersonPicker("Choose someone whose setup the new person should copy", person => _ = CopyPersonAsync(person));
+            return;
+        }
+
+        await NewUserAsync();
+    }
+
+    private async Task CopyPersonAsync(PersonRef person)
+    {
+        UserTemplate copy;
+        ShowStatusMessage($"Reading {person.Label}'s setup…", 30);
+        try
+        {
+            copy = await _services.GetRequiredService<TemplateService>().SnapshotAsync($"{person.Label}'s setup", person.Id, CancellationToken.None);
+        }
+        catch (GraphException ex)
+        {
+            _logger.LogWarning("Copying the setup of {UserId} failed: {Code}", person.Id, ex.ErrorCode);
+            ShowError(ex, $"Could not read {person.Label}'s setup");
+            return;
+        }
+
+        ShowStatusMessage($"Copied {person.Label}'s setup.", 4);
+        await NewUserAsync(copy, person.Label);
+    }
+
+    /// <summary>The create form (doc 07 §flow): the template picker first, unless the form starts from a copy.</summary>
+    private async Task NewUserAsync(UserTemplate? startWith = null, string? copiedFrom = null)
     {
         if (!IsSessionReady) return;
 
@@ -711,6 +752,7 @@ public sealed partial class ShellViewModel : ObservableObject
             AdReason = adStatus?.Reason,
         };
 
+        if (startWith is not null) dialog.StartWith(startWith, copiedFrom);
         await _services.GetRequiredService<DialogService>().ShowAsync(dialog);
     }
 

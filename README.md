@@ -29,7 +29,8 @@ in AD from a template — without opening five admin centres.
 - **Offboarding templates.** Save what each kind of leaver gets — the steps, the manager as delegate, an automatic
   reply with `{name}` and `{delegate}` filled in per person, the attributes to stamp — and pick the one the offboard
   dialog opens with.
-- **Starters from templates.** Snapshot someone who already has the role. In a synced organisation the account is
+- **Onboarding.** **Onboard someone** on Home (or Ctrl+N) starts from a saved template or a copy of someone who already
+  has the role — the same snapshot rules either way, nothing personal copied. In a synced organisation the account is
   created in AD, and the licences, groups and mailbox settings follow on their own once Entra Connect has synced it.
 - **Bulk edit.** Tick people (or every match), set the fields, and read a per-person preview of what changes and
   whether it is written in Entra ID or in AD before anything is sent.
@@ -266,7 +267,7 @@ hex colour falls back to the default. The installer and icon can be branded at b
 | Key | Does |
 |---|---|
 | `Ctrl+K` | Search anything. `u:` `d:` `g:` narrow it, `>` runs an action |
-| `Ctrl+N` · `Ctrl+Shift+O` | New user from a template · Offboard the person on screen |
+| `Ctrl+N` · `Ctrl+Shift+O` | Onboard someone (from a template or a copy of someone) · Offboard the person on screen |
 | `Ctrl+T` · `Ctrl+W` · `Ctrl+Tab` | New tab · close tab · next tab |
 | `Alt+1`…`Alt+8` | Home, Users, Groups, Devices, Templates, Reports, Activity, Domain |
 | `Alt+←` · `F5` · `Esc` | Back · re-read what is on screen · close a dialog |

@@ -70,9 +70,9 @@
 
                     <TextBlock Foreground="{DynamicResource AcTextSecondary}" Text="Start something" FontSize="13" FontWeight="SemiBold" Margin="0,24,0,8" />
                     <WrapPanel>
-                        <ui:Button Icon="{ui:SymbolIcon PersonAdd24}" Content="New user from a template" Margin="0,0,8,8"
-                                   Command="{Binding CreateUserCommand}"
-                                   AutomationProperties.Name="Create a new user from a template" />
+                        <ui:Button Icon="{ui:SymbolIcon PersonAdd24}" Content="Onboard someone" Margin="0,0,8,8" Appearance="Primary"
+                                   Command="{Binding CreateUserCommand}" ToolTip="From a template, or a copy of someone who has the role (Ctrl+N)"
+                                   AutomationProperties.Name="Onboard someone" />
                         <ui:Button Icon="{ui:SymbolIcon PersonDelete24}" Content="Offboard someone" Margin="0,0,8,8"
                                    Command="{Binding OffboardUserCommand}"
                                    AutomationProperties.Name="Offboard someone" />

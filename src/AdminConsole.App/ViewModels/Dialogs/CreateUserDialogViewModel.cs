@@ -70,8 +70,22 @@ public sealed partial class CreateUserDialogViewModel : DialogViewModelBase
     {
         CreatePhase.PickTemplate => "New user",
         CreatePhase.Result => Result?.Success == true ? "User created" : "User not created",
-        _ => $"New user from {Template?.Name}",
+        _ => CopiedFrom is { } who && Template is { IsSaved: false } ? $"New user like {who}" : $"New user from {Template?.Name}",
     };
+
+    /// <summary>Set when the form starts from a copy of a person (Onboard → Copy someone) rather than a saved template.</summary>
+    public string? CopiedFrom { get; private set; }
+
+    /// <summary>
+    /// Opens the form on a template the shell already has — a snapshot of a person, never saved, so nothing is written to
+    /// the Templates folder (MarkUsed skips an unsaved template).
+    /// </summary>
+    public void StartWith(UserTemplate template, string? copiedFrom)
+    {
+        CopiedFrom = copiedFrom;
+        Choose(template);
+        OnPropertyChanged(nameof(Title));
+    }
 
     public override bool ShowFooter => false;
 

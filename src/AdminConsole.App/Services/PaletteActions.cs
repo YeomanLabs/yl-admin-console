@@ -13,7 +13,7 @@ public static class PaletteActions
     public static IReadOnlyList<SearchAction> All { get; } =
     [
         new SearchAction { Id = SyncNow, Title = "Sync now", Aliases = ["refresh", "delta"], Description = "Force a delta sync (Ctrl+Shift+S)" },
-        new SearchAction { Id = NewUser, Title = "New user from template", Aliases = ["new user", "create user", "onboard"], Description = "Ctrl+N" },
+        new SearchAction { Id = NewUser, Title = "Onboard someone…", Aliases = ["new user", "create user", "onboard", "starter", "copy user", "new user from template"], Description = "From a template or a copy of someone (Ctrl+N)" },
         new SearchAction { Id = Offboard, Title = "Offboard user…", Aliases = ["decom", "leaver", "terminate"], Description = "Run the offboarding checklist (Ctrl+Shift+O)" },
         new SearchAction { Id = Settings, Title = "Settings", Aliases = ["preferences", "options", "permissions"], Description = "Ctrl+," },
     ];

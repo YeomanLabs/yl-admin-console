@@ -283,6 +283,33 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- Onboard someone: the one question before the create form. Two cards, each a whole button. -->
+        <DataTemplate DataType="{x:Type dlg:OnboardDialogViewModel}">
+            <StackPanel Margin="0,4,0,0">
+                <Button Command="{Binding UseTemplateCommand}" IsEnabled="{Binding HasTemplates}" HorizontalContentAlignment="Stretch" Padding="14,12" Margin="0,0,0,8"
+                        AutomationProperties.Name="From a template">
+                    <DockPanel>
+                        <ui:SymbolIcon Symbol="DocumentBulletList24" FontSize="22" Margin="0,0,14,0" VerticalAlignment="Top" />
+                        <StackPanel>
+                            <TextBlock Text="From a template" FontWeight="SemiBold" FontSize="14" />
+                            <TextBlock Text="{Binding TemplateDetail}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" Foreground="{DynamicResource AcTextSecondary}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Button>
+                <Button Command="{Binding CopyPersonCommand}" HorizontalContentAlignment="Stretch" Padding="14,12"
+                        AutomationProperties.Name="Copy someone's setup">
+                    <DockPanel>
+                        <ui:SymbolIcon Symbol="Copy24" FontSize="22" Margin="0,0,14,0" VerticalAlignment="Top" />
+                        <StackPanel>
+                            <TextBlock Text="Copy someone's setup" FontWeight="SemiBold" FontSize="14" />
+                            <TextBlock Text="{Binding CopyDetail}" FontSize="12" TextWrapping="Wrap" Margin="0,2,0,0" Foreground="{DynamicResource AcTextSecondary}" />
+                        </StackPanel>
+                    </DockPanel>
+                </Button>
+                <ui:Button Content="Cancel" HorizontalAlignment="Right" Margin="0,12,0,0" Command="{Binding CancelCommand}" AutomationProperties.Name="Cancel" />
+            </StackPanel>
+        </DataTemplate>
+
         <!-- Reset MFA: what goes (ticked, in removal order), what stays and why, then the two usual follow-ups. -->
         <DataTemplate DataType="{x:Type dlg:ResetMfaDialogViewModel}">
             <StackPanel Margin="0,4,0,0">
