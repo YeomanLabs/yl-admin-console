@@ -9,7 +9,7 @@
     <RootNamespace>AdminConsole.App</RootNamespace>
     <AssemblyName>AdminConsole</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.3.8</Version>
+    <Version>0.3.9</Version>
     <!-- The app icon (scripts/icon/New-AppIcon.py). A branded build swaps it with -p:AppIconPath=<file.ico>, which
          Build-Release.ps1 -IconPath passes; the exe, the window and the title bar all take it from here. -->
     <AppIconPath Condition="'$(AppIconPath)' == ''">Assets\AppIcon.ico</AppIconPath>
